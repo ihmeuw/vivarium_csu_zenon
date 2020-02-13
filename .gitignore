@@ -125,3 +125,6 @@ dmypy.json
 
 # Pycharm project settings
 .idea/
+
+# Model specifications
+src/vivarium_csu_zenon/model_specifications/*.yaml
