@@ -6,7 +6,7 @@ import itertools
 ####################
 
 PROJECT_NAME = 'vivarium_csu_zenon'
-CLUSTER_PROJECT = 'proj_cost_effect'
+CLUSTER_PROJECT = 'proj_csu'
 
 CLUSTER_QUEUE = 'all.q'
 MAKE_ARTIFACT_MEM = '3G'
@@ -14,7 +14,12 @@ MAKE_ARTIFACT_CPU = '1'
 MAKE_ARTIFACT_RUNTIME = '3:00:00'
 
 LOCATIONS = [
-    # TODO - project locations here
+    'Brazil',
+    'China',
+    'France',
+    'Italy',
+    'Spain',
+    'Russia',
 ]
 
 

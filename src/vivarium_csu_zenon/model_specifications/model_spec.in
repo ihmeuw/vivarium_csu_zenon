@@ -23,18 +23,19 @@ configuration:
         random_seed: 0
     time:
         start:
-            year: 2005
-            month: 7
-            day: 2
+            year: 2020
+            month: 1
+            day: 1
         end:
-            year: 2010
-            month: 7
-            day: 2
-        step_size: 1 # Days
+            year: 2024
+            month: 12
+            day: 31
+        step_size: 28 # Days
     population:
-        population_size: 100
-        age_start: 0
-        age_end: 100
+        population_size: 10000
+        age_start: 30
+        age_end: 125
+        exit_age: 125
 
     metrics:
         disability:
