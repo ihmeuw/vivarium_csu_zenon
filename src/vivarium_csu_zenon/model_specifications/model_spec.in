@@ -4,10 +4,10 @@ components:
             - BasePopulation()
             - Mortality()
         metrics:
-            - Disability()
+            - DisabilityObserver()
             - MortalityObserver()
 
-    vivarium_csu_zenon.components:
+#    vivarium_csu_zenon.components:
 
 configuration:
     input_data:
