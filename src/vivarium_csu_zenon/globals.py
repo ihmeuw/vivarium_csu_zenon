@@ -32,19 +32,21 @@ LOCATIONS = [
 
 METADATA_LOCATIONS = 'metadata.locations'
 
-POPULATION_STRUCTURE = 'population.structure'
-POPULATION_AGE_BINS = 'population.age_bins'
-POPULATION_DEMOGRAPHY = 'population.demographic_dimensions'
-POPULATION_TMRLE = 'population.theoretical_minimum_risk_life_expectancy'
 
-ALL_CAUSE_CSMR = 'cause.all_causes.cause_specific_mortality_rate'
+class __POPULATION(NamedTuple):
+    STRUCTURE: str = 'population.structure'
+    AGE_BINS: str = 'population.age_bins'
+    DEMOGRAPHY: str = 'population.demographic_dimensions'
+    TMRLE: str = 'population.theoretical_minimum_risk_life_expectancy'
+    ACMR: str = 'cause.all_causes.cause_specific_mortality_rate'
+
+
+POPULATION = __POPULATION()
+
+
+
 
 # TODO - sample keys of type EntityKey used to identify data in the model.
-# For more information see the tutorial:
-# https://vivarium-inputs.readthedocs.io/en/latest/tutorials/pulling_data.html#entity-measure-data
-# DIARRHEA_PREVALENCE = 'cause.diarrheal_diseases.prevalence'
-# STUNTING_CATEGORIES = 'risk_factor.child_stunting.categories'
-# STUNTING_EXPOSURE_MEAN = 'alternative_risk_factor.child_stunting.exposure'
 
 
 ###########################

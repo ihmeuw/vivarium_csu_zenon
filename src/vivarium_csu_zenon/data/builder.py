@@ -118,15 +118,7 @@ def write_data_by_draw(artifact: Artifact, key: str, data: pd.DataFrame):
 
 
 def load_and_write_demographic_data(artifact: Artifact, location: str):
-    keys = [
-        project_globals.POPULATION_STRUCTURE,
-        project_globals.POPULATION_AGE_BINS,
-        project_globals.POPULATION_DEMOGRAPHY,
-        project_globals.POPULATION_TMRLE,
-        project_globals.ALL_CAUSE_CSMR,
-    ]
-
-    for key in keys:
+    for key in project_globals.POPULATION:
         load_and_write_data(artifact, key, location)
 
 # TODO - create appropriate functions to write data
