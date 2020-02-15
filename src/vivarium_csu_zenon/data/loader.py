@@ -143,6 +143,8 @@ def _load_em_from_meid(meid, location):
     data = data.filter(vi_globals.DEMOGRAPHIC_COLUMNS + vi_globals.DRAW_COLUMNS)
     data = utilities.reshape(data)
     data = utilities.scrub_gbd_conventions(data, location)
+    data = utilities.split_interval(data, interval_column='age', split_column_prefix='age')
+    data = utilities.split_interval(data, interval_column='year', split_column_prefix='year')
     return utilities.sort_hierarchical_data(data)
 
 
