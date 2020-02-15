@@ -171,6 +171,9 @@ def build_single_location_artifact(path: Union[str, Path], location: str, log_to
     artifact = builder.open_artifact(path, location)
     logger.info(f'Loading and writing demographic data.')
     builder.load_and_write_demographic_data(artifact, location)
+    logger.info(f'Loading and writing ihd data.')
+    builder.load_and_write_ihd_data(artifact, location)
+
 
     # TODO - add your data
 

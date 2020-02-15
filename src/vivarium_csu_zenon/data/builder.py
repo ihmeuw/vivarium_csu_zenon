@@ -92,6 +92,7 @@ def write_data(artifact: Artifact, key: str, data: pd.DataFrame):
         artifact.write(key, data)
     return artifact.load(key)
 
+
 # TODO - writing and reading by draw is necessary if you are using
 #        LBWSG data. Find the read function in utilities.py
 def write_data_by_draw(artifact: Artifact, key: str, data: pd.DataFrame):
@@ -120,21 +121,8 @@ def write_data_by_draw(artifact: Artifact, key: str, data: pd.DataFrame):
 def load_and_write_demographic_data(artifact: Artifact, location: str):
     for key in project_globals.POPULATION:
         load_and_write_data(artifact, key, location)
+        
 
-# TODO - create appropriate functions to write data
-'''
-def load_and_write_diarrhea_data(artifact: Artifact, location: str):
-    keys = [
-        project_globals.DIARRHEA_PREVALENCE,
-        project_globals.DIARRHEA_INCIDENCE_RATE,
-        project_globals.DIARRHEA_REMISSION_RATE,
-        project_globals.DIARRHEA_CAUSE_SPECIFIC_MORTALITY_RATE,
-        project_globals.DIARRHEA_EXCESS_MORTALITY_RATE,
-        project_globals.DIARRHEA_DISABILITY_WEIGHT,
-        project_globals.DIARRHEA_RESTRICTIONS
-    ]
-
-    for key in keys:
+def load_and_write_ihd_data(artifact: Artifact, location: str):
+    for key in project_globals.IHD:
         load_and_write_data(artifact, key, location)
-'''
-

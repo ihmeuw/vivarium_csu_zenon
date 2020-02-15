@@ -44,10 +44,19 @@ class __POPULATION(NamedTuple):
 POPULATION = __POPULATION()
 
 
+class __IHD(NamedTuple):
+    ACUTE_MI_PREVALENCE: str = 'sequela.acute_myocardial_infarction.prevalence'
+    POST_MI_PREVALENCE: str = 'sequela.post_myocardial_infarction.prevalence'
+    ACUTE_MI_INCIDENCE: str = 'cause.ischemic_heart_disease.incidence_rate'
+    ACUTE_MI_DISABILITY_WEIGHT: str = 'sequela.acute_myocardial_infarction.disability_weight'
+    POST_MI_DISABILITY_WEIGHT: str = 'sequela.post_myocardial_infarction.disability_weight'
+    ACUTE_MI_EMR: str = 'sequela.acute_myocardial_infarction.excess_mortality_rate'
+    POST_MI_EMR: str = 'sequela.post_myocardial_infarction.excess_mortality_rate'
+    CSMR: str = 'cause.ischemic_heart_disease.cause_specific_mortality_rate'
+    RESTRICTIONS: str = 'cause.ischemic_heart_disease.restrictions'
 
 
-# TODO - sample keys of type EntityKey used to identify data in the model.
-
+IHD = __IHD()
 
 ###########################
 # Disease Model variables #
