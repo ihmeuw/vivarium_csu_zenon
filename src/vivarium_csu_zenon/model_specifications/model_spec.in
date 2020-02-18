@@ -10,6 +10,8 @@ components:
     vivarium_csu_zenon.components:
         - IschemicHeartDisease()
         - IschemicStroke()
+        - DiseaseObserver('ischemic_heart_disease')
+        - DiseaseObserver('ischemic_stroke')
 
 configuration:
     input_data:
