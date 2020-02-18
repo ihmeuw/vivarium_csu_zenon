@@ -118,6 +118,7 @@ def write_data_by_draw(artifact: Artifact, key: str, data: pd.DataFrame):
             store.put(f'{key.path}/{c}', data[c])
 
 
+# TODO: later see if these can all be combined to one function with an additional NamedTuple argument
 def load_and_write_demographic_data(artifact: Artifact, location: str):
     for key in project_globals.POPULATION:
         load_and_write_data(artifact, key, location)
@@ -125,4 +126,9 @@ def load_and_write_demographic_data(artifact: Artifact, location: str):
 
 def load_and_write_ihd_data(artifact: Artifact, location: str):
     for key in project_globals.IHD:
+        load_and_write_data(artifact, key, location)
+
+
+def load_and_write_ischemic_stroke_data(artifact: Artifact, location: str):
+    for key in project_globals.ISCHEMIC_STROKE:
         load_and_write_data(artifact, key, location)

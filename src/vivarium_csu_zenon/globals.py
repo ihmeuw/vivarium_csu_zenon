@@ -58,6 +58,21 @@ class __IHD(NamedTuple):
 
 IHD = __IHD()
 
+
+class __ISCHEMIC_STROKE(NamedTuple):
+    ACUTE_STROKE_PREVALENCE: str = 'sequela.acute_ischemic_stroke.prevalence'
+    POST_STROKE_PREVALENCE: str = 'sequela.post_ischemic_stroke.prevalence'
+    ACUTE_STROKE_INCIDENCE: str = 'cause.ischemic_stroke.incidence_rate'
+    ACUTE_STROKE_DISABILITY_WEIGHT: str = 'sequela.acute_ischemic_stroke.disability_weight'
+    POST_STROKE_DISABILITY_WEIGHT: str = 'sequela.post_ischemic_stroke.disability_weight'
+    ACUTE_STROKE_EMR: str = 'sequela.acute_ischemic_stroke.excess_mortality_rate'
+    POST_STROKE_EMR: str = 'sequela.post_ischemic_stroke.excess_mortality_rate'
+    CSMR: str = 'cause.ischemic_stroke.cause_specific_mortality_rate'
+    RESTRICTIONS: str = 'cause.ischemic_stroke.restrictions'
+
+
+ISCHEMIC_STROKE = __ISCHEMIC_STROKE()
+
 ###########################
 # Disease Model variables #
 ###########################
@@ -73,7 +88,7 @@ DIARRHEA_MODEL_TRANSITIONS = (
 )
 
 # TODO - add all diseases to DISEASE_MODELS tuple and the DISEASE_MODEL_MAP dictionary
-DISEASE_MODELS = (DIARRHEA_MODEL_NAME)
+DISEASE_MODELS = (DIARRHEA_MODEL_NAME,)
 DISEASE_MODEL_MAP = {
     DIARRHEA_MODEL_NAME: {
         'states': DIARRHEA_MODEL_STATES,

@@ -1,1 +1,1 @@
-from .disease import IschemicHeartDisease
+from .disease import IschemicHeartDisease, IschemicStroke

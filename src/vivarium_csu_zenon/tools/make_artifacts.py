@@ -173,9 +173,9 @@ def build_single_location_artifact(path: Union[str, Path], location: str, log_to
     builder.load_and_write_demographic_data(artifact, location)
     logger.info(f'Loading and writing ihd data.')
     builder.load_and_write_ihd_data(artifact, location)
+    logger.info(f'Loading and writing ischemic stroke data.')
+    builder.load_and_write_ischemic_stroke_data(artifact, location)
 
-
-    # TODO - add your data
 
     logger.info('**DONE**')
 

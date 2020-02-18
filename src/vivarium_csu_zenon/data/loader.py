@@ -50,10 +50,20 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.IHD.ACUTE_MI_INCIDENCE: load_standard_data,
         project_globals.IHD.ACUTE_MI_DISABILITY_WEIGHT: load_ihd_disability_weight,
         project_globals.IHD.POST_MI_DISABILITY_WEIGHT: load_ihd_disability_weight,
-        project_globals.IHD.ACUTE_MI_EMR: load_ihd_excess_mortality_rate,
-        project_globals.IHD.POST_MI_EMR: load_ihd_excess_mortality_rate,
+        project_globals.IHD.ACUTE_MI_EMR: load_excess_mortality_rate,
+        project_globals.IHD.POST_MI_EMR: load_excess_mortality_rate,
         project_globals.IHD.CSMR: load_standard_data,
         project_globals.IHD.RESTRICTIONS: load_metadata,
+
+        project_globals.ISCHEMIC_STROKE.ACUTE_STROKE_PREVALENCE: load_ischemic_stroke_prevalence,
+        project_globals.ISCHEMIC_STROKE.POST_STROKE_PREVALENCE: load_ischemic_stroke_prevalence,
+        project_globals.ISCHEMIC_STROKE.ACUTE_STROKE_INCIDENCE: load_standard_data,
+        project_globals.ISCHEMIC_STROKE.ACUTE_STROKE_DISABILITY_WEIGHT: load_ischemic_stroke_disability_weight,
+        project_globals.ISCHEMIC_STROKE.POST_STROKE_DISABILITY_WEIGHT: load_ischemic_stroke_disability_weight,
+        project_globals.ISCHEMIC_STROKE.ACUTE_STROKE_EMR: load_excess_mortality_rate,
+        project_globals.ISCHEMIC_STROKE.POST_STROKE_EMR: load_excess_mortality_rate,
+        project_globals.ISCHEMIC_STROKE.CSMR: load_standard_data,
+        project_globals.ISCHEMIC_STROKE.RESTRICTIONS: load_metadata,
     }
     return mapping[lookup_key](lookup_key, location)
 
@@ -104,6 +114,24 @@ def load_ihd_prevalence(key: str, location: str) -> pd.DataFrame:
     return prevalence
 
 
+def load_ischemic_stroke_prevalence(key: str, location: str) -> pd.DataFrame:
+    acute_sequelae = [
+        sequelae.acute_ischemic_stroke_severity_level_1,
+        sequelae.acute_ischemic_stroke_severity_level_2,
+        sequelae.acute_ischemic_stroke_severity_level_3,
+        sequelae.acute_ischemic_stroke_severity_level_4,
+        sequelae.acute_ischemic_stroke_severity_level_5,
+    ]
+
+    if key == project_globals.ISCHEMIC_STROKE.ACUTE_STROKE_PREVALENCE:
+        seq = acute_sequelae
+    else:
+        seq = [s for s in causes.ischemic_stroke.sequelae if s not in acute_sequelae]
+
+    prevalence = sum(interface.get_measure(s, 'prevalence', location) for s in seq)
+    return prevalence
+
+
 def load_ihd_disability_weight(key: str, location: str) -> pd.DataFrame:
     acute_sequelae = [
         sequelae.acute_myocardial_infarction_first_2_days,
@@ -118,18 +146,45 @@ def load_ihd_disability_weight(key: str, location: str) -> pd.DataFrame:
     prevalence_disability_weights = []
     for s in seq:
         prevalence = interface.get_measure(s, 'prevalence', location)
-        ihd_disability_weight = interface.get_measure(s, 'disability_weight', location)
-        prevalence_disability_weights.append(prevalence * ihd_disability_weight)
+        disability_weight = interface.get_measure(s, 'disability_weight', location)
+        prevalence_disability_weights.append(prevalence * disability_weight)
 
     ihd_prevalence = interface.get_measure(causes.ischemic_heart_disease, 'prevalence', location)
     ihd_disability_weight = (sum(prevalence_disability_weights) / ihd_prevalence).fillna(0)
     return ihd_disability_weight
 
 
-def load_ihd_excess_mortality_rate(key: str, location: str) -> pd.DataFrame:
+def load_ischemic_stroke_disability_weight(key: str, location: str) -> pd.DataFrame:
+    acute_sequelae = [
+        sequelae.acute_ischemic_stroke_severity_level_1,
+        sequelae.acute_ischemic_stroke_severity_level_2,
+        sequelae.acute_ischemic_stroke_severity_level_3,
+        sequelae.acute_ischemic_stroke_severity_level_4,
+        sequelae.acute_ischemic_stroke_severity_level_5,
+    ]
+
+    if key == project_globals.IHD.ACUTE_MI_PREVALENCE:
+        seq = acute_sequelae
+    else:
+        seq = [s for s in causes.ischemic_heart_disease.sequelae if s not in acute_sequelae]
+
+    prevalence_disability_weights = []
+    for s in seq:
+        prevalence = interface.get_measure(s, 'prevalence', location)
+        disability_weight = interface.get_measure(s, 'disability_weight', location)
+        prevalence_disability_weights.append(prevalence * disability_weight)
+
+    ischemic_stroke_prevalence = interface.get_measure(causes.ischemic_heart_disease, 'prevalence', location)
+    ischemic_stroke_disability_weight = (sum(prevalence_disability_weights) / ischemic_stroke_prevalence).fillna(0)
+    return ischemic_stroke_disability_weight
+
+
+def load_excess_mortality_rate(key: str, location: str) -> pd.DataFrame:
     meids = {
         project_globals.IHD.ACUTE_MI_EMR: 1814,
         project_globals.IHD.POST_MI_EMR: 15755,
+        project_globals.ISCHEMIC_STROKE.ACUTE_STROKE_EMR: 9310,
+        project_globals.ISCHEMIC_STROKE.POST_STROKE_EMR: 10837,
     }
 
     return _load_em_from_meid(meids[key], location)
