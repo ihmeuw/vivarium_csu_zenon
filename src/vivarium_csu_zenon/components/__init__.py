@@ -1,2 +1,2 @@
-from .disease import IschemicHeartDisease, IschemicStroke
+from .disease import IschemicHeartDisease, IschemicStroke, DiabetesMellitus
 from .observers import DiseaseObserver

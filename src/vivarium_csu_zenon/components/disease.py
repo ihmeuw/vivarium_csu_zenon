@@ -1,6 +1,8 @@
 import pandas as pd
 from vivarium_public_health.disease import (DiseaseState as DiseaseState_, DiseaseModel, SusceptibleState,
-                                            RateTransition as RateTransition_)
+                                            TransientDiseaseState, RateTransition as RateTransition_)
+
+from vivarium_csu_zenon import globals as project_globals
 
 
 class RateTransition(RateTransition_):
@@ -70,3 +72,34 @@ def IschemicStroke():
     post_stroke.add_transition(acute_stroke, source_data_type='rate', get_data_functions=data_funcs)
 
     return DiseaseModel('ischemic_stroke', states=[susceptible, acute_stroke, post_stroke])
+
+
+def DiabetesMellitus():
+    susceptible = SusceptibleState(project_globals.DIABETES_MELLITUS.name)
+    transient = TransientDiseaseState(project_globals.DIABETES_MELLITUS.name)
+    moderate = DiseaseState(f'moderate_{project_globals.DIABETES_MELLITUS.name}', cause_type='sequela',)
+    severe = DiseaseState(f'severe_{project_globals.DIABETES_MELLITUS.name}', cause_type='sequela', )
+
+    susceptible.allow_self_transitions()
+    data_funcs = {
+        'incidence_rate': lambda _, builder: builder.data.load(
+            project_globals.DIABETES_MELLITUS.ALL_DIABETES_INCIDENCE_RATE
+        )
+    }
+    susceptible.add_transition(transient, source_data_type='rate', get_data_functions=data_funcs)
+    data_funcs = {
+        'proportion': lambda _, builder: builder.data.load(
+            project_globals.DIABETES_MELLITUS.MODERATE_DIABETES_PROPORTION
+        )
+    }
+    transient.add_transition(moderate, source_data_type='proportion', get_data_functions=data_funcs)
+    moderate.allow_self_transitions()
+    data_funcs = {
+        'proportion': lambda _, builder: builder.data.load(
+            project_globals.DIABETES_MELLITUS.SEVERE_DIABETES_PROPORTION
+        )
+    }
+    transient.add_transition(severe, source_data_type='proportion', get_data_functions=data_funcs)
+    severe.allow_self_transitions()
+
+    return DiseaseModel(project_globals.DIABETES_MELLITUS.name, states=[susceptible, transient, moderate, severe])
