@@ -33,21 +33,29 @@ LOCATIONS = [
 METADATA_LOCATIONS = 'metadata.locations'
 
 
-class __POPULATION(NamedTuple):
+class __Population(NamedTuple):
     STRUCTURE: str = 'population.structure'
     AGE_BINS: str = 'population.age_bins'
     DEMOGRAPHY: str = 'population.demographic_dimensions'
     TMRLE: str = 'population.theoretical_minimum_risk_life_expectancy'
     ACMR: str = 'cause.all_causes.cause_specific_mortality_rate'
 
+    @property
+    def name(self):
+        return 'population'
 
-POPULATION = __POPULATION()
+    @property
+    def log_name(self):
+        return 'population'
+
+
+POPULATION = __Population()
 
 
 class __IHD(NamedTuple):
     ACUTE_MI_PREVALENCE: str = 'sequela.acute_myocardial_infarction.prevalence'
     POST_MI_PREVALENCE: str = 'sequela.post_myocardial_infarction.prevalence'
-    ACUTE_MI_INCIDENCE: str = 'cause.ischemic_heart_disease.incidence_rate'
+    ACUTE_MI_INCIDENCE_RATE: str = 'cause.ischemic_heart_disease.incidence_rate'
     ACUTE_MI_DISABILITY_WEIGHT: str = 'sequela.acute_myocardial_infarction.disability_weight'
     POST_MI_DISABILITY_WEIGHT: str = 'sequela.post_myocardial_infarction.disability_weight'
     ACUTE_MI_EMR: str = 'sequela.acute_myocardial_infarction.excess_mortality_rate'
@@ -55,14 +63,22 @@ class __IHD(NamedTuple):
     CSMR: str = 'cause.ischemic_heart_disease.cause_specific_mortality_rate'
     RESTRICTIONS: str = 'cause.ischemic_heart_disease.restrictions'
 
+    @property
+    def name(self):
+        return 'ischemic_heart_disease'
+
+    @property
+    def log_name(self):
+        return 'ischemic heart disease'
+
 
 IHD = __IHD()
 
 
-class __ISCHEMIC_STROKE(NamedTuple):
+class __IschemicStroke(NamedTuple):
     ACUTE_STROKE_PREVALENCE: str = 'sequela.acute_ischemic_stroke.prevalence'
     POST_STROKE_PREVALENCE: str = 'sequela.post_ischemic_stroke.prevalence'
-    ACUTE_STROKE_INCIDENCE: str = 'cause.ischemic_stroke.incidence_rate'
+    ACUTE_STROKE_INCIDENCE_RATE: str = 'cause.ischemic_stroke.incidence_rate'
     ACUTE_STROKE_DISABILITY_WEIGHT: str = 'sequela.acute_ischemic_stroke.disability_weight'
     POST_STROKE_DISABILITY_WEIGHT: str = 'sequela.post_ischemic_stroke.disability_weight'
     ACUTE_STROKE_EMR: str = 'sequela.acute_ischemic_stroke.excess_mortality_rate'
@@ -70,8 +86,48 @@ class __ISCHEMIC_STROKE(NamedTuple):
     CSMR: str = 'cause.ischemic_stroke.cause_specific_mortality_rate'
     RESTRICTIONS: str = 'cause.ischemic_stroke.restrictions'
 
+    @property
+    def name(self):
+        return 'ischemic_stroke'
 
-ISCHEMIC_STROKE = __ISCHEMIC_STROKE()
+    @property
+    def log_name(self):
+        return 'ischemic stroke'
+
+
+ISCHEMIC_STROKE = __IschemicStroke()
+
+
+class __DiabetesMellitus(NamedTuple):
+    MODERATE_DIABETES_PREVALENCE: str = 'sequela.moderate_diabetes_mellitus.prevalence'
+    SEVERE_DIABETES_PREVALENCE: str = 'sequela.severe_diabetes_mellitus.prevalence'
+    ALL_DIABETES_INCIDENCE_RATE: str = 'cause.diabetes_mellitus.incidence_rate'
+    MODERATE_DIABETES_PROPORTION: str = 'sequela.moderate_diabetes_mellitus.proportion'
+    SEVERE_DIABETES_PROPORTION: str = 'sequela.severe_diabetes_mellitus.proportion'
+    MODERATE_DIABETES_DISABILITY_WEIGHT: str = 'sequela.moderate_diabetes_mellitus.disability_weight'
+    SEVERE_DIABETES_DISABILITY_WEIGHT: str = 'sequela.severe_diabetes_mellitus.disability_weight'
+    MODERATE_DIABETES_EMR: str = 'sequela.moderate_diabetes_mellitus.excess_mortality_rate'
+    SEVERE_DIABETES_EMR: str = 'sequela.severe_diabetes_mellitus.excess_mortality_rate'
+    CSMR: str = 'cause.diabetes_mellitus.cause_specific_mortality_rate'
+    RESTRICTIONS: str = 'cause.diabetes_mellitus.restrictions'
+
+    @property
+    def name(self):
+        return 'diabetes_mellitus'
+
+    @property
+    def log_name(self):
+        return 'diabetes mellitus'
+
+
+DIABETES_MELLITUS = __DiabetesMellitus()
+
+MAKE_ARTIFACT_KEY_GROUPS = [
+    POPULATION,
+    IHD,
+    ISCHEMIC_STROKE,
+    DIABETES_MELLITUS
+]
 
 ###########################
 # Disease Model variables #
@@ -103,33 +159,37 @@ ISCHEMIC_STROKE_MODEL_TRANSITIONS = (
     f'{POST_ISCHEMIC_STROKE_STATE_NAME} _TO_{ACUTE_ISCHEMIC_STROKE_STATE_NAME}'
 )
 
-DISEASE_MODELS = (IHD_MODEL_NAME,)
+DIABETES_MELLITUS_MODEL_NAME = 'diabetes_mellitus'
+DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME = f'susceptible_to_{DIABETES_MELLITUS_MODEL_NAME}'
+TRANSIENT_DIABETES_MELLITUS_STATE_NAME = 'transient_diabetes_mellitus'
+MODERATE_DIABETES_MELLITUS_STATE_NAME = 'moderate_diabetes_mellitus'
+SEVERE_DIABETES_MELLITUS_STATE_NAME = 'severe_diabetes_mellitus'
+DIABETES_MELLITUS_MODEL_STATES = (
+    DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME,
+    MODERATE_DIABETES_MELLITUS_STATE_NAME,
+    SEVERE_DIABETES_MELLITUS_STATE_NAME
+)
+DIABETES_MELLITUS_MODEL_TRANSITIONS = (
+    f'{DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME}_TO_{TRANSIENT_DIABETES_MELLITUS_STATE_NAME}',
+    f'{TRANSIENT_DIABETES_MELLITUS_STATE_NAME} _TO_{MODERATE_DIABETES_MELLITUS_STATE_NAME}'
+    f'{TRANSIENT_DIABETES_MELLITUS_STATE_NAME}_TO_{SEVERE_DIABETES_MELLITUS_STATE_NAME}',
+)
+
+DISEASE_MODELS = (IHD_MODEL_NAME, ISCHEMIC_STROKE_MODEL_NAME, DIABETES_MELLITUS_MODEL_NAME)
 DISEASE_MODEL_MAP = {
     IHD_MODEL_NAME: {
         'states': IHD_MODEL_STATES,
         'transitions': IHD_MODEL_TRANSITIONS,
     },
     ISCHEMIC_STROKE_MODEL_NAME: {
-        'states': IHD_MODEL_STATES,
-        'transitions': IHD_MODEL_TRANSITIONS,
+        'states': ISCHEMIC_STROKE_MODEL_STATES,
+        'transitions': ISCHEMIC_STROKE_MODEL_TRANSITIONS,
+    },
+    DIABETES_MELLITUS_MODEL_NAME: {
+        'states': DIABETES_MELLITUS_MODEL_STATES,
+        'transitions': DIABETES_MELLITUS_MODEL_TRANSITIONS,
     },
 }
-
-
-########################
-# Risk Model Constants #
-########################
-# TODO - remove if you don't need lbwsg
-LBWSG_MODEL_NAME = 'low_birth_weight_and_short_gestation'
-
-
-class __LBWSG_MISSING_CATEGORY(NamedTuple):
-    CAT: str = 'cat212'
-    NAME: str = 'Birth prevalence - [37, 38) wks, [1000, 1500) g'
-    EXPOSURE: float = 0.
-
-
-LBWSG_MISSING_CATEGORY = __LBWSG_MISSING_CATEGORY()
 
 
 #################################

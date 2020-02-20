@@ -169,13 +169,11 @@ def build_single_location_artifact(path: Union[str, Path], location: str, log_to
 
     logger.info(f'Building artifact for {location} at {str(path)}.')
     artifact = builder.open_artifact(path, location)
-    logger.info(f'Loading and writing demographic data.')
-    builder.load_and_write_demographic_data(artifact, location)
-    logger.info(f'Loading and writing ihd data.')
-    builder.load_and_write_ihd_data(artifact, location)
-    logger.info(f'Loading and writing ischemic stroke data.')
-    builder.load_and_write_ischemic_stroke_data(artifact, location)
 
+    for key_group in project_globals.MAKE_ARTIFACT_KEY_GROUPS:
+        logger.info(f'Loading and writing {key_group.log_name} data')
+        for key in key_group:
+            builder.load_and_write_data(artifact, key, location)
 
     logger.info('**DONE**')
 

@@ -132,3 +132,8 @@ def load_and_write_ihd_data(artifact: Artifact, location: str):
 def load_and_write_ischemic_stroke_data(artifact: Artifact, location: str):
     for key in project_globals.ISCHEMIC_STROKE:
         load_and_write_data(artifact, key, location)
+
+
+def load_and_write_diabetes_mellitus_data(artifact: Artifact, location: str):
+    for key in project_globals.DIABETES_MELLITUS:
+        load_and_write_data(artifact, key, location)

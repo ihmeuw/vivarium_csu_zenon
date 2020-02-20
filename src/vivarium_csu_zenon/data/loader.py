@@ -9,9 +9,8 @@ for an example.
 `BEP <https://github.com/ihmeuw/vivarium_gates_bep/blob/master/src/vivarium_gates_bep/data/loader.py>`_
 
 .. admonition::
-
-   No logging is done here. Logging is done in vivarium inputs itself and forwarded.
 """
+from loguru import logger
 from vivarium_gbd_access import gbd
 from gbd_mapping import causes, risk_factors, covariates, sequelae
 import pandas as pd
@@ -47,7 +46,7 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
 
         project_globals.IHD.ACUTE_MI_PREVALENCE: load_ihd_prevalence,
         project_globals.IHD.POST_MI_PREVALENCE: load_ihd_prevalence,
-        project_globals.IHD.ACUTE_MI_INCIDENCE: load_standard_data,
+        project_globals.IHD.ACUTE_MI_INCIDENCE_RATE: load_standard_data,
         project_globals.IHD.ACUTE_MI_DISABILITY_WEIGHT: load_ihd_disability_weight,
         project_globals.IHD.POST_MI_DISABILITY_WEIGHT: load_ihd_disability_weight,
         project_globals.IHD.ACUTE_MI_EMR: load_excess_mortality_rate,
@@ -57,13 +56,25 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
 
         project_globals.ISCHEMIC_STROKE.ACUTE_STROKE_PREVALENCE: load_ischemic_stroke_prevalence,
         project_globals.ISCHEMIC_STROKE.POST_STROKE_PREVALENCE: load_ischemic_stroke_prevalence,
-        project_globals.ISCHEMIC_STROKE.ACUTE_STROKE_INCIDENCE: load_standard_data,
+        project_globals.ISCHEMIC_STROKE.ACUTE_STROKE_INCIDENCE_RATE: load_standard_data,
         project_globals.ISCHEMIC_STROKE.ACUTE_STROKE_DISABILITY_WEIGHT: load_ischemic_stroke_disability_weight,
         project_globals.ISCHEMIC_STROKE.POST_STROKE_DISABILITY_WEIGHT: load_ischemic_stroke_disability_weight,
         project_globals.ISCHEMIC_STROKE.ACUTE_STROKE_EMR: load_excess_mortality_rate,
         project_globals.ISCHEMIC_STROKE.POST_STROKE_EMR: load_excess_mortality_rate,
         project_globals.ISCHEMIC_STROKE.CSMR: load_standard_data,
         project_globals.ISCHEMIC_STROKE.RESTRICTIONS: load_metadata,
+
+        project_globals.DIABETES_MELLITUS.MODERATE_DIABETES_PREVALENCE: load_diabetes_mellitus_prevalence,
+        project_globals.DIABETES_MELLITUS.SEVERE_DIABETES_PREVALENCE: load_diabetes_mellitus_prevalence,
+        project_globals.DIABETES_MELLITUS.ALL_DIABETES_INCIDENCE_RATE: load_standard_data,
+        project_globals.DIABETES_MELLITUS.MODERATE_DIABETES_PROPORTION: load_diabetes_mellitus_proportion,
+        project_globals.DIABETES_MELLITUS.SEVERE_DIABETES_PROPORTION: load_diabetes_mellitus_proportion,
+        project_globals.DIABETES_MELLITUS.MODERATE_DIABETES_DISABILITY_WEIGHT: load_diabetes_mellitus_disability_weight,
+        project_globals.DIABETES_MELLITUS.SEVERE_DIABETES_DISABILITY_WEIGHT: load_diabetes_mellitus_disability_weight,
+        project_globals.DIABETES_MELLITUS.MODERATE_DIABETES_EMR: load_diabetes_mellitus_excess_mortality_rate,
+        project_globals.DIABETES_MELLITUS.SEVERE_DIABETES_EMR: load_diabetes_mellitus_excess_mortality_rate,
+        project_globals.DIABETES_MELLITUS.CSMR: load_standard_data,
+        project_globals.DIABETES_MELLITUS.RESTRICTIONS: load_metadata,
     }
     return mapping[lookup_key](lookup_key, location)
 
@@ -132,6 +143,47 @@ def load_ischemic_stroke_prevalence(key: str, location: str) -> pd.DataFrame:
     return prevalence
 
 
+def load_diabetes_mellitus_prevalence(key: str, location: str) -> pd.DataFrame:
+    moderate_sequelae = [
+        sequelae.uncomplicated_diabetes_mellitus_type_1,
+        sequelae.uncomplicated_diabetes_mellitus_type_2,
+    ]
+
+    if key == project_globals.DIABETES_MELLITUS.MODERATE_DIABETES_PREVALENCE:
+        seq = moderate_sequelae
+    else:
+        seq = [s for sc in causes.diabetes_mellitus.sub_causes for s in sc.sequelae if s not in moderate_sequelae]
+
+    prevalence = sum(interface.get_measure(s, 'prevalence', location) for s in seq)
+    return prevalence
+
+
+def load_diabetes_mellitus_proportion(key: str, location: str) -> pd.DataFrame:
+    moderate_sequelae = [
+        sequelae.uncomplicated_diabetes_mellitus_type_1,
+        sequelae.uncomplicated_diabetes_mellitus_type_2,
+    ]
+
+    if key == project_globals.DIABETES_MELLITUS.MODERATE_DIABETES_PREVALENCE:
+        seq = moderate_sequelae
+    else:
+        seq = [s for sc in causes.diabetes_mellitus.sub_causes for s in sc.sequelae if s not in moderate_sequelae]
+
+    # TODO this	is temporarily set to prevalence because of missing incidence rate data
+    all_diabetes_prevalence = load_standard_data('cause.diabetes_mellitus.prevalence', location)
+    sequelae_prevalence = []
+    for s in seq:
+        try:
+            # TODO this is temporarily set to prevalence because of missing incidence rate data
+            sequelae_prevalence.append(interface.get_measure(s, 'prevalence', location))
+        except vi_globals.DataDoesNotExistError as e:
+            logger.debug(f'There is no incidence data for sequela {s.name}')
+
+    import pdb; pdb.set_trace()
+    proportion = (sum(sequelae_prevalence) / all_diabetes_prevalence).fillna(0)
+    return proportion
+
+
 def load_ihd_disability_weight(key: str, location: str) -> pd.DataFrame:
     acute_sequelae = [
         sequelae.acute_myocardial_infarction_first_2_days,
@@ -174,9 +226,42 @@ def load_ischemic_stroke_disability_weight(key: str, location: str) -> pd.DataFr
         disability_weight = interface.get_measure(s, 'disability_weight', location)
         prevalence_disability_weights.append(prevalence * disability_weight)
 
-    ischemic_stroke_prevalence = interface.get_measure(causes.ischemic_heart_disease, 'prevalence', location)
+    ischemic_stroke_prevalence = interface.get_measure(causes.ischemic_stroke, 'prevalence', location)
     ischemic_stroke_disability_weight = (sum(prevalence_disability_weights) / ischemic_stroke_prevalence).fillna(0)
     return ischemic_stroke_disability_weight
+
+
+def load_diabetes_mellitus_disability_weight(key: str, location: str) -> pd.DataFrame:
+    moderate_sequelae = [
+        sequelae.uncomplicated_diabetes_mellitus_type_1,
+        sequelae.uncomplicated_diabetes_mellitus_type_2,
+    ]
+
+    if key == project_globals.DIABETES_MELLITUS.MODERATE_DIABETES_PREVALENCE:
+        seq = moderate_sequelae
+    else:
+        seq = [s for sc in causes.diabetes_mellitus.sub_causes for s in sc.sequelae if s not in moderate_sequelae]
+
+    prevalence_disability_weights = []
+    for s in seq:
+        prevalence = interface.get_measure(s, 'prevalence', location)
+        disability_weight = interface.get_measure(s, 'disability_weight', location)
+        prevalence_disability_weights.append(prevalence * disability_weight)
+
+    diabetes_prevalence = interface.get_measure(causes.diabetes_mellitus, 'prevalence', location)
+    diabetes_disability_weight = (sum(prevalence_disability_weights) / diabetes_prevalence).fillna(0)
+    return diabetes_disability_weight
+
+
+def load_diabetes_mellitus_excess_mortality_rate(key: str, location: str) -> pd.DataFrame:
+    if key == project_globals.DIABETES_MELLITUS.MODERATE_DIABETES_EMR:
+        diabetes_emr = get_data(project_globals.POPULATION.DEMOGRAPHY, location)
+        diabetes_emr['value'] = 0
+    else:
+        raw_diabetes_emr = get_data(project_globals.DIABETES_MELLITUS.CSMR, location)
+        prevalence_severe = get_data(project_globals.DIABETES_MELLITUS.SEVERE_DIABETES_PREVALENCE, location)
+        diabetes_emr = (raw_diabetes_emr / prevalence_severe).fillna(0)
+    return diabetes_emr
 
 
 def load_excess_mortality_rate(key: str, location: str) -> pd.DataFrame:
