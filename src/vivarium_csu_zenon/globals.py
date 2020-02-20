@@ -40,6 +40,14 @@ class __Population(NamedTuple):
     TMRLE: str = 'population.theoretical_minimum_risk_life_expectancy'
     ACMR: str = 'cause.all_causes.cause_specific_mortality_rate'
 
+    @property
+    def name(self):
+        return 'population'
+
+    @property
+    def log_name(self):
+        return 'population'
+
 
 POPULATION = __Population()
 
@@ -113,6 +121,13 @@ class __DiabetesMellitus(NamedTuple):
 
 
 DIABETES_MELLITUS = __DiabetesMellitus()
+
+MAKE_ARTIFACT_KEY_GROUPS = [
+    POPULATION,
+    IHD,
+    ISCHEMIC_STROKE,
+    DIABETES_MELLITUS
+]
 
 ###########################
 # Disease Model variables #
