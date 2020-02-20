@@ -67,8 +67,8 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.DIABETES_MELLITUS.MODERATE_DIABETES_PREVALENCE: load_diabetes_mellitus_prevalence,
         project_globals.DIABETES_MELLITUS.SEVERE_DIABETES_PREVALENCE: load_diabetes_mellitus_prevalence,
         project_globals.DIABETES_MELLITUS.ALL_DIABETES_INCIDENCE_RATE: load_standard_data,
-        project_globals.DIABETES_MELLITUS.MODERATE_DIABETES_PROPORTION: load_diabetes_mellitus_incidence,
-        project_globals.DIABETES_MELLITUS.SEVERE_DIABETES_PROPORTION: load_diabetes_mellitus_incidence,
+        project_globals.DIABETES_MELLITUS.MODERATE_DIABETES_PROPORTION: load_diabetes_mellitus_incidence_proportion,
+        project_globals.DIABETES_MELLITUS.SEVERE_DIABETES_PROPORTION: load_diabetes_mellitus_incidence_proportion,
         project_globals.DIABETES_MELLITUS.MODERATE_DIABETES_DISABILITY_WEIGHT: load_diabetes_mellitus_disability_weight,
         project_globals.DIABETES_MELLITUS.SEVERE_DIABETES_DISABILITY_WEIGHT: load_diabetes_mellitus_disability_weight,
         project_globals.DIABETES_MELLITUS.MODERATE_DIABETES_EMR: load_diabetes_mellitus_excess_mortality_rate,
@@ -158,7 +158,7 @@ def load_diabetes_mellitus_prevalence(key: str, location: str) -> pd.DataFrame:
     return prevalence
 
 
-def load_diabetes_mellitus_incidence(key: str, location: str) -> pd.DataFrame:
+def load_diabetes_mellitus_incidence_proportion(key: str, location: str) -> pd.DataFrame:
     moderate_sequelae = [
         sequelae.uncomplicated_diabetes_mellitus_type_1,
         sequelae.uncomplicated_diabetes_mellitus_type_2,
@@ -169,15 +169,17 @@ def load_diabetes_mellitus_incidence(key: str, location: str) -> pd.DataFrame:
     else:
         seq = [s for sc in causes.diabetes_mellitus.sub_causes for s in sc.sequelae if s not in moderate_sequelae]
 
-    all_diabetes_incidence_rate = load_standard_data(project_globals.DIABETES_MELLITUS.ALL_DIABETES_INCIDENCE_RATE,
-                                                 location)
+    # TODO this	is temporarily set to prevalence because of missing incidence rate data
+    all_diabetes_incidence_rate = load_standard_data('cause.diabetes_mellitus.prevalence', location)
     sequelae_incidence_rates = []
     for s in seq:
         try:
-            sequelae_incidence_rates.append(interface.get_measure(s, 'incidence_rate', location))
+            # TODO this is temporarily set to prevalence because of missing incidence rate data
+            sequelae_incidence_rates.append(interface.get_measure(s, 'prevalence', location))
         except vi_globals.DataDoesNotExistError as e:
             logger.debug(f'There is no incidence data for sequela {s.name}')
 
+    import pdb; pdb.set_trace()
     incidence_proportion = (sum(sequelae_incidence_rates) / all_diabetes_incidence_rate).fillna(0)
     return incidence_proportion
 
