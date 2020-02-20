@@ -179,7 +179,6 @@ def load_diabetes_mellitus_proportion(key: str, location: str) -> pd.DataFrame:
         except vi_globals.DataDoesNotExistError as e:
             logger.debug(f'There is no incidence data for sequela {s.name}')
 
-    import pdb; pdb.set_trace()
     proportion = (sum(sequelae_prevalence) / all_diabetes_prevalence).fillna(0)
     return proportion
 
