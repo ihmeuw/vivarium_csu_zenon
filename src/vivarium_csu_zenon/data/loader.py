@@ -9,9 +9,8 @@ for an example.
 `BEP <https://github.com/ihmeuw/vivarium_gates_bep/blob/master/src/vivarium_gates_bep/data/loader.py>`_
 
 .. admonition::
-
-   No logging is done here. Logging is done in vivarium inputs itself and forwarded.
 """
+from loguru import logger
 from vivarium_gbd_access import gbd
 from gbd_mapping import causes, risk_factors, covariates, sequelae
 import pandas as pd
@@ -171,8 +170,14 @@ def load_diabetes_mellitus_incidence(key: str, location: str) -> pd.DataFrame:
         seq = [s for sc in causes.diabetes_mellitus.sub_causes for s in sc.sequelae if s not in moderate_sequelae]
 
     all_diabetes_incidence_rate = load_standard_data(project_globals.DIABETES_MELLITUS.ALL_DIABETES_INCIDENCE_RATE,
-                                                     location)
-    sequelae_incidence_rates = [interface.get_measure(s, 'incidence_rate', location) for s in seq]
+                                                 location)
+    sequelae_incidence_rates = []
+    for s in seq:
+        try:
+            sequelae_incidence_rates.append(interface.get_measure(s, 'incidence_rate', location))
+        except vi_globals.DataDoesNotExistError as e:
+            logger.debug(f'There is no incidence data for sequela {s.name}')
+
     incidence_proportion = (sum(sequelae_incidence_rates) / all_diabetes_incidence_rate).fillna(0)
     return incidence_proportion
 
