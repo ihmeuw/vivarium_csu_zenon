@@ -83,7 +83,7 @@ def DiabetesMellitus():
     susceptible.allow_self_transitions()
     data_funcs = {
         'incidence_rate': lambda _, builder: builder.data.load(
-            project_globals.DIABETES_MELLITUS.ALL_DIABETES_INCIDENCE_RATE
+            project_globals.DIABETES_MELLITUS.INCIDENCE_RATE
         )
     }
     susceptible.add_transition(transient, source_data_type='rate', get_data_functions=data_funcs)
@@ -103,3 +103,39 @@ def DiabetesMellitus():
     severe.allow_self_transitions()
 
     return DiseaseModel(project_globals.DIABETES_MELLITUS.name, states=[susceptible, transient, moderate, severe])
+
+
+def ChronicKidneyDisease():
+    # States
+    susceptible = SusceptibleState(project_globals.CKD.name)
+    transient = TransientDiseaseState(project_globals.CKD.name)
+    albuminuria = DiseaseState('albuminuria', cause_type='sequela',)
+    stage_iii = DiseaseState(f'stage_iii_{project_globals.CKD.name}', cause_type='sequela', )
+    stage_iv = DiseaseState(f'stage_iv_{project_globals.CKD.name}', cause_type='sequela', )
+    stage_v = DiseaseState(f'stage_v_{project_globals.CKD.name}', cause_type='sequela', )
+
+    # Susceptible transitions
+    susceptible.allow_self_transitions()
+    data_funcs = {'incidence_rate': lambda _, builder: builder.data.load(project_globals.CKD.INCIDENCE_RATE)}
+    susceptible.add_transition(transient, source_data_type='rate', get_data_functions=data_funcs)
+
+    # Transient transitions
+    data_funcs = {'proportion': lambda _, builder: builder.data.load(project_globals.CKD.ALBUMINURIA_PROPORTION)}
+    transient.add_transition(albuminuria, source_data_type='proportion', get_data_functions=data_funcs)
+    data_funcs = {'proportion': lambda _, builder: builder.data.load(project_globals.CKD.STAGE_III_CKD_PROPORTION)}
+    transient.add_transition(stage_iii, source_data_type='proportion', get_data_functions=data_funcs)
+    data_funcs = {'proportion': lambda _, builder: builder.data.load(project_globals.CKD.STAGE_IV_CKD_PROPORTION)}
+    transient.add_transition(stage_iv, source_data_type='proportion', get_data_functions=data_funcs)
+    data_funcs = {'proportion': lambda _, builder: builder.data.load(project_globals.CKD.STAGE_V_CKD_PROPORTION)}
+    transient.add_transition(stage_v, source_data_type='proportion', get_data_functions=data_funcs)
+
+    # Other transitions
+    albuminuria.allow_self_transitions()
+    stage_iii.allow_self_transitions()
+    stage_iv.allow_self_transitions()
+    stage_v.allow_self_transitions()
+
+    return DiseaseModel(
+        project_globals.CKD.name,
+        states=[susceptible, transient, albuminuria, stage_iii, stage_iv, stage_v]
+    )

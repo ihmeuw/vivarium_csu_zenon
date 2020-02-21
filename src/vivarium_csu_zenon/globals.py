@@ -101,7 +101,7 @@ ISCHEMIC_STROKE = __IschemicStroke()
 class __DiabetesMellitus(NamedTuple):
     MODERATE_DIABETES_PREVALENCE: str = 'sequela.moderate_diabetes_mellitus.prevalence'
     SEVERE_DIABETES_PREVALENCE: str = 'sequela.severe_diabetes_mellitus.prevalence'
-    ALL_DIABETES_INCIDENCE_RATE: str = 'cause.diabetes_mellitus.incidence_rate'
+    INCIDENCE_RATE: str = 'cause.diabetes_mellitus.incidence_rate'
     MODERATE_DIABETES_PROPORTION: str = 'sequela.moderate_diabetes_mellitus.proportion'
     SEVERE_DIABETES_PROPORTION: str = 'sequela.severe_diabetes_mellitus.proportion'
     MODERATE_DIABETES_DISABILITY_WEIGHT: str = 'sequela.moderate_diabetes_mellitus.disability_weight'
@@ -122,11 +122,45 @@ class __DiabetesMellitus(NamedTuple):
 
 DIABETES_MELLITUS = __DiabetesMellitus()
 
+
+class __ChronicKidneyDisease(NamedTuple):
+    ALBUMINURIA_PREVALENCE: str = 'sequela.albuminuria.prevalence'
+    STAGE_III_CKD_PREVALENCE: str = 'sequela.stage_iii_chronic_kidney_disease.prevalence'
+    STAGE_IV_CKD_PREVALENCE: str = 'sequela.stage_iv_chronic_kidney_disease.prevalence'
+    STAGE_V_CKD_PREVALENCE: str = 'sequela.stage_v_chronic_kidney_disease.prevalence'
+    INCIDENCE_RATE: str = 'cause.chronic_kidney_disease.incidence_rate'
+    ALBUMINURIA_PROPORTION: str = 'sequela.albuminuria.proportion'
+    STAGE_III_CKD_PROPORTION: str = 'sequela.stage_iii_chronic_kidney_disease.proportion'
+    STAGE_IV_CKD_PROPORTION: str = 'sequela.stage_iv_chronic_kidney_disease.proportion'
+    STAGE_V_CKD_PROPORTION: str = 'sequela.stage_v_chronic_kidney_disease.proportion'
+    ALBUMINURIA_DISABILITY_WEIGHT: str = 'sequela.albuminuria.disability_weight'
+    STAGE_III_CKD_DISABILITY_WEIGHT: str = 'sequela.stage_iii_chronic_kidney_disease.disability_weight'
+    STAGE_IV_CKD_DISABILITY_WEIGHT: str = 'sequela.stage_iv_chronic_kidney_disease.disability_weight'
+    STAGE_V_CKD_DISABILITY_WEIGHT: str = 'sequela.stage_v_chronic_kidney_disease.disability_weight'
+    ALBUMINURIA_EMR: str = 'sequela.albuminuria.excess_mortality_rate'
+    STAGE_III_CKD_EMR: str = 'sequela.stage_iii_chronic_kidney_disease.excess_mortality_rate'
+    STAGE_IV_CKD_EMR: str = 'sequela.stage_iv_chronic_kidney_disease.excess_mortality_rate'
+    STAGE_V_CKD_EMR: str = 'sequela.stage_v_chronic_kidney_disease.excess_mortality_rate'
+    CSMR: str = 'cause.chronic_kidney_disease.cause_specific_mortality_rate'
+    RESTRICTIONS: str = 'cause.chronic_kidney_disease.restrictions'
+
+    @property
+    def name(self):
+        return 'chronic_kidney_disease'
+
+    @property
+    def log_name(self):
+        return 'chronic kidney disease'
+
+
+CKD = __ChronicKidneyDisease()
+
 MAKE_ARTIFACT_KEY_GROUPS = [
     POPULATION,
     IHD,
     ISCHEMIC_STROKE,
-    DIABETES_MELLITUS
+    DIABETES_MELLITUS,
+    CKD,
 ]
 
 ###########################
@@ -141,7 +175,7 @@ IHD_MODEL_STATES = (IHD_SUSCEPTIBLE_STATE_NAME, ACUTE_MI_STATE_NAME, POST_MI_STA
 IHD_MODEL_TRANSITIONS = (
     f'{IHD_SUSCEPTIBLE_STATE_NAME}_TO_{ACUTE_MI_STATE_NAME}',
     f'{ACUTE_MI_STATE_NAME}_TO_{POST_MI_STATE_NAME}',
-    f'{POST_MI_STATE_NAME} _TO_{ACUTE_MI_STATE_NAME}'
+    f'{POST_MI_STATE_NAME}_TO_{ACUTE_MI_STATE_NAME}'
 )
 
 ISCHEMIC_STROKE_MODEL_NAME = 'ischemic_stroke'
@@ -156,7 +190,7 @@ ISCHEMIC_STROKE_MODEL_STATES = (
 ISCHEMIC_STROKE_MODEL_TRANSITIONS = (
     f'{ISCHEMIC_STROKE_SUSCEPTIBLE_STATE_NAME}_TO_{ACUTE_ISCHEMIC_STROKE_STATE_NAME}',
     f'{ACUTE_ISCHEMIC_STROKE_STATE_NAME}_TO_{POST_ISCHEMIC_STROKE_STATE_NAME}',
-    f'{POST_ISCHEMIC_STROKE_STATE_NAME} _TO_{ACUTE_ISCHEMIC_STROKE_STATE_NAME}'
+    f'{POST_ISCHEMIC_STROKE_STATE_NAME}_TO_{ACUTE_ISCHEMIC_STROKE_STATE_NAME}'
 )
 
 DIABETES_MELLITUS_MODEL_NAME = 'diabetes_mellitus'
@@ -166,16 +200,41 @@ MODERATE_DIABETES_MELLITUS_STATE_NAME = 'moderate_diabetes_mellitus'
 SEVERE_DIABETES_MELLITUS_STATE_NAME = 'severe_diabetes_mellitus'
 DIABETES_MELLITUS_MODEL_STATES = (
     DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME,
+    TRANSIENT_DIABETES_MELLITUS_STATE_NAME,
     MODERATE_DIABETES_MELLITUS_STATE_NAME,
     SEVERE_DIABETES_MELLITUS_STATE_NAME
 )
 DIABETES_MELLITUS_MODEL_TRANSITIONS = (
     f'{DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME}_TO_{TRANSIENT_DIABETES_MELLITUS_STATE_NAME}',
-    f'{TRANSIENT_DIABETES_MELLITUS_STATE_NAME} _TO_{MODERATE_DIABETES_MELLITUS_STATE_NAME}'
+    f'{TRANSIENT_DIABETES_MELLITUS_STATE_NAME}_TO_{MODERATE_DIABETES_MELLITUS_STATE_NAME}',
     f'{TRANSIENT_DIABETES_MELLITUS_STATE_NAME}_TO_{SEVERE_DIABETES_MELLITUS_STATE_NAME}',
+    f'{MODERATE_DIABETES_MELLITUS_STATE_NAME}_TO_{DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME}',
 )
 
-DISEASE_MODELS = (IHD_MODEL_NAME, ISCHEMIC_STROKE_MODEL_NAME, DIABETES_MELLITUS_MODEL_NAME)
+CKD_MODEL_NAME = 'chronic_kidney_disease'
+CKD_SUSCEPTIBLE_STATE_NAME = f'susceptible_to_{CKD_MODEL_NAME}'
+TRANSIENT_CKD_STATE_NAME = f'transient_{CKD_MODEL_NAME}'
+ALBUMINURIA_STATE_NAME = 'albuminuria'
+STAGE_III_CKD_STATE_NAME = f'stage_iii_{CKD_MODEL_NAME}'
+STAGE_IV_CKD_STATE_NAME = f'stage_iv_{CKD_MODEL_NAME}'
+STAGE_V_CKD_STATE_NAME = f'stage_v_{CKD_MODEL_NAME}'
+CKD_MODEL_STATES = (
+    CKD_SUSCEPTIBLE_STATE_NAME,
+    TRANSIENT_CKD_STATE_NAME,
+    ALBUMINURIA_STATE_NAME,
+    STAGE_III_CKD_STATE_NAME,
+    STAGE_IV_CKD_STATE_NAME,
+    STAGE_V_CKD_STATE_NAME
+)
+CKD_MODEL_TRANSITIONS = (
+    f'{CKD_SUSCEPTIBLE_STATE_NAME}_TO_{TRANSIENT_CKD_STATE_NAME}',
+    f'{TRANSIENT_CKD_STATE_NAME}_TO_{ALBUMINURIA_STATE_NAME}',
+    f'{TRANSIENT_CKD_STATE_NAME}_TO_{STAGE_III_CKD_STATE_NAME}',
+    f'{TRANSIENT_CKD_STATE_NAME}_TO_{STAGE_IV_CKD_STATE_NAME}',
+    f'{TRANSIENT_CKD_STATE_NAME}_TO_{STAGE_V_CKD_STATE_NAME}',
+)
+
+DISEASE_MODELS = (IHD_MODEL_NAME, ISCHEMIC_STROKE_MODEL_NAME, DIABETES_MELLITUS_MODEL_NAME, CKD_MODEL_NAME)
 DISEASE_MODEL_MAP = {
     IHD_MODEL_NAME: {
         'states': IHD_MODEL_STATES,
@@ -188,6 +247,10 @@ DISEASE_MODEL_MAP = {
     DIABETES_MELLITUS_MODEL_NAME: {
         'states': DIABETES_MELLITUS_MODEL_STATES,
         'transitions': DIABETES_MELLITUS_MODEL_TRANSITIONS,
+    },
+    CKD_MODEL_NAME: {
+        'states': CKD_MODEL_STATES,
+        'transitions': CKD_MODEL_TRANSITIONS,
     },
 }
 

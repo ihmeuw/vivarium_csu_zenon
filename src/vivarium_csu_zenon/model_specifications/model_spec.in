@@ -11,9 +11,11 @@ components:
         - IschemicHeartDisease()
         - IschemicStroke()
         - DiabetesMellitus()
+        - ChronicKidneyDisease()
         - DiseaseObserver('ischemic_heart_disease')
         - DiseaseObserver('ischemic_stroke')
         - DiseaseObserver('diabetes_mellitus')
+        - DiseaseObserver('chronic_kidney_disease')
 
 configuration:
     input_data:
