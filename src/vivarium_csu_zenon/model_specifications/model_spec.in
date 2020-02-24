@@ -54,3 +54,19 @@ configuration:
             by_age: True
             by_sex: True
             by_year: True
+        ischemic_heart_disease_observer:
+            by_age: True
+            by_sex: True
+            by_year: True
+        ischemic_stroke_observer:
+            by_age: True
+            by_sex: True
+            by_year: True
+        diabetes_mellitus_observer:
+            by_age: True
+            by_sex: True
+            by_year: True
+        chronic_kidney_disease_observer:
+            by_age: True
+            by_sex: True
+            by_year: True
