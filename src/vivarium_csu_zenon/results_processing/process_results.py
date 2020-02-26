@@ -29,8 +29,8 @@ def make_measure_data(data):
         ylls=get_measure_data(data, 'ylls'),
         ylds=get_measure_data(data, 'ylds'),
         deaths=get_measure_data(data, 'deaths'),
-        state_person_time=get_measure_data(data, 'state_person_time', with_cause=False),
-        transition_count=get_measure_data(data, 'transition_count', with_cause=False)
+        state_person_time=get_measure_data(data, 'state_person_time', with_cause=False, state=True),
+        transition_count=get_measure_data(data, 'transition_count', with_cause=False, transition=True),
     )
     return measure_data
 
@@ -140,13 +140,20 @@ def sort_data(data):
     return data.reset_index(drop=True)
 
 
-def split_processing_column(data, with_cause):
-    if with_cause:
-        data['measure'], data['process'] = data.process.str.split('_due_to_').str
-        data['cause'], data['age_group'] = data.process.str.split('_in_age_group_').str
-    else:
-        data['measure'], data['age_group'] = data.process.str.split('_in_age_group_').str
+def split_processing_column(data, with_cause, state, transition):
     data['treatment_group'] = 'all'
+    data['process'], data['age_group'] = data.process.str.split('_in_age_group_').str
+    data['process'], data['sex'] = data.process.str.split('_among_').str
+    data['process'], data['year'] = data.process.str.split('_in_').str
+    if with_cause:
+        data['measure'], data['cause'] = data.process.str.split('_due_to_').str
+    elif state:
+        data['state'], _ = data.process.str.split('_person_time').str
+        data['measure'] = 'person_time'
+    elif transition:
+        data['measure'], _ = data.process.str.split('_event_count').str
+    else:
+        data['measure'] = data['process']
     return data.drop(columns='process')
 
 
@@ -159,9 +166,9 @@ def get_population_data(data):
     return sort_data(total_pop)
 
 
-def get_measure_data(data, measure, with_cause=True):
+def get_measure_data(data, measure, with_cause=True, state=False, transition=False):
     data = pivot_data(data[project_globals.RESULT_COLUMNS(measure) + GROUPBY_COLUMNS])
-    data = split_processing_column(data, with_cause)
+    data = split_processing_column(data, with_cause, state, transition)
     return sort_data(data)
 
 
