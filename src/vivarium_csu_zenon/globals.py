@@ -101,9 +101,6 @@ ISCHEMIC_STROKE = __IschemicStroke()
 class __DiabetesMellitus(NamedTuple):
     MODERATE_DIABETES_PREVALENCE: str = 'sequela.moderate_diabetes_mellitus.prevalence'
     SEVERE_DIABETES_PREVALENCE: str = 'sequela.severe_diabetes_mellitus.prevalence'
-    INCIDENCE_RATE: str = 'cause.diabetes_mellitus.incidence_rate'
-    MODERATE_DIABETES_PROPORTION: str = 'sequela.moderate_diabetes_mellitus.proportion'
-    SEVERE_DIABETES_PROPORTION: str = 'sequela.severe_diabetes_mellitus.proportion'
     MODERATE_DIABETES_DISABILITY_WEIGHT: str = 'sequela.moderate_diabetes_mellitus.disability_weight'
     SEVERE_DIABETES_DISABILITY_WEIGHT: str = 'sequela.severe_diabetes_mellitus.disability_weight'
     MODERATE_DIABETES_EMR: str = 'sequela.moderate_diabetes_mellitus.excess_mortality_rate'
@@ -128,11 +125,6 @@ class __ChronicKidneyDisease(NamedTuple):
     STAGE_III_CKD_PREVALENCE: str = 'sequela.stage_iii_chronic_kidney_disease.prevalence'
     STAGE_IV_CKD_PREVALENCE: str = 'sequela.stage_iv_chronic_kidney_disease.prevalence'
     STAGE_V_CKD_PREVALENCE: str = 'sequela.stage_v_chronic_kidney_disease.prevalence'
-    INCIDENCE_RATE: str = 'cause.chronic_kidney_disease.incidence_rate'
-    ALBUMINURIA_PROPORTION: str = 'sequela.albuminuria.proportion'
-    STAGE_III_CKD_PROPORTION: str = 'sequela.stage_iii_chronic_kidney_disease.proportion'
-    STAGE_IV_CKD_PROPORTION: str = 'sequela.stage_iv_chronic_kidney_disease.proportion'
-    STAGE_V_CKD_PROPORTION: str = 'sequela.stage_v_chronic_kidney_disease.proportion'
     ALBUMINURIA_DISABILITY_WEIGHT: str = 'sequela.albuminuria.disability_weight'
     STAGE_III_CKD_DISABILITY_WEIGHT: str = 'sequela.stage_iii_chronic_kidney_disease.disability_weight'
     STAGE_IV_CKD_DISABILITY_WEIGHT: str = 'sequela.stage_iv_chronic_kidney_disease.disability_weight'
@@ -202,11 +194,7 @@ DIABETES_MELLITUS_MODEL_STATES = (
     MODERATE_DIABETES_MELLITUS_STATE_NAME,
     SEVERE_DIABETES_MELLITUS_STATE_NAME
 )
-DIABETES_MELLITUS_MODEL_TRANSITIONS = (
-    f'{DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME}_to_{MODERATE_DIABETES_MELLITUS_STATE_NAME}',
-    f'{DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME}_to_{SEVERE_DIABETES_MELLITUS_STATE_NAME}',
-    f'{MODERATE_DIABETES_MELLITUS_STATE_NAME}_to_{DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME}',
-)
+DIABETES_MELLITUS_MODEL_TRANSITIONS = ()
 
 CKD_MODEL_NAME = 'chronic_kidney_disease'
 CKD_SUSCEPTIBLE_STATE_NAME = f'susceptible_to_{CKD_MODEL_NAME}'
@@ -221,12 +209,7 @@ CKD_MODEL_STATES = (
     STAGE_IV_CKD_STATE_NAME,
     STAGE_V_CKD_STATE_NAME
 )
-CKD_MODEL_TRANSITIONS = (
-    f'{CKD_SUSCEPTIBLE_STATE_NAME}_to_{ALBUMINURIA_STATE_NAME}',
-    f'{CKD_SUSCEPTIBLE_STATE_NAME}_to_{STAGE_III_CKD_STATE_NAME}',
-    f'{CKD_SUSCEPTIBLE_STATE_NAME}_to_{STAGE_IV_CKD_STATE_NAME}',
-    f'{CKD_SUSCEPTIBLE_STATE_NAME}_to_{STAGE_V_CKD_STATE_NAME}',
-)
+CKD_MODEL_TRANSITIONS = ()
 
 DISEASE_MODELS = (IHD_MODEL_NAME, ISCHEMIC_STROKE_MODEL_NAME, DIABETES_MELLITUS_MODEL_NAME, CKD_MODEL_NAME)
 DISEASE_MODEL_MAP = {
