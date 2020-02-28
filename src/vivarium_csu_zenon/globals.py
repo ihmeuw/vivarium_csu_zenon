@@ -155,6 +155,7 @@ class __HighLDLCholesterol(NamedTuple):
     EXPOSURE_WEIGHTS: str = 'risk_factor.high_ldl_cholesterol.exposure_distribution_weights'
     RELATIVE_RISK: str = 'risk_factor.high_ldl_cholesterol.relative_risk'
     PAF: str = 'risk_factor.high_ldl_cholesterol.population_attributable_fraction'
+    TMRED: str = 'risk_factor.high_ldl_cholesterol.tmred'
 
     @property
     def name(self):
@@ -175,6 +176,7 @@ class __HighSystolicBloodPressure(NamedTuple):
     EXPOSURE_WEIGHTS: str = 'risk_factor.high_systolic_blood_pressure.exposure_distribution_weights'
     RELATIVE_RISK: str = 'risk_factor.high_systolic_blood_pressure.relative_risk'
     PAF: str = 'risk_factor.high_systolic_blood_pressure.population_attributable_fraction'
+    TMRED: str = 'risk_factor.high_systolic_blood_pressure.tmred'
 
     @property
     def name(self):
