@@ -95,6 +95,7 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.LDL_C.RELATIVE_RISK: load_standard_data,
         project_globals.LDL_C.PAF: load_standard_data,
         project_globals.LDL_C.TMRED: load_metadata,
+        project_globals.LDL_C.RELATIVE_RISK_SCALAR: load_metadata,
         
         project_globals.SBP.DISTRIBUTION: load_metadata,
         project_globals.SBP.EXPOSURE_MEAN: load_standard_data,
@@ -103,6 +104,7 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.SBP.RELATIVE_RISK: load_standard_data,
         project_globals.SBP.PAF: load_standard_data,
         project_globals.SBP.TMRED: load_metadata,
+        project_globals.SBP.RELATIVE_RISK_SCALAR: load_metadata,
         
     }
     return mapping[lookup_key](lookup_key, location)
