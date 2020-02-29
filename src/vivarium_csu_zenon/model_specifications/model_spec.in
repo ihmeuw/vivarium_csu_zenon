@@ -10,15 +10,15 @@ components:
             - Risk('risk_factor.high_systolic_blood_pressure')
             - RiskEffect('risk_factor.high_systolic_blood_pressure', 'cause.ischemic_heart_disease.incidence_rate')
             - RiskEffect('risk_factor.high_systolic_blood_pressure', 'cause.ischemic_stroke.incidence_rate')
-        metrics:
-            - DisabilityObserver()
-            - MortalityObserver()
 
     vivarium_csu_zenon.components:
         - IschemicHeartDisease()
         - IschemicStroke()
         - DiabetesMellitus()
         - ChronicKidneyDisease()
+
+        - MortalityObserver()
+        - DisabilityObserver()
         - DiseaseObserver('ischemic_heart_disease')
         - DiseaseObserver('ischemic_stroke')
         - DiseaseObserver('diabetes_mellitus')
