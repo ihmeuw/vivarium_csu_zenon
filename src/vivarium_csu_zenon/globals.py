@@ -1,8 +1,6 @@
-from math import inf
 from typing import NamedTuple
 
 import itertools
-from pandas import interval_range
 
 
 ####################
