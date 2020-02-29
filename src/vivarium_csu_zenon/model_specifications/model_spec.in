@@ -3,6 +3,13 @@ components:
         population:
             - BasePopulation()
             - Mortality()
+        risks:
+            - Risk('risk_factor.high_ldl_cholesterol')
+            - RiskEffect('risk_factor.high_ldl_cholesterol', 'cause.ischemic_heart_disease.incidence_rate')
+            - RiskEffect('risk_factor.high_ldl_cholesterol', 'cause.ischemic_stroke.incidence_rate')
+            - Risk('risk_factor.high_systolic_blood_pressure')
+            - RiskEffect('risk_factor.high_systolic_blood_pressure', 'cause.ischemic_heart_disease.incidence_rate')
+            - RiskEffect('risk_factor.high_systolic_blood_pressure', 'cause.ischemic_stroke.incidence_rate')
         metrics:
             - DisabilityObserver()
             - MortalityObserver()

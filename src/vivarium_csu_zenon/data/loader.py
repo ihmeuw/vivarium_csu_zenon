@@ -87,6 +87,25 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.CKD.STAGE_V_CKD_EMR: load_ckd_excess_mortality_rate,
         project_globals.CKD.CSMR: load_standard_data,
         project_globals.CKD.RESTRICTIONS: load_metadata,
+        
+        project_globals.LDL_C.DISTRIBUTION: load_metadata,
+        project_globals.LDL_C.EXPOSURE_MEAN: load_standard_data,
+        project_globals.LDL_C.EXPOSURE_SD: load_standard_data,
+        project_globals.LDL_C.EXPOSURE_WEIGHTS: load_standard_data,
+        project_globals.LDL_C.RELATIVE_RISK: load_standard_data,
+        project_globals.LDL_C.PAF: load_standard_data,
+        project_globals.LDL_C.TMRED: load_metadata,
+        project_globals.LDL_C.RELATIVE_RISK_SCALAR: load_metadata,
+        
+        project_globals.SBP.DISTRIBUTION: load_metadata,
+        project_globals.SBP.EXPOSURE_MEAN: load_standard_data,
+        project_globals.SBP.EXPOSURE_SD: load_standard_data,
+        project_globals.SBP.EXPOSURE_WEIGHTS: load_standard_data,
+        project_globals.SBP.RELATIVE_RISK: load_standard_data,
+        project_globals.SBP.PAF: load_standard_data,
+        project_globals.SBP.TMRED: load_metadata,
+        project_globals.SBP.RELATIVE_RISK_SCALAR: load_metadata,
+        
     }
     return mapping[lookup_key](lookup_key, location)
 
