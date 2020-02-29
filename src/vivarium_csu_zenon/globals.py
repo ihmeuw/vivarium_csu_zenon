@@ -147,12 +147,58 @@ class __ChronicKidneyDisease(NamedTuple):
 
 CKD = __ChronicKidneyDisease()
 
+
+class __HighLDLCholesterol(NamedTuple):
+    DISTRIBUTION: str = 'risk_factor.high_ldl_cholesterol.distribution'
+    EXPOSURE_MEAN: str = 'risk_factor.high_ldl_cholesterol.exposure'
+    EXPOSURE_SD: str = 'risk_factor.high_ldl_cholesterol.exposure_standard_deviation'
+    EXPOSURE_WEIGHTS: str = 'risk_factor.high_ldl_cholesterol.exposure_distribution_weights'
+    RELATIVE_RISK: str = 'risk_factor.high_ldl_cholesterol.relative_risk'
+    PAF: str = 'risk_factor.high_ldl_cholesterol.population_attributable_fraction'
+    TMRED: str = 'risk_factor.high_ldl_cholesterol.tmred'
+    RELATIVE_RISK_SCALAR: str = 'risk_factor.high_ldl_cholesterol.relative_risk_scalar'
+
+    @property
+    def name(self):
+        return 'high_ldl_cholesterol'
+
+    @property
+    def log_name(self):
+        return 'high ldl cholesterol'
+
+
+LDL_C = __HighLDLCholesterol()
+
+
+class __HighSystolicBloodPressure(NamedTuple):
+    DISTRIBUTION: str = 'risk_factor.high_systolic_blood_pressure.distribution'
+    EXPOSURE_MEAN: str = 'risk_factor.high_systolic_blood_pressure.exposure'
+    EXPOSURE_SD: str = 'risk_factor.high_systolic_blood_pressure.exposure_standard_deviation'
+    EXPOSURE_WEIGHTS: str = 'risk_factor.high_systolic_blood_pressure.exposure_distribution_weights'
+    RELATIVE_RISK: str = 'risk_factor.high_systolic_blood_pressure.relative_risk'
+    PAF: str = 'risk_factor.high_systolic_blood_pressure.population_attributable_fraction'
+    TMRED: str = 'risk_factor.high_systolic_blood_pressure.tmred'
+    RELATIVE_RISK_SCALAR: str = 'risk_factor.high_systolic_blood_pressure.relative_risk_scalar'
+
+    @property
+    def name(self):
+        return 'high_systolic_blood_pressure'
+
+    @property
+    def log_name(self):
+        return 'high systolic blood pressure'
+
+
+SBP = __HighSystolicBloodPressure()
+
 MAKE_ARTIFACT_KEY_GROUPS = [
     POPULATION,
     IHD,
     ISCHEMIC_STROKE,
     DIABETES_MELLITUS,
     CKD,
+    LDL_C,
+    SBP,
 ]
 
 ###########################
