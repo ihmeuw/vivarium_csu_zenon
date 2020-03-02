@@ -22,12 +22,10 @@ class MortalityObserver(MortalityObserver_):
 
     def metrics(self, index, metrics):
         pop = self.population_view.get(index)
-        pop['sbp_category'] = pd.cut(self.systolic_blood_pressure(pop.index),
-                                     (0, project_globals.SBP_CATEGORY_CUTOFF, inf),
-                                     labels=project_globals.LDL_C_RISK_CATEGORIES)
-        pop['ldl_c_category'] = pd.cut(self.ldl_cholesterol(pop.index),
-                                       (0, project_globals.LDL_C_CATEGORY_CUTOFF, inf),
-                                       labels=project_globals.SBP_RISK_CATEGORIES)
+        sbp = pd.cut(self.systolic_blood_pressure(pop.index), (0, project_globals.SBP_CATEGORY_CUTOFF, inf),
+                     labels=project_globals.LDL_C_RISK_CATEGORIES)
+        ldl_c = pd.cut(self.ldl_cholesterol(pop.index), (0, project_globals.LDL_C_CATEGORY_CUTOFF, inf),
+                       labels=project_globals.SBP_RISK_CATEGORIES)
         pop.loc[pop.exit_time.isnull(), 'exit_time'] = self.clock()
 
         measure_getters = (
@@ -38,13 +36,13 @@ class MortalityObserver(MortalityObserver_):
 
         categories = product(project_globals.SBP_RISK_CATEGORIES, project_globals.LDL_C_RISK_CATEGORIES,)
 
-        for sbp_cat, ldlc_cat in categories:
-            pop_in_group = pop.loc[(pop['sbp_category'] == sbp_cat) & (pop['ldl_c_category'] == ldlc_cat)]
+        for sbp_cat, ldl_c_cat in categories:
+            pop_in_group = pop.loc[(sbp == sbp_cat) & (ldl_c == ldl_c_cat)]
             base_args = (pop_in_group, self.config.to_dict(), self.start_time, self.clock(), self.age_bins)
 
             for measure_getter, extra_args in measure_getters:
                 measure_data = measure_getter(*base_args, *extra_args)
-                measure_data = {f'{k}_sbp_{sbp_cat}_ldl_c_{ldlc_cat}': v for k, v in measure_data.items()}
+                measure_data = {f'{k}_sbp_{sbp_cat}_ldl_c_{ldl_c_cat}': v for k, v in measure_data.items()}
                 metrics.update(measure_data)
 
         the_living = pop[(pop.alive == 'alive') & pop.tracked]
@@ -71,25 +69,20 @@ class DisabilityObserver(DisabilityObserver_):
 
     def update_metrics(self, pop):
 
-        pop['sbp_category'] = pd.cut(self.systolic_blood_pressure(pop.index),
-                                     (0, project_globals.SBP_CATEGORY_CUTOFF, inf),
-                                     labels=project_globals.LDL_C_RISK_CATEGORIES)
-        pop['ldl_c_category'] = pd.cut(self.ldl_cholesterol(pop.index),
-                                       (0, project_globals.LDL_C_CATEGORY_CUTOFF, inf),
-                                       labels=project_globals.SBP_RISK_CATEGORIES)
+        sbp = pd.cut(self.systolic_blood_pressure(pop.index), (0, project_globals.SBP_CATEGORY_CUTOFF, inf),
+                     labels=project_globals.LDL_C_RISK_CATEGORIES)
+        ldl_c = pd.cut(self.ldl_cholesterol(pop.index), (0, project_globals.LDL_C_CATEGORY_CUTOFF, inf),
+                       labels=project_globals.SBP_RISK_CATEGORIES)
         categories = product(project_globals.SBP_RISK_CATEGORIES, project_globals.LDL_C_RISK_CATEGORIES,)
-        for sbp_cat, ldlc_cat in categories:
-            pop_in_group = pop.loc[(pop['sbp_category'] == sbp_cat) & (pop['ldl_c_category'] == ldlc_cat)]
+        for sbp_cat, ldl_c_cat in categories:
+            pop_in_group = pop.loc[(sbp == sbp_cat) & (ldl_c == ldl_c_cat)]
 
             ylds_this_step = get_years_lived_with_disability(pop_in_group, self.config.to_dict(),
                                                              self.clock().year, self.step_size(),
                                                              self.age_bins, self.disability_weight_pipelines,
                                                              project_globals.CAUSES_OF_DISABILITY)
-            ylds_this_step = {f'{k}_sbp_{sbp_cat}_ldl_c_{ldlc_cat}': v for k, v in ylds_this_step.items()}
+            ylds_this_step = {f'{k}_sbp_{sbp_cat}_ldl_c_{ldl_c_cat}': v for k, v in ylds_this_step.items()}
             self.years_lived_with_disability.update(ylds_this_step)
-
-        del pop['sbp_category']
-        del pop['ldl_c_category']
 
 
 class DiseaseObserver:
