@@ -1,5 +1,6 @@
 from collections import Counter
 from itertools import product
+from math import inf
 
 import pandas as pd
 from vivarium_public_health.metrics import (MortalityObserver as MortalityObserver_,
@@ -10,6 +11,78 @@ from vivarium_public_health.metrics.utilities import (get_output_template, get_g
                                                       get_years_lived_with_disability, get_age_bins)
 
 from vivarium_csu_zenon import globals as project_globals
+
+
+class MortalityObserver(MortalityObserver_):
+
+    def setup(self, builder):
+        super().setup(builder)
+        self.systolic_blood_pressure = builder.value.get_value(f'{project_globals.SBP.name}.exposure')
+        self.ldl_cholesterol = builder.value.get_value(f'{project_globals.LDL_C.name}.exposure')
+
+    def metrics(self, index, metrics):
+        pop = self.population_view.get(index)
+        sbp = pd.cut(self.systolic_blood_pressure(pop.index), (0, project_globals.SBP_CATEGORY_CUTOFF, inf),
+                     labels=project_globals.LDL_C_RISK_CATEGORIES)
+        ldl_c = pd.cut(self.ldl_cholesterol(pop.index), (0, project_globals.LDL_C_CATEGORY_CUTOFF, inf),
+                       labels=project_globals.SBP_RISK_CATEGORIES)
+        pop.loc[pop.exit_time.isnull(), 'exit_time'] = self.clock()
+
+        measure_getters = (
+            (get_person_time, ()),
+            (get_deaths, (project_globals.CAUSES_OF_DEATH,)),
+            (get_years_of_life_lost, (self.life_expectancy, project_globals.CAUSES_OF_DEATH)),
+        )
+
+        categories = product(project_globals.SBP_RISK_CATEGORIES, project_globals.LDL_C_RISK_CATEGORIES,)
+
+        for sbp_cat, ldl_c_cat in categories:
+            pop_in_group = pop.loc[(sbp == sbp_cat) & (ldl_c == ldl_c_cat)]
+            base_args = (pop_in_group, self.config.to_dict(), self.start_time, self.clock(), self.age_bins)
+
+            for measure_getter, extra_args in measure_getters:
+                measure_data = measure_getter(*base_args, *extra_args)
+                measure_data = {f'{k}_sbp_{sbp_cat}_ldl_c_{ldl_c_cat}': v for k, v in measure_data.items()}
+                metrics.update(measure_data)
+
+        the_living = pop[(pop.alive == 'alive') & pop.tracked]
+        the_dead = pop[pop.alive == 'dead']
+        metrics[project_globals.TOTAL_YLLS_COLUMN] = self.life_expectancy(the_dead.index).sum()
+        metrics['total_population_living'] = len(the_living)
+        metrics['total_population_dead'] = len(the_dead)
+
+        return metrics
+
+
+class DisabilityObserver(DisabilityObserver_):
+    def setup(self, builder):
+        super().setup(builder)
+        self.systolic_blood_pressure = builder.value.get_value(f'{project_globals.SBP.name}.exposure')
+        self.ldl_cholesterol = builder.value.get_value(f'{project_globals.LDL_C.name}.exposure')
+
+    def on_time_step_prepare(self, event):
+        pop = self.population_view.get(event.index, query='tracked == True and alive == "alive"')
+        self.update_metrics(pop)
+
+        pop.loc[:, project_globals.TOTAL_YLDS_COLUMN] += self.disability_weight(pop.index)
+        self.population_view.update(pop)
+
+    def update_metrics(self, pop):
+
+        sbp = pd.cut(self.systolic_blood_pressure(pop.index), (0, project_globals.SBP_CATEGORY_CUTOFF, inf),
+                     labels=project_globals.LDL_C_RISK_CATEGORIES)
+        ldl_c = pd.cut(self.ldl_cholesterol(pop.index), (0, project_globals.LDL_C_CATEGORY_CUTOFF, inf),
+                       labels=project_globals.SBP_RISK_CATEGORIES)
+        categories = product(project_globals.SBP_RISK_CATEGORIES, project_globals.LDL_C_RISK_CATEGORIES,)
+        for sbp_cat, ldl_c_cat in categories:
+            pop_in_group = pop.loc[(sbp == sbp_cat) & (ldl_c == ldl_c_cat)]
+
+            ylds_this_step = get_years_lived_with_disability(pop_in_group, self.config.to_dict(),
+                                                             self.clock().year, self.step_size(),
+                                                             self.age_bins, self.disability_weight_pipelines,
+                                                             project_globals.CAUSES_OF_DISABILITY)
+            ylds_this_step = {f'{k}_sbp_{sbp_cat}_ldl_c_{ldl_c_cat}': v for k, v in ylds_this_step.items()}
+            self.years_lived_with_disability.update(ylds_this_step)
 
 
 class DiseaseObserver:
