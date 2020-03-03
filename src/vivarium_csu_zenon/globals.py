@@ -191,6 +191,47 @@ class __HighSystolicBloodPressure(NamedTuple):
 
 SBP = __HighSystolicBloodPressure()
 
+
+class __FastingPlasmaGlucose(NamedTuple):
+    DISTRIBUTION: str = 'risk_factor.high_fasting_plasma_glucose_continuous.distribution'
+    EXPOSURE_MEAN: str = 'risk_factor.high_fasting_plasma_glucose_continuous.exposure'
+    EXPOSURE_SD: str = 'risk_factor.high_fasting_plasma_glucose_continuous.exposure_standard_deviation'
+    EXPOSURE_WEIGHTS: str = 'risk_factor.high_fasting_plasma_glucose_continuous.exposure_distribution_weights'
+    RELATIVE_RISK: str = 'risk_factor.high_fasting_plasma_glucose_continuous.relative_risk'
+    PAF: str = 'risk_factor.high_fasting_plasma_glucose_continuous.population_attributable_fraction'
+    TMRED: str = 'risk_factor.high_fasting_plasma_glucose_continuous.tmred'
+    RELATIVE_RISK_SCALAR: str = 'risk_factor.high_fasting_plasma_glucose_continuous.relative_risk_scalar'
+
+    @property
+    def name(self):
+        return 'high_fasting_plasma_glucose_continuous'
+
+    @property
+    def log_name(self):
+        return 'high fasting plasma glucose'
+
+
+FPG = __FastingPlasmaGlucose()
+
+
+# class __ImpairedKidneyFunction(NamedTuple):
+#     DISTRIBUTION: str = 'risk_factor.impaired_kidney_function.distribution'
+#     EXPOSURE_MEAN: str = 'risk_factor.impaired_kidney_function.exposure'
+#     RELATIVE_RISK: str = 'risk_factor.impaired_kidney_function.relative_risk'
+#     PAF: str = 'risk_factor.impaired_kidney_function.population_attributable_fraction'
+#     CATEGORIES: str = 'risk_factor.impaired_kidney_function.categories'
+#
+#     @property
+#     def name(self):
+#         return 'impaired_kidney_function'
+#
+#     @property
+#     def log_name(self):
+#         return 'impaired kidney function'
+#
+#
+# IKF = __ImpairedKidneyFunction()
+
 MAKE_ARTIFACT_KEY_GROUPS = [
     POPULATION,
     IHD,
@@ -199,6 +240,8 @@ MAKE_ARTIFACT_KEY_GROUPS = [
     CKD,
     LDL_C,
     SBP,
+    FPG,
+    # IKF,
 ]
 
 ###########################
