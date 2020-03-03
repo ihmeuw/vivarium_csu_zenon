@@ -292,6 +292,7 @@ AGE_GROUPS = (
     '75_to_79',
     '80_to_84',
     '85_to_89',
+    '90_to_94',
     '95_plus',
 )
 # TODO: do we include states with no mortality (e.g. MODERATE_DIABETES_MELLITUS_STATE_NAME)?
