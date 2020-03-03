@@ -25,10 +25,10 @@ DROP_COLUMNS = ['measure']
 def make_measure_data(data):
     measure_data = MeasureData(
         population=get_population_data(data),
-        person_time=get_measure_data(data, 'person_time', with_cause=False),
-        ylls=get_measure_data(data, 'ylls'),
-        ylds=get_measure_data(data, 'ylds'),
-        deaths=get_measure_data(data, 'deaths'),
+        person_time=get_measure_data(data, 'person_time', with_cause=False, risk_factors=True),
+        ylls=get_measure_data(data, 'ylls', risk_factors=True),
+        ylds=get_measure_data(data, 'ylds', risk_factors=True),
+        deaths=get_measure_data(data, 'deaths', risk_factors=True),
         state_person_time=get_measure_data(data, 'state_person_time', with_cause=False, state=True),
         transition_count=get_measure_data(data, 'transition_count', with_cause=False, transition=True),
     )
@@ -140,8 +140,11 @@ def sort_data(data):
     return data.reset_index(drop=True)
 
 
-def split_processing_column(data, with_cause, state, transition):
+def split_processing_column(data, with_cause, state, transition, risk_factors):
     data['treatment_group'] = 'all'
+    if risk_factors:
+        data['process'], data['ldl_cholestrol'] = data.process.str.split('_ldl_c_').str
+        data['process'], data['systolic_blood_pressure'] = data.process.str.split('_sbp_').str
     data['process'], data['age_group'] = data.process.str.split('_in_age_group_').str
     data['process'], data['sex'] = data.process.str.split('_among_').str
     data['process'], data['year'] = data.process.str.split('_in_').str
@@ -166,9 +169,9 @@ def get_population_data(data):
     return sort_data(total_pop)
 
 
-def get_measure_data(data, measure, with_cause=True, state=False, transition=False):
+def get_measure_data(data, measure, with_cause=True, state=False, transition=False, risk_factors=False):
     data = pivot_data(data[project_globals.RESULT_COLUMNS(measure) + GROUPBY_COLUMNS])
-    data = split_processing_column(data, with_cause, state, transition)
+    data = split_processing_column(data, with_cause, state, transition, risk_factors)
     return sort_data(data)
 
 
