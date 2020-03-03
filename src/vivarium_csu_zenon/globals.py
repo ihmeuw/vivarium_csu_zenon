@@ -214,23 +214,22 @@ class __FastingPlasmaGlucose(NamedTuple):
 FPG = __FastingPlasmaGlucose()
 
 
-# class __ImpairedKidneyFunction(NamedTuple):
-#     DISTRIBUTION: str = 'risk_factor.impaired_kidney_function.distribution'
-#     EXPOSURE_MEAN: str = 'risk_factor.impaired_kidney_function.exposure'
-#     RELATIVE_RISK: str = 'risk_factor.impaired_kidney_function.relative_risk'
-#     PAF: str = 'risk_factor.impaired_kidney_function.population_attributable_fraction'
-#     CATEGORIES: str = 'risk_factor.impaired_kidney_function.categories'
-#
-#     @property
-#     def name(self):
-#         return 'impaired_kidney_function'
-#
-#     @property
-#     def log_name(self):
-#         return 'impaired kidney function'
-#
-#
-# IKF = __ImpairedKidneyFunction()
+class __ImpairedKidneyFunction(NamedTuple):
+    DISTRIBUTION: str = 'risk_factor.impaired_kidney_function.distribution'
+    RELATIVE_RISK: str = 'risk_factor.impaired_kidney_function.relative_risk'
+    PAF: str = 'risk_factor.impaired_kidney_function.population_attributable_fraction'
+    CATEGORIES: str = 'risk_factor.impaired_kidney_function.categories'
+
+    @property
+    def name(self):
+        return 'impaired_kidney_function'
+
+    @property
+    def log_name(self):
+        return 'impaired kidney function'
+
+
+IKF = __ImpairedKidneyFunction()
 
 MAKE_ARTIFACT_KEY_GROUPS = [
     POPULATION,
@@ -241,7 +240,7 @@ MAKE_ARTIFACT_KEY_GROUPS = [
     LDL_C,
     SBP,
     FPG,
-    # IKF,
+    IKF,
 ]
 
 ###########################
