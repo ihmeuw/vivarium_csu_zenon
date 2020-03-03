@@ -517,6 +517,12 @@ def load_ikf_relative_risk(key: str, location: str) -> pd.DataFrame:
     data.loc[~morbidity & mortality, 'affected_measure'] = 'excess_mortality_rate'
     data = core.filter_relative_risk_to_cause_restrictions(data)
 
+    data = (data.groupby(['affected_entity', 'parameter'])
+            .apply(utilities.normalize, fill_value=1)
+            .reset_index(drop=True))
+    data = data.filter(vi_globals.DEMOGRAPHIC_COLUMNS + ['affected_entity', 'affected_measure', 'parameter']
+                       + vi_globals.DRAW_COLUMNS)
+
     tmrel_cat = utility_data.get_tmrel_category(entity)
     tmrel_mask = data.parameter == tmrel_cat
     data.loc[tmrel_mask, value_cols] = (
