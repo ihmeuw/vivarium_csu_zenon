@@ -105,7 +105,21 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.SBP.PAF: load_standard_data,
         project_globals.SBP.TMRED: load_metadata,
         project_globals.SBP.RELATIVE_RISK_SCALAR: load_metadata,
-        
+
+        project_globals.FPG.DISTRIBUTION: load_metadata,
+        project_globals.FPG.EXPOSURE_MEAN: load_standard_data,
+        project_globals.FPG.EXPOSURE_SD: load_standard_data,
+        project_globals.FPG.EXPOSURE_WEIGHTS: load_standard_data,
+        project_globals.FPG.RELATIVE_RISK: load_standard_data,
+        project_globals.FPG.PAF: load_standard_data,
+        project_globals.FPG.TMRED: load_metadata,
+        project_globals.FPG.RELATIVE_RISK_SCALAR: load_metadata,
+
+        # project_globals.IKF.DISTRIBUTION: load_metadata,
+        # project_globals.IKF.EXPOSURE_MEAN: load_standard_data,
+        # project_globals.IKF.RELATIVE_RISK: load_standard_data,
+        # project_globals.IKF.PAF: load_standard_data,
+        # project_globals.IKF.CATEGORIES: load_standard_data,
     }
     return mapping[lookup_key](lookup_key, location)
 
