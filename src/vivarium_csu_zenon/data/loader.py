@@ -10,13 +10,14 @@ for an example.
 
 .. admonition::
 """
-from loguru import logger
+import pandas as pd
+import numpy as np
 from vivarium_gbd_access import gbd
 from gbd_mapping import causes, risk_factors, covariates, sequelae
-import pandas as pd
 from vivarium.framework.artifact import EntityKey
-from vivarium_inputs import interface, utilities, utility_data, globals as vi_globals
+from vivarium_inputs import core, extract, interface, utilities, utility_data, globals as vi_globals
 from vivarium_inputs.mapping_extension import alternative_risk_factors
+import vivarium_inputs.validation.sim as validation
 
 from vivarium_csu_zenon import paths, globals as project_globals
 
@@ -115,11 +116,10 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.FPG.TMRED: load_metadata,
         project_globals.FPG.RELATIVE_RISK_SCALAR: load_metadata,
 
-        # project_globals.IKF.DISTRIBUTION: load_metadata,
-        # project_globals.IKF.EXPOSURE_MEAN: load_standard_data,
-        # project_globals.IKF.RELATIVE_RISK: load_standard_data,
-        # project_globals.IKF.PAF: load_standard_data,
-        # project_globals.IKF.CATEGORIES: load_standard_data,
+        project_globals.IKF.DISTRIBUTION: load_metadata,
+        project_globals.IKF.RELATIVE_RISK: load_ikf_relative_risk,
+        project_globals.IKF.PAF: load_ikf_paf,
+        project_globals.IKF.CATEGORIES: load_metadata,
     }
     return mapping[lookup_key](lookup_key, location)
 
@@ -496,6 +496,91 @@ def load_standard_excess_mortality_rate(key: str, location: str) -> pd.DataFrame
     }
 
     return _load_em_from_meid(meids[key], location)
+
+
+def load_ikf_relative_risk(key: str, location: str) -> pd.DataFrame:
+    key = EntityKey(key)
+    entity = get_entity(key)
+
+    value_cols = vi_globals.DRAW_COLUMNS
+    location_id = utility_data.get_location_id(location)
+
+    data = extract.extract_data(entity, 'relative_risk', location_id, validate=False)
+    yll_only_causes = set([c.gbd_id for c in causes if c.restrictions.yll_only])
+    data = data[~data.cause_id.isin(yll_only_causes)]
+
+    data = utilities.convert_affected_entity(data, 'cause_id')
+    data = data[data['affected_entity'].isin(project_globals.DISEASE_MODELS)]
+    morbidity = data.morbidity == 1
+    mortality = data.mortality == 1
+    data.loc[morbidity & mortality, 'affected_measure'] = 'incidence_rate'
+    data.loc[morbidity & ~mortality, 'affected_measure'] = 'incidence_rate'
+    data.loc[~morbidity & mortality, 'affected_measure'] = 'excess_mortality_rate'
+    data = core.filter_relative_risk_to_cause_restrictions(data)
+
+    data = (data.groupby(['affected_entity', 'parameter'])
+            .apply(utilities.normalize, fill_value=1)
+            .reset_index(drop=True))
+    data = data.filter(vi_globals.DEMOGRAPHIC_COLUMNS + ['affected_entity', 'affected_measure', 'parameter']
+                       + vi_globals.DRAW_COLUMNS)
+
+    tmrel_cat = utility_data.get_tmrel_category(entity)
+    tmrel_mask = data.parameter == tmrel_cat
+    data.loc[tmrel_mask, value_cols] = (
+        data.loc[tmrel_mask, value_cols].mask(np.isclose(data.loc[tmrel_mask, value_cols], 1.0), 1.0)
+    )
+
+    data = utilities.reshape(data, value_cols=value_cols)
+    data = utilities.scrub_gbd_conventions(data, location)
+    validation.validate_for_simulation(data, entity, key.measure, location)
+    data = utilities.split_interval(data, interval_column='age', split_column_prefix='age')
+    data = utilities.split_interval(data, interval_column='year', split_column_prefix='year')
+    return utilities.sort_hierarchical_data(data)
+
+
+def load_ikf_paf(key: str, location: str) -> pd.DataFrame:
+    key = EntityKey(key)
+    entity = get_entity(key)
+
+    value_cols = vi_globals.DRAW_COLUMNS
+    location_id = utility_data.get_location_id(location)
+
+    data = extract.extract_data(entity, 'population_attributable_fraction', location_id, validate=False)
+    relative_risk = extract.extract_data(entity, 'relative_risk', location_id, validate=False)
+
+    yll_only_causes = set([c.gbd_id for c in causes if c.restrictions.yll_only])
+    data = data[~data.cause_id.isin(yll_only_causes)]
+    relative_risk = relative_risk[~relative_risk.cause_id.isin(yll_only_causes)]
+
+    data = (data.groupby('cause_id', as_index=False)
+            .apply(core.filter_by_relative_risk, relative_risk)
+            .reset_index(drop=True))
+
+    causes_map = {c.gbd_id: c for c in causes}
+    temp = []
+    # We filter paf age groups by cause level restrictions.
+    for (c_id, measure), df in data.groupby(['cause_id', 'measure_id']):
+        cause = causes_map[c_id]
+        measure = 'yll' if measure == vi_globals.MEASURES['YLLs'] else 'yld'
+        df = utilities.filter_data_by_restrictions(df, cause, measure, utility_data.get_age_group_ids())
+        temp.append(df)
+    data = pd.concat(temp, ignore_index=True)
+
+    data = utilities.convert_affected_entity(data, 'cause_id')
+    data.loc[data['measure_id'] == vi_globals.MEASURES['YLLs'], 'affected_measure'] = 'excess_mortality_rate'
+    data.loc[data['measure_id'] == vi_globals.MEASURES['YLDs'], 'affected_measure'] = 'incidence_rate'
+    data = (data.groupby(['affected_entity', 'affected_measure'])
+            .apply(utilities.normalize, fill_value=0)
+            .reset_index(drop=True))
+    data = data.filter(vi_globals.DEMOGRAPHIC_COLUMNS + ['affected_entity', 'affected_measure']
+                       + vi_globals.DRAW_COLUMNS)
+
+    data = utilities.reshape(data, value_cols=value_cols)
+    data = utilities.scrub_gbd_conventions(data, location)
+    validation.validate_for_simulation(data, entity, key.measure, location)
+    data = utilities.split_interval(data, interval_column='age', split_column_prefix='age')
+    data = utilities.split_interval(data, interval_column='year', split_column_prefix='year')
+    return utilities.sort_hierarchical_data(data)
 
 
 def _load_em_from_meid(meid, location):
