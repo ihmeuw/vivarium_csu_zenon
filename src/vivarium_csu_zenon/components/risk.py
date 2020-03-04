@@ -1,4 +1,7 @@
-from vivarium_public_health.risks import RiskEffect as RiskEffect_
+import pandas as pd
+
+from gbd_mapping import risk_factors
+from vivarium_public_health.risks import Risk, RiskEffect as RiskEffect_
 from vivarium_public_health.risks.data_transformations import get_distribution_type, pivot_categorical
 from vivarium_public_health.utilities import TargetString
 
@@ -34,3 +37,40 @@ class RiskEffect(RiskEffect_):
         paf_data = (paf_data[correct_target]
                     .drop(['affected_entity', 'affected_measure'], 'columns'))
         return paf_data
+
+
+class IKFRisk(Risk):
+    def __init__(self):
+        super().__init__(f'risk_factor.{project_globals.IKF.name}')
+        self.exposure_distribution = None
+        self._sub_components = []
+
+    def setup(self, builder):
+        self.exposure = builder.value.register_value_producer(
+            f'{self.risk.name}.exposure',
+            source=self.get_current_exposure,
+            requires_columns=list(project_globals.CKD_MODEL_STATES)
+        )
+
+        self.population_view = builder.population.get_view(list(project_globals.CKD_MODEL_STATES))
+        builder.population.initializes_simulants(self.on_initialize_simulants)
+
+    def on_initialize_simulants(self, pop_data):
+        pass
+
+    def get_current_exposure(self, index):
+        ckd_state_df = self.population_view.get(index)[project_globals.CKD_MODEL_STATES]
+        ikf_state_df = ckd_state_df.apply(self.get_risk_level_from_ckd_level, axis=1)
+        return pd.Series(ikf_state_df, index=index)
+
+    def get_risk_level_from_ckd_level(self, row):
+        if row.susceptible_to_chronic_kidney_disease:
+            return risk_factors.impaired_kidney_function.categories.cat5
+        if row.albuminuria:
+            return risk_factors.impaired_kidney_function.categories.cat4
+        if row.stage_iii_chronic_kidney_disease:
+            return risk_factors.impaired_kidney_function.categories.cat3
+        if row.stage_iv_chronic_kidney_disease:
+            return risk_factors.impaired_kidney_function.categories.cat2
+        if row.stage_v_chronic_kidney_disease:
+            return risk_factors.impaired_kidney_function.categories.cat1
