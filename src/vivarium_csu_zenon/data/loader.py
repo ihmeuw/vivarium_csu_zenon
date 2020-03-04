@@ -119,7 +119,7 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.IKF.DISTRIBUTION: load_metadata,
         project_globals.IKF.RELATIVE_RISK: load_ikf_relative_risk,
         project_globals.IKF.PAF: load_ikf_paf,
-        project_globals.IKF.CATEGORIES: load_standard_data,
+        project_globals.IKF.CATEGORIES: load_metadata,
     }
     return mapping[lookup_key](lookup_key, location)
 
