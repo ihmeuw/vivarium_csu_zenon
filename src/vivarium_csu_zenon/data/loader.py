@@ -510,6 +510,7 @@ def load_ikf_relative_risk(key: str, location: str) -> pd.DataFrame:
     data = data[~data.cause_id.isin(yll_only_causes)]
 
     data = utilities.convert_affected_entity(data, 'cause_id')
+    data = data[data['affected_entity'].isin(project_globals.DISEASE_MODELS)]
     morbidity = data.morbidity == 1
     mortality = data.mortality == 1
     data.loc[morbidity & mortality, 'affected_measure'] = 'incidence_rate'
