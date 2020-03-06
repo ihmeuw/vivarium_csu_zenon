@@ -69,6 +69,8 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.DIABETES_MELLITUS.MODERATE_DIABETES_PREVALENCE: load_diabetes_mellitus_prevalence,
         project_globals.DIABETES_MELLITUS.SEVERE_DIABETES_PREVALENCE: load_diabetes_mellitus_prevalence,
         project_globals.DIABETES_MELLITUS.INCIDENCE_RATE: load_standard_data,
+        project_globals.DIABETES_MELLITUS.MODERATE_DIABETES_PROPORTION: load_diabetes_mellitus_proportion,
+        project_globals.DIABETES_MELLITUS.SEVERE_DIABETES_PROPORTION: load_diabetes_mellitus_proportion,
         project_globals.DIABETES_MELLITUS.MODERATE_DIABETES_DISABILITY_WEIGHT: load_diabetes_mellitus_disability_weight,
         project_globals.DIABETES_MELLITUS.SEVERE_DIABETES_DISABILITY_WEIGHT: load_diabetes_mellitus_disability_weight,
         project_globals.DIABETES_MELLITUS.CSMR: load_standard_data,
