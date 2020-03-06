@@ -65,29 +65,30 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.ISCHEMIC_STROKE.CSMR: load_standard_data,
         project_globals.ISCHEMIC_STROKE.RESTRICTIONS: load_metadata,
 
+        project_globals.DIABETES_MELLITUS.PREVALENCE: load_standard_data,
         project_globals.DIABETES_MELLITUS.MODERATE_DIABETES_PREVALENCE: load_diabetes_mellitus_prevalence,
         project_globals.DIABETES_MELLITUS.SEVERE_DIABETES_PREVALENCE: load_diabetes_mellitus_prevalence,
+        project_globals.DIABETES_MELLITUS.INCIDENCE_RATE: load_standard_data,
         project_globals.DIABETES_MELLITUS.MODERATE_DIABETES_DISABILITY_WEIGHT: load_diabetes_mellitus_disability_weight,
         project_globals.DIABETES_MELLITUS.SEVERE_DIABETES_DISABILITY_WEIGHT: load_diabetes_mellitus_disability_weight,
-        project_globals.DIABETES_MELLITUS.MODERATE_DIABETES_EMR: load_diabetes_mellitus_excess_mortality_rate,
-        project_globals.DIABETES_MELLITUS.SEVERE_DIABETES_EMR: load_diabetes_mellitus_excess_mortality_rate,
         project_globals.DIABETES_MELLITUS.CSMR: load_standard_data,
+        project_globals.DIABETES_MELLITUS.EMR: load_diabetes_mellitus_excess_mortality_rate,
         project_globals.DIABETES_MELLITUS.RESTRICTIONS: load_metadata,
 
-        project_globals.CKD.ALBUMINURIA_PREVALENCE: load_ckd_prevalence,
-        project_globals.CKD.STAGE_III_CKD_PREVALENCE: load_ckd_prevalence,
-        project_globals.CKD.STAGE_IV_CKD_PREVALENCE: load_ckd_prevalence,
-        project_globals.CKD.STAGE_V_CKD_PREVALENCE: load_ckd_prevalence,
-        project_globals.CKD.ALBUMINURIA_DISABILITY_WEIGHT: load_ckd_disability_weight,
-        project_globals.CKD.STAGE_III_CKD_DISABILITY_WEIGHT: load_ckd_disability_weight,
-        project_globals.CKD.STAGE_IV_CKD_DISABILITY_WEIGHT: load_ckd_disability_weight,
-        project_globals.CKD.STAGE_V_CKD_DISABILITY_WEIGHT: load_ckd_disability_weight,
-        project_globals.CKD.ALBUMINURIA_EMR: load_ckd_excess_mortality_rate,
-        project_globals.CKD.STAGE_III_CKD_EMR: load_ckd_excess_mortality_rate,
-        project_globals.CKD.STAGE_IV_CKD_EMR: load_ckd_excess_mortality_rate,
-        project_globals.CKD.STAGE_V_CKD_EMR: load_ckd_excess_mortality_rate,
-        project_globals.CKD.CSMR: load_standard_data,
-        project_globals.CKD.RESTRICTIONS: load_metadata,
+        # project_globals.CKD.ALBUMINURIA_PREVALENCE: load_ckd_prevalence,
+        # project_globals.CKD.STAGE_III_CKD_PREVALENCE: load_ckd_prevalence,
+        # project_globals.CKD.STAGE_IV_CKD_PREVALENCE: load_ckd_prevalence,
+        # project_globals.CKD.STAGE_V_CKD_PREVALENCE: load_ckd_prevalence,
+        # project_globals.CKD.ALBUMINURIA_DISABILITY_WEIGHT: load_ckd_disability_weight,
+        # project_globals.CKD.STAGE_III_CKD_DISABILITY_WEIGHT: load_ckd_disability_weight,
+        # project_globals.CKD.STAGE_IV_CKD_DISABILITY_WEIGHT: load_ckd_disability_weight,
+        # project_globals.CKD.STAGE_V_CKD_DISABILITY_WEIGHT: load_ckd_disability_weight,
+        # project_globals.CKD.ALBUMINURIA_EMR: load_ckd_excess_mortality_rate,
+        # project_globals.CKD.STAGE_III_CKD_EMR: load_ckd_excess_mortality_rate,
+        # project_globals.CKD.STAGE_IV_CKD_EMR: load_ckd_excess_mortality_rate,
+        # project_globals.CKD.STAGE_V_CKD_EMR: load_ckd_excess_mortality_rate,
+        # project_globals.CKD.CSMR: load_standard_data,
+        # project_globals.CKD.RESTRICTIONS: load_metadata,
         
         project_globals.LDL_C.DISTRIBUTION: load_metadata,
         project_globals.LDL_C.EXPOSURE_MEAN: load_standard_data,
@@ -116,10 +117,10 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.FPG.TMRED: load_metadata,
         project_globals.FPG.RELATIVE_RISK_SCALAR: load_metadata,
 
-        project_globals.IKF.DISTRIBUTION: load_metadata,
-        project_globals.IKF.RELATIVE_RISK: load_ikf_relative_risk,
-        project_globals.IKF.PAF: load_ikf_paf,
-        project_globals.IKF.CATEGORIES: load_metadata,
+        # project_globals.IKF.DISTRIBUTION: load_metadata,
+        # project_globals.IKF.RELATIVE_RISK: load_ikf_relative_risk,
+        # project_globals.IKF.PAF: load_ikf_paf,
+        # project_globals.IKF.CATEGORIES: load_metadata,
     }
     return mapping[lookup_key](lookup_key, location)
 
@@ -296,6 +297,22 @@ def load_ckd_prevalence(key: str, location: str) -> pd.DataFrame:
     return prevalence
 
 
+def load_diabetes_mellitus_proportion(key: str, location: str) -> pd.DataFrame:
+    proportion_to_prevalence = {
+        project_globals.DIABETES_MELLITUS.MODERATE_DIABETES_PROPORTION: (
+            project_globals.DIABETES_MELLITUS.MODERATE_DIABETES_PREVALENCE
+        ),
+        project_globals.DIABETES_MELLITUS.SEVERE_DIABETES_PROPORTION: (
+            project_globals.DIABETES_MELLITUS.SEVERE_DIABETES_PREVALENCE
+        ),
+    }
+    prevalence_key = proportion_to_prevalence[key]
+    diabetes_subtype_prevalence = get_data(prevalence_key, location)
+    all_diabetes_prevalence = get_data(project_globals.DIABETES_MELLITUS.PREVALENCE, location)
+    proportion = (diabetes_subtype_prevalence / all_diabetes_prevalence).fillna(0)
+    return proportion
+
+
 def load_ihd_disability_weight(key: str, location: str) -> pd.DataFrame:
     acute_sequelae = [
         sequelae.acute_myocardial_infarction_first_2_days,
@@ -466,14 +483,10 @@ def load_ckd_disability_weight(key: str, location: str) -> pd.DataFrame:
 
 
 def load_diabetes_mellitus_excess_mortality_rate(key: str, location: str) -> pd.DataFrame:
-    if key == project_globals.DIABETES_MELLITUS.MODERATE_DIABETES_EMR:
-        diabetes_emr = get_data(project_globals.POPULATION.DEMOGRAPHY, location)
-        diabetes_emr['value'] = 0
-    else:
-        raw_diabetes_emr = get_data(project_globals.DIABETES_MELLITUS.CSMR, location)
-        prevalence_severe = get_data(project_globals.DIABETES_MELLITUS.SEVERE_DIABETES_PREVALENCE, location)
-        diabetes_emr = (raw_diabetes_emr / prevalence_severe).fillna(0)
-    return diabetes_emr
+    csmr = get_data(project_globals.DIABETES_MELLITUS.CSMR, location)
+    prevalence = get_data(project_globals.DIABETES_MELLITUS.PREVALENCE, location)
+    emr = (csmr / prevalence).fillna(0)
+    return emr
 
 
 def load_ckd_excess_mortality_rate(key: str, location: str) -> pd.DataFrame:
