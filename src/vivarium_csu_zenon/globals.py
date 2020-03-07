@@ -103,6 +103,7 @@ class __DiabetesMellitus(NamedTuple):
     MODERATE_DIABETES_PREVALENCE: str = 'sequela.moderate_diabetes_mellitus.prevalence'
     SEVERE_DIABETES_PREVALENCE: str = 'sequela.severe_diabetes_mellitus.prevalence'
     INCIDENCE_RATE: str = 'cause.diabetes_mellitus.incidence_rate'
+    REMISSION_RATE: str = 'cause.diabetes_mellitus.remission_rate'
     MODERATE_DIABETES_PROPORTION: str = 'sequela.moderate_diabetes_mellitus.proportion'
     SEVERE_DIABETES_PROPORTION: str = 'sequela.severe_diabetes_mellitus.proportion'
     MODERATE_DIABETES_DISABILITY_WEIGHT: str = 'sequela.moderate_diabetes_mellitus.disability_weight'
