@@ -86,12 +86,7 @@ def DiabetesMellitus():
     severe.allow_self_transitions()
 
     # Transitions from Susceptible
-    data_funcs = {
-        'incidence_rate': lambda _, builder: builder.data.load(
-            project_globals.DIABETES_MELLITUS.INCIDENCE_RATE
-        )
-    }
-    susceptible.add_transition(transient, source_data_type='rate', get_data_functions=data_funcs)
+    susceptible.add_transition(transient, source_data_type='rate')
     
     # Transitions from Transient
     data_funcs = {
