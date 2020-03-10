@@ -57,6 +57,8 @@ class MortalityObserver(MortalityObserver_):
 class DisabilityObserver(DisabilityObserver_):
     def setup(self, builder):
         super().setup(builder)
+        self.disability_weight_pipelines = {cause: builder.value.get_value(f'{cause}.disability_weight')
+                                            for cause in project_globals.CAUSES_OF_DISABILITY}
         self.systolic_blood_pressure = builder.value.get_value(f'{project_globals.SBP.name}.exposure')
         self.ldl_cholesterol = builder.value.get_value(f'{project_globals.LDL_C.name}.exposure')
 
@@ -195,8 +197,8 @@ class DiseaseObserver:
 
     def __repr__(self):
         return f"DiseaseObserver({self.disease})"
-
-
+        
+    
 def get_state_person_time(pop, config, disease, state, current_year, step_size, age_bins):
     """Custom person time getter that handles state column name assumptions"""
     base_key = get_output_template(**config).substitute(measure=f'{state}_person_time',
@@ -208,9 +210,7 @@ def get_state_person_time(pop, config, disease, state, current_year, step_size, 
 
 
 def get_transition_count(pop, config, disease, transition, event_time, age_bins):
-    from_state, to_state = transition.split('_TO_')
-    event_this_step = ((pop[f'{to_state}_event_time'] == event_time)
-                       & (pop[f'previous_{disease}'] == from_state))
+    event_this_step = pop[disease] != pop[f'previous_{disease}']
     transitioned_pop = pop.loc[event_this_step]
     base_key = get_output_template(**config).substitute(measure=f'{transition}_event_count',
                                                         year=event_time.year)

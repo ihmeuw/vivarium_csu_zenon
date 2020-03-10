@@ -1,8 +1,15 @@
+import typing
+
 import pandas as pd
 from vivarium_public_health.disease import (DiseaseState as DiseaseState_, DiseaseModel, SusceptibleState,
                                             TransientDiseaseState, RateTransition as RateTransition_)
 
 from vivarium_csu_zenon import globals as project_globals
+
+if typing.TYPE_CHECKING:
+    from vivarium.framework.engine import Builder
+    from vivarium.framework.population import SimulantData
+    from vivarium.framework.event import Event
 
 
 class RateTransition(RateTransition_):
@@ -114,18 +121,129 @@ def DiabetesMellitus():
     return DiseaseModel(project_globals.DIABETES_MELLITUS.name, states=[susceptible, transient, moderate, severe])
 
 
-def ChronicKidneyDisease():
-    # States
-    susceptible = SusceptibleState(project_globals.CKD.name)
-    albuminuria = DiseaseState('albuminuria', cause_type='sequela',)
-    stage_iii = DiseaseState(f'stage_iii_{project_globals.CKD.name}', cause_type='sequela', )
-    stage_iv = DiseaseState(f'stage_iv_{project_globals.CKD.name}', cause_type='sequela', )
-    stage_v = DiseaseState(f'stage_v_{project_globals.CKD.name}', cause_type='sequela', )
+class ChronicKidneyDisease:
+    @property
+    def name(self):
+        return 'chronic_kidney_disease'
 
-    susceptible.allow_self_transitions()
-    albuminuria.allow_self_transitions()
-    stage_iii.allow_self_transitions()
-    stage_iv.allow_self_transitions()
-    stage_v.allow_self_transitions()
+    def setup(self, builder: 'Builder'):
+        self.population_view = builder.population.get_view([self.name])
 
-    return DiseaseModel(project_globals.CKD.name, states=[susceptible, albuminuria, stage_iii, stage_iv, stage_v])
+        cause_specific_mortality_rate = builder.data.load(project_globals.IKF.CSMR)
+        self.cause_specific_mortality_rate = builder.lookup.build_table(cause_specific_mortality_rate,
+                                                                        key_columns=['sex'],
+                                                                        parameter_columns=['age', 'year'])
+        builder.value.register_value_modifier('cause_specific_mortality_rate',
+                                              self.adjust_cause_specific_mortality_rate,
+                                              requires_columns=['age', 'sex'])
+
+        builder.population.initializes_simulants(self.on_initialize_simulants,
+                                                 creates_columns=[self.name],
+                                                 requires_values=[f'{project_globals.IKF.name}.exposure'])
+
+        # TODO uncomment and aggregate states once disaggregation not needed
+        # disability_weight_data = self.load_disability_weight_data(builder)
+        self.base_disability_weight = {}
+        self.disability_weight = {}
+        for i, disability_weight_key in enumerate(project_globals.IKF.disability_weights):
+            ikf_category = f'cat{i + 1}'
+            disability_weight_data = builder.data.load(disability_weight_key)
+            self.base_disability_weight[ikf_category] = builder.lookup.build_table(disability_weight_data,
+                                                                                   key_columns=['sex'],
+                                                                                   parameter_columns=['age', 'year'])
+            self.disability_weight[ikf_category] = builder.value.register_value_producer(
+                f'{project_globals.IKF_TO_CKD_MAP[ikf_category]}.disability_weight',
+                source=lambda index: self.compute_disability_weight(index, ikf_category),
+                requires_values=[f'{project_globals.IKF.name}.exposure']
+            )
+
+            builder.value.register_value_modifier('disability_weight', modifier=self.disability_weight[ikf_category])
+
+        excess_mortality_data = builder.data.load(project_globals.IKF.EMR)
+        self.base_excess_mortality_rate = {}
+        self.excess_mortality_rate = {}
+        for ikf_category, ckd_state in project_globals.IKF_TO_CKD_MAP.items():
+            # Calculate EMR
+            self.base_excess_mortality_rate[ikf_category] = builder.lookup.build_table(
+                excess_mortality_data, key_columns=['sex'], parameter_columns=['age', 'year'])
+
+            self.excess_mortality_rate[ikf_category] = builder.value.register_rate_producer(
+                f'{ckd_state}.excess_mortality_rate',
+                source=lambda index: self.compute_excess_mortality_rate(index, ikf_category),
+                requires_values=[f'{project_globals.IKF.name}.exposure']
+            )
+
+            # Calculate mortality rate adjustment
+            builder.value.register_value_modifier(
+                'mortality_rate',
+                modifier=lambda index, rates: self.adjust_mortality_rate(index, rates, ikf_category),
+                requires_values=[f'{ckd_state}.excess_mortality_rate']
+            )
+
+        self.ikf_exposure = builder.value.get_value(f'{project_globals.IKF.name}.exposure')
+
+    def on_initialize_simulants(self, pop_data: 'SimulantData'):
+        exposure = self.ikf_exposure(pop_data.index)
+        states = exposure.map(project_globals.IKF_TO_CKD_MAP)
+        states.name = self.name
+        self.population_view.update(states)
+
+    def adjust_cause_specific_mortality_rate(self, index, rate):
+        return rate + self.cause_specific_mortality_rate(index)
+
+    # leave this here
+    def load_disability_weight_data(self, builder: 'Builder'):
+        dfs = []
+        for i, disability_weight_key in enumerate(project_globals.IKF.disability_weights):
+            col_name = f'cat{i+1}'
+            df = builder.data.load(disability_weight_key)
+            df = df.rename(columns={'value': col_name})
+            df = df.set_index([c for c in df.columns if c != col_name])
+            dfs.append(df)
+
+        cat5 = dfs[-1].copy()
+        cat5 = cat5.rename(columns={'cat4': 'cat5'})
+        cat5.loc[:, 'cat5'] = 0
+        return pd.concat(dfs + [cat5], axis=1).reset_index()
+
+    def compute_disability_weight(self, index, category):
+        """Gets the disability weight associated with this state.
+
+        Parameters
+        ----------
+        index : iterable of ints
+            An iterable of integer labels for the simulants.
+        category:
+            IKF category
+
+        Returns
+        -------
+        `pandas.Series`
+            An iterable of disability weights indexed by the provided `index`.
+        """
+        disability_weight = pd.Series(0, index=index)
+        with_condition = index[self.ikf_exposure(index) == category]
+        disability_weight.loc[with_condition] = self.base_disability_weight[category](with_condition)
+        return disability_weight
+
+    def compute_excess_mortality_rate(self, index, category):
+        excess_mortality_rate = pd.Series(0, index=index)
+        with_condition = index[self.ikf_exposure(index) == category]
+        excess_mortality_rate.loc[with_condition] = self.base_excess_mortality_rate[category](with_condition)
+        return excess_mortality_rate
+
+    def adjust_mortality_rate(self, index, rates_df, category):
+        """Modifies the baseline mortality rate for a simulant if they are in this state.
+
+        Parameters
+        ----------
+        index : iterable of ints
+            An iterable of integer labels for the simulants.
+        category
+            IKF category
+        rates_df : `pandas.DataFrame`
+
+        """
+        rate = self.excess_mortality_rate[category](index, skip_post_processor=True)
+        rates_df[project_globals.IKF_TO_CKD_MAP[category]] = rate
+        return rates_df
