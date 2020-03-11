@@ -17,7 +17,8 @@ from gbd_mapping import causes, risk_factors, covariates, sequelae
 from vivarium.framework.artifact import EntityKey
 from vivarium_inputs import core, extract, interface, utilities, utility_data, globals as vi_globals
 from vivarium_inputs.mapping_extension import alternative_risk_factors
-import vivarium_inputs.validation.sim as validation
+import vivarium_inputs.validation.sim as sim_validation
+import vivarium_inputs.validation.raw as raw_validation
 
 from vivarium_csu_zenon import paths, globals as project_globals
 
@@ -107,7 +108,7 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
 
         project_globals.IKF.CATEGORIES: load_metadata,
         project_globals.IKF.DISTRIBUTION: load_metadata,
-        project_globals.IKF.EXPOSURE: load_standard_data,
+        project_globals.IKF.EXPOSURE: load_ikf_exposure,
         project_globals.IKF.RELATIVE_RISK: load_ikf_relative_risk,
         project_globals.IKF.CAT_4_DISABILITY_WEIGHT: load_ikf_disability_weight,
         project_globals.IKF.CAT_3_DISABILITY_WEIGHT: load_ikf_disability_weight,
@@ -410,6 +411,70 @@ def load_standard_excess_mortality_rate(key: str, location: str) -> pd.DataFrame
     return _load_em_from_meid(meids[key], location)
 
 
+def load_ikf_exposure(key: str, location: str) -> pd.DataFrame:
+    key = EntityKey(key)
+    entity = get_entity(key)
+    
+    measure = 'exposure'
+    raw_validation.check_metadata(entity, measure)
+
+    try:
+        data = gbd.get_draws(
+            gbd_id_type='rei_id',
+            gbd_id=entity.gbd_id,
+            source='exposure',
+            location_id=location,
+            sex_id=gbd.MALE + gbd.FEMALE,
+            age_group_id=gbd.get_age_group_id(),
+            gbd_round_id=gbd.GBD_ROUND_ID,
+            status='best')
+        data['rei_id'] = entity.gbd_id
+
+        data = data[data.measure_id == vi_globals.MEASURES['Prevalence']]
+    except (ValueError, AssertionError, vi_globals.EmptyDataFrameException, vi_globals.NoBestVersionError,
+            vi_globals.InputsException) as e:
+        if isinstance(e, ValueError) and f'Metadata associated with rei_id = {entity.gbd_id}' not in str(e):
+            raise e
+        elif (isinstance(e, AssertionError) and f'Invalid covariate_id {entity.gbd_id}' not in str(e)
+              and 'No best model found' not in str(e)):
+            raise e
+        elif isinstance(e, vi_globals.InputsException) and measure != 'birth_prevalence':
+            raise e
+        else:
+            raise vi_globals.DataDoesNotExistError(f'{measure.capitalize()} data for {entity.name} does not exist.')
+
+    raw_validation.validate_raw_data(data, entity, measure, location)
+
+    data = data.drop('modelable_entity_id', 'columns')
+
+    data = utilities.filter_data_by_restrictions(data, entity, 'outer', utility_data.get_age_group_ids())
+
+    tmrel_cat = utility_data.get_tmrel_category(entity)
+    exposed = data[data.parameter != tmrel_cat]
+    unexposed = data[data.parameter == tmrel_cat]
+
+    #  FIXME: We fill 1 as exposure of tmrel category, which is not correct.
+    data = pd.concat([utilities.normalize(exposed, fill_value=0), utilities.normalize(unexposed, fill_value=1)],
+                     ignore_index=True)
+
+    # normalize so all categories sum to 1
+    cols = list(set(data.columns).difference(vi_globals.DRAW_COLUMNS + ['parameter']))
+    sums = data.groupby(cols)[vi_globals.DRAW_COLUMNS].sum()
+    data = (data.groupby('parameter')
+            .apply(lambda df: df.set_index(cols).loc[:, vi_globals.DRAW_COLUMNS].divide(sums))
+            .reset_index())
+
+    data = data.filter(vi_globals.DEMOGRAPHIC_COLUMNS + vi_globals.DRAW_COLUMNS + ['parameter'])
+    
+    data = utilities.reshape(data, value_cols=vi_globals.DRAW_COLUMNS)
+    
+    data = utilities.scrub_gbd_conventions(data, location)
+    sim_validation.validate_for_simulation(data, entity, key.measure, location)
+    data = utilities.split_interval(data, interval_column='age', split_column_prefix='age')
+    data = utilities.split_interval(data, interval_column='year', split_column_prefix='year')
+    return utilities.sort_hierarchical_data(data)
+
+
 def load_ikf_relative_risk(key: str, location: str) -> pd.DataFrame:
     key = EntityKey(key)
     entity = get_entity(key)
@@ -444,7 +509,7 @@ def load_ikf_relative_risk(key: str, location: str) -> pd.DataFrame:
 
     data = utilities.reshape(data, value_cols=value_cols)
     data = utilities.scrub_gbd_conventions(data, location)
-    validation.validate_for_simulation(data, entity, key.measure, location)
+    sim_validation.validate_for_simulation(data, entity, key.measure, location)
     data = utilities.split_interval(data, interval_column='age', split_column_prefix='age')
     data = utilities.split_interval(data, interval_column='year', split_column_prefix='year')
     return utilities.sort_hierarchical_data(data)
@@ -489,7 +554,7 @@ def load_ikf_paf(key: str, location: str) -> pd.DataFrame:
 
     data = utilities.reshape(data, value_cols=value_cols)
     data = utilities.scrub_gbd_conventions(data, location)
-    validation.validate_for_simulation(data, entity, key.measure, location)
+    sim_validation.validate_for_simulation(data, entity, key.measure, location)
     data = utilities.split_interval(data, interval_column='age', split_column_prefix='age')
     data = utilities.split_interval(data, interval_column='year', split_column_prefix='year')
     return utilities.sort_hierarchical_data(data)
