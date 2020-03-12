@@ -12,7 +12,9 @@ for an example.
 """
 import pandas as pd
 import numpy as np
+
 from vivarium_gbd_access import gbd
+from vivarium_gbd_access.utilities import get_draws
 from gbd_mapping import causes, risk_factors, covariates, sequelae
 from vivarium.framework.artifact import EntityKey
 from vivarium_inputs import core, extract, interface, utilities, utility_data, globals as vi_globals
@@ -414,36 +416,47 @@ def load_standard_excess_mortality_rate(key: str, location: str) -> pd.DataFrame
 def load_ikf_exposure(key: str, location: str) -> pd.DataFrame:
     key = EntityKey(key)
     entity = get_entity(key)
-    
+
+    location_id = utility_data.get_location_id(location) if isinstance(location, str) else location
     measure = 'exposure'
     raw_validation.check_metadata(entity, measure)
 
-    try:
-        data = gbd.get_draws(
-            gbd_id_type='rei_id',
-            gbd_id=entity.gbd_id,
-            source='exposure',
-            location_id=location,
-            sex_id=gbd.MALE + gbd.FEMALE,
-            age_group_id=gbd.get_age_group_id(),
-            gbd_round_id=gbd.GBD_ROUND_ID,
-            status='best')
-        data['rei_id'] = entity.gbd_id
+    data = get_draws(
+        gbd_id_type='rei_id',
+        gbd_id=entity.gbd_id,
+        source='exposure',
+        location_id=location_id,
+        sex_id=gbd.MALE + gbd.FEMALE,
+        age_group_id=gbd.get_age_group_id(),
+        gbd_round_id=gbd.GBD_ROUND_ID,
+        status='best')
 
-        data = data[data.measure_id == vi_globals.MEASURES['Prevalence']]
-    except (ValueError, AssertionError, vi_globals.EmptyDataFrameException, vi_globals.NoBestVersionError,
-            vi_globals.InputsException) as e:
-        if isinstance(e, ValueError) and f'Metadata associated with rei_id = {entity.gbd_id}' not in str(e):
-            raise e
-        elif (isinstance(e, AssertionError) and f'Invalid covariate_id {entity.gbd_id}' not in str(e)
-              and 'No best model found' not in str(e)):
-            raise e
-        elif isinstance(e, vi_globals.InputsException) and measure != 'birth_prevalence':
-            raise e
-        else:
-            raise vi_globals.DataDoesNotExistError(f'{measure.capitalize()} data for {entity.name} does not exist.')
+    data = data.drop(data[(data.parameter == 'cat5')].index)
 
-    raw_validation.validate_raw_data(data, entity, measure, location)
+    cat5_data = data.groupby(
+        vi_globals.DEMOGRAPHIC_COLUMNS
+    ).agg(
+        {f'draw_{i}': (lambda x: 1 - sum(x)) for i in range(1000)}
+    ).reset_index()
+
+    cat5_data[[
+        'rei_id',
+        'modelable_entity_id',
+        'location_id',
+        'parameter',
+        'measure_id',
+        'metric_id'
+    ]] = pd.DataFrame(
+        [[entity.gbd_id, np.nan, location_id, 'cat5', vi_globals.MEASURES['Prevalence'], vi_globals.METRICS['Rate']]],
+        index=cat5_data.index
+    )
+
+    data = pd.concat([data, cat5_data], sort=False)
+
+    data['rei_id'] = entity.gbd_id
+    data['measure_id'] = vi_globals.MEASURES['Prevalence']
+
+    raw_validation.validate_raw_data(data, entity, measure, location_id)
 
     data = data.drop('modelable_entity_id', 'columns')
 
