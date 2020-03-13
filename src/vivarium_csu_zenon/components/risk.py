@@ -1,7 +1,4 @@
-import pandas as pd
-
-from gbd_mapping import risk_factors
-from vivarium_public_health.risks import Risk, RiskEffect as RiskEffect_
+from vivarium_public_health.risks import RiskEffect as RiskEffect_
 from vivarium_public_health.risks.data_transformations import get_distribution_type, pivot_categorical
 from vivarium_public_health.utilities import TargetString
 
