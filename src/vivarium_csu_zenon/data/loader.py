@@ -14,7 +14,6 @@ import pandas as pd
 import numpy as np
 
 from vivarium_gbd_access import gbd
-from vivarium_gbd_access.utilities import get_draws
 from gbd_mapping import causes, risk_factors, covariates, sequelae
 from vivarium.framework.artifact import EntityKey
 from vivarium_inputs import core, extract, interface, utilities, utility_data, globals as vi_globals
@@ -80,7 +79,7 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.DIABETES_MELLITUS.CSMR: load_standard_data,
         project_globals.DIABETES_MELLITUS.EMR: load_diabetes_mellitus_excess_mortality_rate,
         project_globals.DIABETES_MELLITUS.RESTRICTIONS: load_metadata,
-        
+
         project_globals.LDL_C.DISTRIBUTION: load_metadata,
         project_globals.LDL_C.EXPOSURE_MEAN: load_standard_data,
         project_globals.LDL_C.EXPOSURE_SD: load_standard_data,
@@ -89,7 +88,7 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.LDL_C.PAF: load_standard_data,
         project_globals.LDL_C.TMRED: load_metadata,
         project_globals.LDL_C.RELATIVE_RISK_SCALAR: load_metadata,
-        
+
         project_globals.SBP.DISTRIBUTION: load_metadata,
         project_globals.SBP.EXPOSURE_MEAN: load_standard_data,
         project_globals.SBP.EXPOSURE_SD: load_standard_data,
@@ -421,41 +420,8 @@ def load_ikf_exposure(key: str, location: str) -> pd.DataFrame:
     measure = 'exposure'
     raw_validation.check_metadata(entity, measure)
 
-    data = get_draws(
-        gbd_id_type='rei_id',
-        gbd_id=entity.gbd_id,
-        source='exposure',
-        location_id=location_id,
-        sex_id=gbd.MALE + gbd.FEMALE,
-        age_group_id=gbd.get_age_group_id(),
-        gbd_round_id=gbd.GBD_ROUND_ID,
-        status='best')
-
-    data = data.drop(data[(data.parameter == 'cat5')].index)
-
-    cat5_data = data.groupby(
-        vi_globals.DEMOGRAPHIC_COLUMNS
-    ).agg(
-        {f'draw_{i}': (lambda x: 1 - sum(x)) for i in range(1000)}
-    ).reset_index()
-
-    cat5_data[[
-        'rei_id',
-        'modelable_entity_id',
-        'location_id',
-        'parameter',
-        'measure_id',
-        'metric_id'
-    ]] = pd.DataFrame(
-        [[entity.gbd_id, np.nan, location_id, 'cat5', vi_globals.MEASURES['Prevalence'], vi_globals.METRICS['Rate']]],
-        index=cat5_data.index
-    )
-
-    data = pd.concat([data, cat5_data], sort=False)
-
-    data['rei_id'] = entity.gbd_id
-    data['measure_id'] = vi_globals.MEASURES['Prevalence']
-
+    data = gbd.get_exposure(entity.gbd_id, location_id)
+    data = normalize_ikf_exposure_distribution(data)
     raw_validation.validate_raw_data(data, entity, measure, location_id)
 
     data = data.drop('modelable_entity_id', 'columns')
@@ -473,20 +439,53 @@ def load_ikf_exposure(key: str, location: str) -> pd.DataFrame:
     # normalize so all categories sum to 1
     cols = list(set(data.columns).difference(vi_globals.DRAW_COLUMNS + ['parameter']))
     sums = data.groupby(cols)[vi_globals.DRAW_COLUMNS].sum()
-    data = (data.groupby('parameter')
+    data = (data
+            .groupby('parameter')
             .apply(lambda df: df.set_index(cols).loc[:, vi_globals.DRAW_COLUMNS].divide(sums))
             .reset_index())
 
     data = data.filter(vi_globals.DEMOGRAPHIC_COLUMNS + vi_globals.DRAW_COLUMNS + ['parameter'])
-    
-    data = utilities.reshape(data, value_cols=vi_globals.DRAW_COLUMNS)
-    
+    data = utilities.reshape(data)
     data = utilities.scrub_gbd_conventions(data, location)
     sim_validation.validate_for_simulation(data, entity, key.measure, location)
     data = utilities.split_interval(data, interval_column='age', split_column_prefix='age')
     data = utilities.split_interval(data, interval_column='year', split_column_prefix='year')
     return utilities.sort_hierarchical_data(data)
 
+
+def normalize_ikf_exposure_distribution(data: pd.DataFrame) -> pd.DataFrame:
+    data = (data
+            .set_index('parameter')
+            .drop('cat5')
+            .reset_index())
+    unused_data = {c: data[c].unique()[0] for c in data.columns
+                   if c not in vi_globals.DEMOGRAPHIC_COLUMNS + vi_globals.DRAW_COLUMNS + ['parameter']}
+    data = (data
+            .drop(columns=list(unused_data.keys()))
+            .set_index(['parameter'] + vi_globals.DEMOGRAPHIC_COLUMNS)
+            .rename_axis(columns='draw')
+            .stack()
+            .to_frame()
+            .rename(columns={0: 'value'})
+            .reorder_levels(vi_globals.DEMOGRAPHIC_COLUMNS + ['draw', 'parameter']))
+    sums = (data
+            .reset_index()
+            .groupby(vi_globals.DEMOGRAPHIC_COLUMNS + ['draw'])
+            .value
+            .sum())
+    data.loc[sums > 1, 'value'] /= sums[sums > 1]
+    data = (data
+            .reorder_levels(vi_globals.DEMOGRAPHIC_COLUMNS + ['parameter', 'draw'])
+            .unstack()
+            .rename_axis(columns=[None, None]))
+    data.columns = data.columns.droplevel()
+    data = data.reset_index()
+    cat5 = (1 - data.groupby(vi_globals.DEMOGRAPHIC_COLUMNS).sum()).reset_index()
+    cat5['parameter'] = 'cat5'
+    data = pd.concat([data, cat5]).reset_index(drop=True)
+    for column, fill_val in unused_data.items():
+        data[column] = fill_val
+    return data
 
 def load_ikf_relative_risk(key: str, location: str) -> pd.DataFrame:
     key = EntityKey(key)
