@@ -454,12 +454,19 @@ def load_ikf_exposure(key: str, location: str) -> pd.DataFrame:
 
 
 def normalize_ikf_exposure_distribution(data: pd.DataFrame) -> pd.DataFrame:
+    # Ditch the provided cat5 data, which is incorrect.
     data = (data
             .set_index('parameter')
             .drop('cat5')
             .reset_index())
+
+    # Hang on to some column names and a sample value for things the validator
+    # needs but we don't need for processing.
     unused_data = {c: data[c].unique()[0] for c in data.columns
                    if c not in vi_globals.DEMOGRAPHIC_COLUMNS + vi_globals.DRAW_COLUMNS + ['parameter']}
+    # Clear unused columns, reshape from wide to long on draws
+    # and sort the index order to be demography then draw then parameter
+    # so broadcasting will work correctly.
     data = (data
             .drop(columns=list(unused_data.keys()))
             .set_index(['parameter'] + vi_globals.DEMOGRAPHIC_COLUMNS)
@@ -468,21 +475,26 @@ def normalize_ikf_exposure_distribution(data: pd.DataFrame) -> pd.DataFrame:
             .to_frame()
             .rename(columns={0: 'value'})
             .reorder_levels(vi_globals.DEMOGRAPHIC_COLUMNS + ['draw', 'parameter']))
+    # Get the total of cats 1-4.
     sums = (data
             .reset_index()
             .groupby(vi_globals.DEMOGRAPHIC_COLUMNS + ['draw'])
             .value
             .sum())
+    # Where the sums are larger than one, rescale so they sum to 1.
     data.loc[sums > 1, 'value'] /= sums[sums > 1]
+    # Reshape wide and clean up indices.
     data = (data
             .reorder_levels(vi_globals.DEMOGRAPHIC_COLUMNS + ['parameter', 'draw'])
             .unstack()
             .rename_axis(columns=[None, None]))
     data.columns = data.columns.droplevel()
     data = data.reset_index()
+    # Compute cat 5 as the balance of cats 1-4 and add it to the data set
     cat5 = (1 - data.groupby(vi_globals.DEMOGRAPHIC_COLUMNS).sum()).reset_index()
     cat5['parameter'] = 'cat5'
     data = pd.concat([data, cat5]).reset_index(drop=True)
+    # Add our extra columns back in.
     for column, fill_val in unused_data.items():
         data[column] = fill_val
     return data
