@@ -201,10 +201,7 @@ class ChronicKidneyDisease:
             df = df.set_index([c for c in df.columns if c != col_name])
             dfs.append(df)
 
-        cat5 = dfs[-1].copy()
-        cat5 = cat5.rename(columns={'cat4': 'cat5'})
-        cat5.loc[:, 'cat5'] = 0
-        return pd.concat(dfs + [cat5], axis=1).reset_index()
+        return pd.concat(dfs, axis=1).reset_index()
 
     def compute_disability_weight(self, index, category):
         """Gets the disability weight associated with this state.
