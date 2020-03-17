@@ -20,12 +20,12 @@ from risk_distributions import EnsembleDistribution
 from vivarium_inputs import interface
 from gbd_mapping import risk_factors
 
-from vivarium_csu_zenon import globals as project_globals
+from vivarium_csu_zenon import paths, globals as project_globals
 from vivarium_csu_zenon.utilities import sanitize_location
 
 
 def build_fpg_thresholds(location: str, draws: str, concat_only: bool, verbose: int):
-    output_dir = Path('/share/costeffectiveness/auxiliary_data/GBD_2017/03_untracked_data/fpg_diabetes_threshold')
+    output_dir = paths.FPG_THRESHOLD_DIR
     locations = project_globals.LOCATIONS if location == 'all' else [location]
 
     if not concat_only:

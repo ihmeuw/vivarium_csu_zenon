@@ -10,6 +10,8 @@ for an example.
 
 .. admonition::
 """
+from pathlib import Path
+
 import pandas as pd
 import numpy as np
 
@@ -22,7 +24,7 @@ import vivarium_inputs.validation.sim as sim_validation
 import vivarium_inputs.validation.raw as raw_validation
 
 from vivarium_csu_zenon import globals as project_globals
-
+from vivarium_csu_zenon.utilities import sanitize_location
 
 def get_data(lookup_key: str, location: str) -> pd.DataFrame:
     """Retrieves data from an appropriate source.
@@ -588,9 +590,11 @@ def load_ikf_paf(key: str, location: str) -> pd.DataFrame:
     return utilities.sort_hierarchical_data(data)
 
 
-# def load_diabetes_fpg_threshold(key: str, location: str) -> pd.DataFrame:
-#     fpg_exposure = get_data()
-#     fpg_exposure_dist =
+def load_diabetes_fpg_threshold(key: str, location: str) -> pd.DataFrame:
+    directory = Path('/share/costeffectiveness/auxiliary_data/GBD_2017/03_untracked_data/fpg_diabetes_threshold')
+    data_path = directory / f'{sanitize_location(location)}.hdf'
+    fpg_exposure = pd.read_hdf(data_path)
+    return fpg_exposure
 
 
 def _load_em_from_meid(meid, location):
