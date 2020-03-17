@@ -115,7 +115,8 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.FPG.EXPOSURE_MEAN: load_standard_data,
         project_globals.FPG.EXPOSURE_SD: load_standard_data,
         project_globals.FPG.EXPOSURE_WEIGHTS: load_standard_data,
-        project_globals.FPG.DIABETES_MELLITUS_THRESHOLD: load_diabetes_fpg_threshold,
+        # TODO
+        # project_globals.FPG.DIABETES_MELLITUS_THRESHOLD: load_diabetes_fpg_threshold,
         project_globals.FPG.RELATIVE_RISK: load_standard_data,
         project_globals.FPG.PAF: load_standard_data,
         project_globals.FPG.TMRED: load_metadata,
@@ -600,9 +601,9 @@ def load_ikf_paf(key: str, location: str) -> pd.DataFrame:
     return utilities.sort_hierarchical_data(data)
 
 
-def load_diabetes_fpg_threshold(key: str, location: str) -> pd.DataFrame:
-    fpg_exposure = get_data()
-    fpg_exposure_dist = 
+# def load_diabetes_fpg_threshold(key: str, location: str) -> pd.DataFrame:
+#     fpg_exposure = get_data()
+#     fpg_exposure_dist =
 
 
 def _load_em_from_meid(meid, location):

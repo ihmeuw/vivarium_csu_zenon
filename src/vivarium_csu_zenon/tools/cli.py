@@ -99,6 +99,15 @@ def make_results(output_file: str, verbose: int, with_debugger: bool) -> None:
 
 
 @click.command()
+@click.option('-l', '--location',
+              default='all',
+              show_default=True,
+              type=click.Choice(project_globals.LOCATIONS + ['all']),
+              help='Location to make fpg threasholds for.')
+@click.option('-d', '--draws',
+              default='all',
+              show_default=True,
+              help='Comma separated list of draws to make fpg thresholds for')
 @click.option('-o', '--output-dir',
               default=str(paths.ARTIFACT_ROOT),
               show_default=True,
@@ -110,7 +119,7 @@ def make_results(output_file: str, verbose: int, with_debugger: bool) -> None:
 @click.option('--pdb', 'with_debugger',
               is_flag=True,
               help='Drop into python debugger if an error occurs.')
-def make_fpg_exposure_thresholds(output_dir: str, verbose: int, with_debugger: bool) -> None:
+def make_fpg_exposure_thresholds(location: str, draws: str, output_dir: str, verbose: int, with_debugger: bool) -> None:
     configure_logging_to_terminal(verbose)
     main = handle_exceptions(build_fpg_thresholds, logger, with_debugger=with_debugger)
-    main(output_dir, verbose)
+    main(location, draws, output_dir, verbose)
