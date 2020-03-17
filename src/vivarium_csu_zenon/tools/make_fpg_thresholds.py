@@ -24,8 +24,8 @@ from vivarium_csu_zenon import globals as project_globals
 from vivarium_csu_zenon.utilities import sanitize_location
 
 
-def build_fpg_thresholds(location: str, draws: str, output_dir: str, verbose: int):
-    output_dir = Path(output_dir)
+def build_fpg_thresholds(location: str, draws: str, verbose: int):
+    output_dir = Path('/share/costeffectiveness/auxiliary_data/GBD_2017/03_untracked_data/fpg_diabetes_threshold')
 
     from vivarium_cluster_tools.psimulate.utilities import get_drmaa
     drmaa = get_drmaa()
