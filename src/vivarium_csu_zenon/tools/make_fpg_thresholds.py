@@ -33,7 +33,7 @@ def build_fpg_thresholds(location: str, draws: str, concat_only: bool, verbose: 
         drmaa = get_drmaa()
 
         jobs = {}
-        draw_list = range(1000) if draws == 'all' else ','.split(draws)
+        draw_list = range(1000) if draws == 'all' else draws.split(',')
 
         with drmaa.Session() as session:
             for location in locations:
