@@ -104,8 +104,7 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.FPG.EXPOSURE_MEAN: load_standard_data,
         project_globals.FPG.EXPOSURE_SD: load_standard_data,
         project_globals.FPG.EXPOSURE_WEIGHTS: load_standard_data,
-        # TODO
-        # project_globals.FPG.DIABETES_MELLITUS_THRESHOLD: load_diabetes_fpg_threshold,
+        project_globals.FPG.DIABETES_MELLITUS_THRESHOLD: load_diabetes_fpg_threshold,
         project_globals.FPG.RELATIVE_RISK: load_standard_data,
         project_globals.FPG.PAF: load_standard_data,
         project_globals.FPG.TMRED: load_metadata,
