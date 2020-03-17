@@ -24,45 +24,46 @@ from vivarium_csu_zenon import globals as project_globals
 from vivarium_csu_zenon.utilities import sanitize_location
 
 
-def build_fpg_thresholds(location: str, draws: str, verbose: int):
+def build_fpg_thresholds(location: str, draws: str, concat_only: bool, verbose: int):
     output_dir = Path('/share/costeffectiveness/auxiliary_data/GBD_2017/03_untracked_data/fpg_diabetes_threshold')
-
-    from vivarium_cluster_tools.psimulate.utilities import get_drmaa
-    drmaa = get_drmaa()
-
-    jobs = {}
     locations = project_globals.LOCATIONS if location == 'all' else [location]
-    draw_list = range(1000) if draws == 'all' else ','.split(draws)
 
-    with drmaa.Session() as session:
-        for location in locations:
-            build_fpg_thresholds_single_location(drmaa, jobs, location, draw_list, output_dir, session)
+    if not concat_only:
+        from vivarium_cluster_tools.psimulate.utilities import get_drmaa
+        drmaa = get_drmaa()
 
-        decodestatus = {drmaa.JobState.UNDETERMINED: 'undetermined',
-                        drmaa.JobState.QUEUED_ACTIVE: 'queued_active',
-                        drmaa.JobState.SYSTEM_ON_HOLD: 'system_hold',
-                        drmaa.JobState.USER_ON_HOLD: 'user_hold',
-                        drmaa.JobState.USER_SYSTEM_ON_HOLD: 'user_system_hold',
-                        drmaa.JobState.RUNNING: 'running',
-                        drmaa.JobState.SYSTEM_SUSPENDED: 'system_suspended',
-                        drmaa.JobState.USER_SUSPENDED: 'user_suspended',
-                        drmaa.JobState.DONE: 'finished',
-                        drmaa.JobState.FAILED: 'failed'}
+        jobs = {}
+        draw_list = range(1000) if draws == 'all' else ','.split(draws)
 
-        if verbose:
-            logger.info('Entering monitoring loop.')
-            logger.info('-------------------------')
-            logger.info('')
+        with drmaa.Session() as session:
+            for location in locations:
+                build_fpg_thresholds_single_location(drmaa, jobs, location, draw_list, output_dir, session)
 
-            while any([job[1] not in [drmaa.JobState.DONE, drmaa.JobState.FAILED] for job in jobs.values()]):
-                for location, (job_id, status) in jobs.items():
-                    jobs[location] = (job_id, session.jobStatus(job_id))
-                    logger.info(f'{location:<35}: {decodestatus[jobs[location][1]]:>15}')
+            decodestatus = {drmaa.JobState.UNDETERMINED: 'undetermined',
+                            drmaa.JobState.QUEUED_ACTIVE: 'queued_active',
+                            drmaa.JobState.SYSTEM_ON_HOLD: 'system_hold',
+                            drmaa.JobState.USER_ON_HOLD: 'user_hold',
+                            drmaa.JobState.USER_SYSTEM_ON_HOLD: 'user_system_hold',
+                            drmaa.JobState.RUNNING: 'running',
+                            drmaa.JobState.SYSTEM_SUSPENDED: 'system_suspended',
+                            drmaa.JobState.USER_SUSPENDED: 'user_suspended',
+                            drmaa.JobState.DONE: 'finished',
+                            drmaa.JobState.FAILED: 'failed'}
+
+            if verbose:
+                logger.info('Entering monitoring loop.')
+                logger.info('-------------------------')
                 logger.info('')
-                time.sleep(project_globals.MAKE_ARTIFACT_SLEEP)
-                logger.info('Checking status again')
-                logger.info('---------------------')
-                logger.info('')
+
+                while any([job[1] not in [drmaa.JobState.DONE, drmaa.JobState.FAILED] for job in jobs.values()]):
+                    for location, (job_id, status) in jobs.items():
+                        jobs[location] = (job_id, session.jobStatus(job_id))
+                        logger.info(f'{location:<35}: {decodestatus[jobs[location][1]]:>15}')
+                    logger.info('')
+                    time.sleep(project_globals.MAKE_ARTIFACT_SLEEP)
+                    logger.info('Checking status again')
+                    logger.info('---------------------')
+                    logger.info('')
 
     for location in locations:
         sanitized_location = f'{sanitize_location(location)}'
