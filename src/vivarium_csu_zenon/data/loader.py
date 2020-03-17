@@ -12,12 +12,14 @@ for an example.
 """
 import pandas as pd
 import numpy as np
+
 from vivarium_gbd_access import gbd
 from gbd_mapping import causes, risk_factors, covariates, sequelae
 from vivarium.framework.artifact import EntityKey
 from vivarium_inputs import core, extract, interface, utilities, utility_data, globals as vi_globals
 from vivarium_inputs.mapping_extension import alternative_risk_factors
-import vivarium_inputs.validation.sim as validation
+import vivarium_inputs.validation.sim as sim_validation
+import vivarium_inputs.validation.raw as raw_validation
 
 from vivarium_csu_zenon import globals as project_globals
 
@@ -78,21 +80,6 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.DIABETES_MELLITUS.EMR: load_diabetes_mellitus_excess_mortality_rate,
         project_globals.DIABETES_MELLITUS.RESTRICTIONS: load_metadata,
 
-        # project_globals.CKD.ALBUMINURIA_PREVALENCE: load_ckd_prevalence,
-        # project_globals.CKD.STAGE_III_CKD_PREVALENCE: load_ckd_prevalence,
-        # project_globals.CKD.STAGE_IV_CKD_PREVALENCE: load_ckd_prevalence,
-        # project_globals.CKD.STAGE_V_CKD_PREVALENCE: load_ckd_prevalence,
-        # project_globals.CKD.ALBUMINURIA_DISABILITY_WEIGHT: load_ckd_disability_weight,
-        # project_globals.CKD.STAGE_III_CKD_DISABILITY_WEIGHT: load_ckd_disability_weight,
-        # project_globals.CKD.STAGE_IV_CKD_DISABILITY_WEIGHT: load_ckd_disability_weight,
-        # project_globals.CKD.STAGE_V_CKD_DISABILITY_WEIGHT: load_ckd_disability_weight,
-        # project_globals.CKD.ALBUMINURIA_EMR: load_ckd_excess_mortality_rate,
-        # project_globals.CKD.STAGE_III_CKD_EMR: load_ckd_excess_mortality_rate,
-        # project_globals.CKD.STAGE_IV_CKD_EMR: load_ckd_excess_mortality_rate,
-        # project_globals.CKD.STAGE_V_CKD_EMR: load_ckd_excess_mortality_rate,
-        # project_globals.CKD.CSMR: load_standard_data,
-        # project_globals.CKD.RESTRICTIONS: load_metadata,
-        
         project_globals.LDL_C.DISTRIBUTION: load_metadata,
         project_globals.LDL_C.EXPOSURE_MEAN: load_standard_data,
         project_globals.LDL_C.EXPOSURE_SD: load_standard_data,
@@ -101,7 +88,7 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.LDL_C.PAF: load_standard_data,
         project_globals.LDL_C.TMRED: load_metadata,
         project_globals.LDL_C.RELATIVE_RISK_SCALAR: load_metadata,
-        
+
         project_globals.SBP.DISTRIBUTION: load_metadata,
         project_globals.SBP.EXPOSURE_MEAN: load_standard_data,
         project_globals.SBP.EXPOSURE_SD: load_standard_data,
@@ -121,10 +108,18 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.FPG.TMRED: load_metadata,
         project_globals.FPG.RELATIVE_RISK_SCALAR: load_metadata,
 
-        # project_globals.IKF.DISTRIBUTION: load_metadata,
-        # project_globals.IKF.RELATIVE_RISK: load_ikf_relative_risk,
-        # project_globals.IKF.PAF: load_ikf_paf,
-        # project_globals.IKF.CATEGORIES: load_metadata,
+        project_globals.IKF.CATEGORIES: load_metadata,
+        project_globals.IKF.DISTRIBUTION: load_metadata,
+        project_globals.IKF.EXPOSURE: load_ikf_exposure,
+        project_globals.IKF.RELATIVE_RISK: load_ikf_relative_risk,
+        project_globals.IKF.CAT_5_DISABILITY_WEIGHT: load_ikf_disability_weight,
+        project_globals.IKF.CAT_4_DISABILITY_WEIGHT: load_ikf_disability_weight,
+        project_globals.IKF.CAT_3_DISABILITY_WEIGHT: load_ikf_disability_weight,
+        project_globals.IKF.CAT_2_DISABILITY_WEIGHT: load_ikf_disability_weight,
+        project_globals.IKF.CAT_1_DISABILITY_WEIGHT: load_ikf_disability_weight,
+        project_globals.IKF.CSMR: load_ckd_standard_data,
+        project_globals.IKF.EMR: load_ckd_standard_data,
+        project_globals.IKF.PAF: load_ikf_paf,
     }
     return mapping[lookup_key](lookup_key, location)
 
@@ -203,99 +198,6 @@ def load_diabetes_mellitus_prevalence(key: str, location: str) -> pd.DataFrame:
         seq = moderate_sequelae
     else:
         seq = [s for sc in causes.diabetes_mellitus.sub_causes for s in sc.sequelae if s not in moderate_sequelae]
-
-    prevalence = sum(interface.get_measure(s, 'prevalence', location) for s in seq)
-    return prevalence
-
-
-def load_ckd_prevalence(key: str, location: str) -> pd.DataFrame:
-    ckd_sequelae = {
-        project_globals.CKD.ALBUMINURIA_PREVALENCE: [
-            sequelae.albuminuria_with_preserved_gfr_due_to_glomerulonephritis,
-            sequelae.albuminuria_with_preserved_gfr_due_to_hypertension,
-            sequelae.albuminuria_with_preserved_gfr_due_to_other_and_unspecified_causes,
-            sequelae.albuminuria_with_preserved_gfr_due_to_type_1_diabetes_mellitus,
-            sequelae.albuminuria_with_preserved_gfr_due_to_type_2_diabetes_mellitus,
-        ],
-        project_globals.CKD.STAGE_III_CKD_PREVALENCE: [
-            sequelae.stage_iii_chronic_kidney_disease_and_mild_anemia_due_to_hypertension,
-            sequelae.stage_iii_chronic_kidney_disease_and_moderate_anemia_due_to_hypertension,
-            sequelae.stage_iii_chronic_kidney_disease_and_severe_anemia_due_to_hypertension,
-            sequelae.stage_iii_chronic_kidney_disease_without_anemia_due_to_hypertension,
-            sequelae.stage_iii_chronic_kidney_disease_and_mild_anemia_due_to_glomerulonephritis,
-            sequelae.stage_iii_chronic_kidney_disease_and_moderate_anemia_due_to_glomerulonephritis,
-            sequelae.stage_iii_chronic_kidney_disease_and_severe_anemia_due_to_glomerulonephritis,
-            sequelae.stage_iii_chronic_kidney_disease_without_anemia_due_to_glomerulonephritis,
-            sequelae.stage_iii_chronic_kidney_disease_and_mild_anemia_due_to_other_and_unspecified_causes,
-            sequelae.stage_iii_chronic_kidney_disease_and_moderate_anemia_due_to_other_and_unspecified_causes,
-            sequelae.stage_iii_chronic_kidney_disease_and_severe_anemia_due_to_other_and_unspecified_causes,
-            sequelae.stage_iii_chronic_kidney_disease_without_anemia_due_to_other_and_unspecified_causes,
-            sequelae.stage_iii_chronic_kidney_disease_and_severe_anemia_due_to_type_1_diabetes_mellitus,
-            sequelae.stage_iii_chronic_kidney_disease_and_severe_anemia_due_to_type_2_diabetes_mellitus,
-            sequelae.stage_iii_chronic_kidney_disease_and_moderate_anemia_due_to_type_1_diabetes_mellitus,
-            sequelae.stage_iii_chronic_kidney_disease_and_moderate_anemia_due_to_type_2_diabetes_mellitus,
-            sequelae.stage_iii_chronic_kidney_disease_and_mild_anemia_due_to_type_1_diabetes_mellitus,
-            sequelae.stage_iii_chronic_kidney_disease_and_mild_anemia_due_to_type_2_diabetes_mellitus,
-            sequelae.stage_iii_chronic_kidney_disease_without_anemia_due_to_type_1_diabetes_mellitus,
-            sequelae.stage_iii_chronic_kidney_disease_without_anemia_due_to_type_2_diabetes_mellitus,
-        ],
-        project_globals.CKD.STAGE_IV_CKD_PREVALENCE: [
-            sequelae.stage_iv_chronic_kidney_disease_untreated_without_anemia_due_to_hypertension,
-            sequelae.stage_iv_chronic_kidney_disease_untreated_and_mild_anemia_due_to_hypertension,
-            sequelae.stage_iv_chronic_kidney_disease_untreated_and_moderate_anemia_due_to_hypertension,
-            sequelae.stage_iv_chronic_kidney_disease_untreated_and_severe_anemia_due_to_hypertension,
-            sequelae.stage_iv_chronic_kidney_disease_untreated_without_anemia_due_to_glomerulonephritis,
-            sequelae.stage_iv_chronic_kidney_disease_untreated_and_mild_anemia_due_to_glomerulonephritis,
-            sequelae.stage_iv_chronic_kidney_disease_untreated_and_moderate_anemia_due_to_glomerulonephritis,
-            sequelae.stage_iv_chronic_kidney_disease_untreated_and_severe_anemia_due_to_glomerulonephritis,
-            sequelae.stage_iv_chronic_kidney_disease_untreated_without_anemia_due_to_other_and_unspecified_causes,
-            sequelae.stage_iv_chronic_kidney_disease_untreated_and_mild_anemia_due_to_other_and_unspecified_causes,
-            sequelae.stage_iv_chronic_kidney_disease_untreated_and_moderate_anemia_due_to_other_and_unspecified_causes,
-            sequelae.stage_iv_chronic_kidney_disease_untreated_and_severe_anemia_due_to_other_and_unspecified_causes,
-            sequelae.stage_iv_chronic_kidney_disease_untreated_and_severe_anemia_due_to_type_1_diabetes_mellitus,
-            sequelae.stage_iv_chronic_kidney_disease_untreated_and_severe_anemia_due_to_type_2_diabetes_mellitus,
-            sequelae.stage_iv_chronic_kidney_disease_untreated_and_moderate_anemia_due_to_type_1_diabetes_mellitus,
-            sequelae.stage_iv_chronic_kidney_disease_untreated_and_moderate_anemia_due_to_type_2_diabetes_mellitus,
-            sequelae.stage_iv_chronic_kidney_disease_untreated_and_mild_anemia_due_to_type_1_diabetes_mellitus,
-            sequelae.stage_iv_chronic_kidney_disease_untreated_and_mild_anemia_due_to_type_2_diabetes_mellitus,
-            sequelae.stage_iv_chronic_kidney_disease_untreated_without_anemia_due_to_type_1_diabetes_mellitus,
-            sequelae.stage_iv_chronic_kidney_disease_untreated_without_anemia_due_to_type_2_diabetes_mellitus,
-        ],
-        project_globals.CKD.STAGE_V_CKD_PREVALENCE: [
-            sequelae.end_stage_renal_disease_after_transplant_due_to_hypertension,
-            sequelae.end_stage_renal_disease_on_dialysis_due_to_hypertension,
-            sequelae.end_stage_renal_disease_after_transplant_due_to_glomerulonephritis,
-            sequelae.end_stage_renal_disease_on_dialysis_due_to_glomerulonephritis,
-            sequelae.end_stage_renal_disease_after_transplant_due_to_other_and_unspecified_causes,
-            sequelae.end_stage_renal_disease_on_dialysis_due_to_other_and_unspecified_causes,
-            sequelae.stage_v_chronic_kidney_disease_untreated_without_anemia_due_to_hypertension,
-            sequelae.stage_v_chronic_kidney_disease_untreated_and_mild_anemia_due_to_hypertension,
-            sequelae.stage_v_chronic_kidney_disease_untreated_and_moderate_anemia_due_to_hypertension,
-            sequelae.stage_v_chronic_kidney_disease_untreated_and_severe_anemia_due_to_hypertension,
-            sequelae.stage_v_chronic_kidney_disease_untreated_without_anemia_due_to_glomerulonephritis,
-            sequelae.stage_v_chronic_kidney_disease_untreated_and_mild_anemia_due_to_glomerulonephritis,
-            sequelae.stage_v_chronic_kidney_disease_untreated_and_moderate_anemia_due_to_glomerulonephritis,
-            sequelae.stage_v_chronic_kidney_disease_untreated_and_severe_anemia_due_to_glomerulonephritis,
-            sequelae.stage_v_chronic_kidney_disease_untreated_without_anemia_due_to_other_and_unspecified_causes,
-            sequelae.stage_v_chronic_kidney_disease_untreated_and_mild_anemia_due_to_other_and_unspecified_causes,
-            sequelae.stage_v_chronic_kidney_disease_untreated_and_moderate_anemia_due_to_other_and_unspecified_causes,
-            sequelae.stage_v_chronic_kidney_disease_untreated_and_severe_anemia_due_to_other_and_unspecified_causes,
-            sequelae.end_stage_renal_disease_after_transplant_due_to_type_1_diabetes_mellitus,
-            sequelae.end_stage_renal_disease_after_transplant_due_to_type_2_diabetes_mellitus,
-            sequelae.end_stage_renal_disease_on_dialysis_due_to_type_1_diabetes_mellitus,
-            sequelae.end_stage_renal_disease_on_dialysis_due_to_type_2_diabetes_mellitus,
-            sequelae.stage_v_chronic_kidney_disease_untreated_and_severe_anemia_due_to_type_1_diabetes_mellitus,
-            sequelae.stage_v_chronic_kidney_disease_untreated_and_severe_anemia_due_to_type_2_diabetes_mellitus,
-            sequelae.stage_v_chronic_kidney_disease_untreated_and_moderate_anemia_due_to_type_1_diabetes_mellitus,
-            sequelae.stage_v_chronic_kidney_disease_untreated_and_moderate_anemia_due_to_type_2_diabetes_mellitus,
-            sequelae.stage_v_chronic_kidney_disease_untreated_and_mild_anemia_due_to_type_1_diabetes_mellitus,
-            sequelae.stage_v_chronic_kidney_disease_untreated_and_mild_anemia_due_to_type_2_diabetes_mellitus,
-            sequelae.stage_v_chronic_kidney_disease_untreated_without_anemia_due_to_type_1_diabetes_mellitus,
-            sequelae.stage_v_chronic_kidney_disease_untreated_without_anemia_due_to_type_2_diabetes_mellitus,
-        ]
-    }
-
-    seq = ckd_sequelae[key]
 
     prevalence = sum(interface.get_measure(s, 'prevalence', location) for s in seq)
     return prevalence
@@ -386,16 +288,17 @@ def load_diabetes_mellitus_disability_weight(key: str, location: str) -> pd.Data
     return diabetes_disability_weight
 
 
-def load_ckd_disability_weight(key: str, location: str) -> pd.DataFrame:
-    ckd_sequelae = {
-        project_globals.CKD.ALBUMINURIA_DISABILITY_WEIGHT: [
+def load_ikf_disability_weight(key: str, location: str) -> pd.DataFrame:
+    category_sequelae_map = {
+        project_globals.IKF.CAT_5_DISABILITY_WEIGHT: [],
+        project_globals.IKF.CAT_4_DISABILITY_WEIGHT: [
             sequelae.albuminuria_with_preserved_gfr_due_to_glomerulonephritis,
             sequelae.albuminuria_with_preserved_gfr_due_to_hypertension,
             sequelae.albuminuria_with_preserved_gfr_due_to_other_and_unspecified_causes,
             sequelae.albuminuria_with_preserved_gfr_due_to_type_1_diabetes_mellitus,
             sequelae.albuminuria_with_preserved_gfr_due_to_type_2_diabetes_mellitus,
         ],
-        project_globals.CKD.STAGE_III_CKD_DISABILITY_WEIGHT: [
+        project_globals.IKF.CAT_3_DISABILITY_WEIGHT: [
             sequelae.stage_iii_chronic_kidney_disease_and_mild_anemia_due_to_hypertension,
             sequelae.stage_iii_chronic_kidney_disease_and_moderate_anemia_due_to_hypertension,
             sequelae.stage_iii_chronic_kidney_disease_and_severe_anemia_due_to_hypertension,
@@ -417,7 +320,7 @@ def load_ckd_disability_weight(key: str, location: str) -> pd.DataFrame:
             sequelae.stage_iii_chronic_kidney_disease_without_anemia_due_to_type_1_diabetes_mellitus,
             sequelae.stage_iii_chronic_kidney_disease_without_anemia_due_to_type_2_diabetes_mellitus,
         ],
-        project_globals.CKD.STAGE_IV_CKD_DISABILITY_WEIGHT: [
+        project_globals.IKF.CAT_2_DISABILITY_WEIGHT: [
             sequelae.stage_iv_chronic_kidney_disease_untreated_without_anemia_due_to_hypertension,
             sequelae.stage_iv_chronic_kidney_disease_untreated_and_mild_anemia_due_to_hypertension,
             sequelae.stage_iv_chronic_kidney_disease_untreated_and_moderate_anemia_due_to_hypertension,
@@ -439,7 +342,7 @@ def load_ckd_disability_weight(key: str, location: str) -> pd.DataFrame:
             sequelae.stage_iv_chronic_kidney_disease_untreated_without_anemia_due_to_type_1_diabetes_mellitus,
             sequelae.stage_iv_chronic_kidney_disease_untreated_without_anemia_due_to_type_2_diabetes_mellitus,
         ],
-        project_globals.CKD.STAGE_V_CKD_DISABILITY_WEIGHT: [
+        project_globals.IKF.CAT_1_DISABILITY_WEIGHT: [
             sequelae.end_stage_renal_disease_after_transplant_due_to_hypertension,
             sequelae.end_stage_renal_disease_on_dialysis_due_to_hypertension,
             sequelae.end_stage_renal_disease_after_transplant_due_to_glomerulonephritis,
@@ -473,17 +376,17 @@ def load_ckd_disability_weight(key: str, location: str) -> pd.DataFrame:
         ]
     }
 
-    seq = ckd_sequelae[key]
+    sequelae_for_category = category_sequelae_map[key]
 
     prevalence_disability_weights = []
-    for s in seq:
-        prevalence = interface.get_measure(s, 'prevalence', location)
-        disability_weight = interface.get_measure(s, 'disability_weight', location)
+    for sequela in sequelae_for_category:
+        prevalence = interface.get_measure(sequela, 'prevalence', location)
+        disability_weight = interface.get_measure(sequela, 'disability_weight', location)
         prevalence_disability_weights.append(prevalence * disability_weight)
 
-    diabetes_prevalence = interface.get_measure(causes.chronic_kidney_disease, 'prevalence', location)
-    diabetes_disability_weight = (sum(prevalence_disability_weights) / diabetes_prevalence).fillna(0)
-    return diabetes_disability_weight
+    ckd_prevalence = interface.get_measure(causes.chronic_kidney_disease, 'prevalence', location)
+    ikf_category_disability_weight = (sum(prevalence_disability_weights) / ckd_prevalence).fillna(0)
+    return ikf_category_disability_weight
 
 
 def load_diabetes_mellitus_excess_mortality_rate(key: str, location: str) -> pd.DataFrame:
@@ -493,15 +396,12 @@ def load_diabetes_mellitus_excess_mortality_rate(key: str, location: str) -> pd.
     return emr
 
 
-def load_ckd_excess_mortality_rate(key: str, location: str) -> pd.DataFrame:
-    if key == project_globals.CKD.STAGE_V_CKD_EMR:
-        raw_ckd_emr = get_data(project_globals.CKD.CSMR, location)
-        prevalence_stage_v = get_data(project_globals.CKD.STAGE_V_CKD_PREVALENCE, location)
-        ckd_emr = (raw_ckd_emr / prevalence_stage_v).fillna(0)
-    else:
-        ckd_emr = get_data(project_globals.POPULATION.DEMOGRAPHY, location)
-        ckd_emr['value'] = 0
-    return ckd_emr
+def load_ckd_standard_data(key: str, location: str) -> pd.DataFrame:
+    key_mapping = {
+        project_globals.IKF.EMR: 'excess_mortality_rate',
+        project_globals.IKF.CSMR: 'cause_specific_mortality_rate'
+    }
+    return interface.get_measure(causes.chronic_kidney_disease, key_mapping[key], location)
 
 
 def load_standard_excess_mortality_rate(key: str, location: str) -> pd.DataFrame:
@@ -514,6 +414,93 @@ def load_standard_excess_mortality_rate(key: str, location: str) -> pd.DataFrame
 
     return _load_em_from_meid(meids[key], location)
 
+
+def load_ikf_exposure(key: str, location: str) -> pd.DataFrame:
+    key = EntityKey(key)
+    entity = get_entity(key)
+
+    location_id = utility_data.get_location_id(location) if isinstance(location, str) else location
+    measure = 'exposure'
+    raw_validation.check_metadata(entity, measure)
+
+    data = gbd.get_exposure(entity.gbd_id, location_id)
+    data = normalize_ikf_exposure_distribution(data)
+    raw_validation.validate_raw_data(data, entity, measure, location_id)
+
+    data = data.drop('modelable_entity_id', 'columns')
+
+    data = utilities.filter_data_by_restrictions(data, entity, 'outer', utility_data.get_age_group_ids())
+
+    tmrel_cat = utility_data.get_tmrel_category(entity)
+    exposed = data[data.parameter != tmrel_cat]
+    unexposed = data[data.parameter == tmrel_cat]
+
+    #  FIXME: We fill 1 as exposure of tmrel category, which is not correct.
+    data = pd.concat([utilities.normalize(exposed, fill_value=0), utilities.normalize(unexposed, fill_value=1)],
+                     ignore_index=True)
+
+    # normalize so all categories sum to 1
+    cols = list(set(data.columns).difference(vi_globals.DRAW_COLUMNS + ['parameter']))
+    sums = data.groupby(cols)[vi_globals.DRAW_COLUMNS].sum()
+    data = (data
+            .groupby('parameter')
+            .apply(lambda df: df.set_index(cols).loc[:, vi_globals.DRAW_COLUMNS].divide(sums))
+            .reset_index())
+
+    data = data.filter(vi_globals.DEMOGRAPHIC_COLUMNS + vi_globals.DRAW_COLUMNS + ['parameter'])
+    data = utilities.reshape(data)
+    data = utilities.scrub_gbd_conventions(data, location)
+    sim_validation.validate_for_simulation(data, entity, key.measure, location)
+    data = utilities.split_interval(data, interval_column='age', split_column_prefix='age')
+    data = utilities.split_interval(data, interval_column='year', split_column_prefix='year')
+    return utilities.sort_hierarchical_data(data)
+
+
+def normalize_ikf_exposure_distribution(data: pd.DataFrame) -> pd.DataFrame:
+    # Ditch the provided cat5 data, which is incorrect.
+    data = (data
+            .set_index('parameter')
+            .drop('cat5')
+            .reset_index())
+
+    # Hang on to some column names and a sample value for things the validator
+    # needs but we don't need for processing.
+    unused_data = {c: data[c].unique()[0] for c in data.columns
+                   if c not in vi_globals.DEMOGRAPHIC_COLUMNS + vi_globals.DRAW_COLUMNS + ['parameter']}
+    # Clear unused columns, reshape from wide to long on draws
+    # and sort the index order to be demography then draw then parameter
+    # so broadcasting will work correctly.
+    data = (data
+            .drop(columns=list(unused_data.keys()))
+            .set_index(['parameter'] + vi_globals.DEMOGRAPHIC_COLUMNS)
+            .rename_axis(columns='draw')
+            .stack()
+            .to_frame()
+            .rename(columns={0: 'value'})
+            .reorder_levels(vi_globals.DEMOGRAPHIC_COLUMNS + ['draw', 'parameter']))
+    # Get the total of cats 1-4.
+    sums = (data
+            .reset_index()
+            .groupby(vi_globals.DEMOGRAPHIC_COLUMNS + ['draw'])
+            .value
+            .sum())
+    # Where the sums are larger than one, rescale so they sum to 1.
+    data.loc[sums > 1, 'value'] /= sums[sums > 1]
+    # Reshape wide and clean up indices.
+    data = (data
+            .reorder_levels(vi_globals.DEMOGRAPHIC_COLUMNS + ['parameter', 'draw'])
+            .unstack()
+            .rename_axis(columns=[None, None]))
+    data.columns = data.columns.droplevel()
+    data = data.reset_index()
+    # Compute cat 5 as the balance of cats 1-4 and add it to the data set
+    cat5 = (1 - data.groupby(vi_globals.DEMOGRAPHIC_COLUMNS).sum()).reset_index()
+    cat5['parameter'] = 'cat5'
+    data = pd.concat([data, cat5]).reset_index(drop=True)
+    # Add our extra columns back in.
+    for column, fill_val in unused_data.items():
+        data[column] = fill_val
+    return data
 
 def load_ikf_relative_risk(key: str, location: str) -> pd.DataFrame:
     key = EntityKey(key)
@@ -549,7 +536,7 @@ def load_ikf_relative_risk(key: str, location: str) -> pd.DataFrame:
 
     data = utilities.reshape(data, value_cols=value_cols)
     data = utilities.scrub_gbd_conventions(data, location)
-    validation.validate_for_simulation(data, entity, key.measure, location)
+    sim_validation.validate_for_simulation(data, entity, key.measure, location)
     data = utilities.split_interval(data, interval_column='age', split_column_prefix='age')
     data = utilities.split_interval(data, interval_column='year', split_column_prefix='year')
     return utilities.sort_hierarchical_data(data)
@@ -594,7 +581,7 @@ def load_ikf_paf(key: str, location: str) -> pd.DataFrame:
 
     data = utilities.reshape(data, value_cols=value_cols)
     data = utilities.scrub_gbd_conventions(data, location)
-    validation.validate_for_simulation(data, entity, key.measure, location)
+    sim_validation.validate_for_simulation(data, entity, key.measure, location)
     data = utilities.split_interval(data, interval_column='age', split_column_prefix='age')
     data = utilities.split_interval(data, interval_column='year', split_column_prefix='year')
     return utilities.sort_hierarchical_data(data)

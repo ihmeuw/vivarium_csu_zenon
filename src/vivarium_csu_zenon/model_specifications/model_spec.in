@@ -6,6 +6,7 @@ components:
         risks:
             - Risk('risk_factor.high_ldl_cholesterol')
             - Risk('risk_factor.high_systolic_blood_pressure')
+            - Risk('risk_factor.impaired_kidney_function')
 
     vivarium_csu_zenon.components:
         - IschemicHeartDisease()
