@@ -10,8 +10,11 @@ for an example.
 
 .. admonition::
 """
+from pathlib import Path
+
 import pandas as pd
 import numpy as np
+
 from vivarium_gbd_access import gbd
 from gbd_mapping import causes, risk_factors, covariates, sequelae
 from vivarium.framework.artifact import EntityKey
@@ -20,7 +23,7 @@ from vivarium_inputs.mapping_extension import alternative_risk_factors
 import vivarium_inputs.validation.sim as validation
 
 from vivarium_csu_zenon import globals as project_globals
-
+from vivarium_csu_zenon.utilities import sanitize_location
 
 def get_data(lookup_key: str, location: str) -> pd.DataFrame:
     """Retrieves data from an appropriate source.
@@ -115,8 +118,7 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.FPG.EXPOSURE_MEAN: load_standard_data,
         project_globals.FPG.EXPOSURE_SD: load_standard_data,
         project_globals.FPG.EXPOSURE_WEIGHTS: load_standard_data,
-        # TODO
-        # project_globals.FPG.DIABETES_MELLITUS_THRESHOLD: load_diabetes_fpg_threshold,
+        project_globals.FPG.DIABETES_MELLITUS_THRESHOLD: load_diabetes_fpg_threshold,
         project_globals.FPG.RELATIVE_RISK: load_standard_data,
         project_globals.FPG.PAF: load_standard_data,
         project_globals.FPG.TMRED: load_metadata,
@@ -601,9 +603,11 @@ def load_ikf_paf(key: str, location: str) -> pd.DataFrame:
     return utilities.sort_hierarchical_data(data)
 
 
-# def load_diabetes_fpg_threshold(key: str, location: str) -> pd.DataFrame:
-#     fpg_exposure = get_data()
-#     fpg_exposure_dist =
+def load_diabetes_fpg_threshold(key: str, location: str) -> pd.DataFrame:
+    directory = Path('/share/costeffectiveness/auxiliary_data/GBD_2017/03_untracked_data/fpg_diabetes_threshold')
+    data_path = directory / f'{sanitize_location(location)}.hdf'
+    fpg_exposure = pd.read_hdf(data_path)
+    return fpg_exposure
 
 
 def _load_em_from_meid(meid, location):
