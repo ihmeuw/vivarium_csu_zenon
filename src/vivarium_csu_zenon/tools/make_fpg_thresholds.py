@@ -68,9 +68,12 @@ def build_fpg_thresholds(location: str, draws: str, concat_only: bool, verbose: 
     for location in locations:
         sanitized_location = f'{sanitize_location(location)}'
         path = output_dir / sanitized_location
-        existing_data = pd.read_hdf(output_dir / f'{sanitized_location}.hdf')
-        existing_data.to_hdf(output_dir / f'{sanitized_location}-old.hdf', 'data')
-        threshold_data = pd.concat([existing_data] + [pd.read_hdf(file) for file in path.iterdir()], axis=1)
+        existing_data_path = output_dir / f'{sanitized_location}.hdf'
+        existing_data = []
+        if existing_data_path.exists():
+            existing_data.append(pd.read_hdf(output_dir / f'{sanitized_location}.hdf'))
+            existing_data[0].to_hdf(output_dir / f'{sanitized_location}-old.hdf', 'data')
+        threshold_data = pd.concat(existing_data + [pd.read_hdf(file) for file in path.iterdir()], axis=1)
         threshold_data.to_hdf(output_dir / f'{sanitized_location}.hdf', 'data')
         shutil.rmtree(path)
 
