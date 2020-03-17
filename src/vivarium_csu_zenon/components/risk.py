@@ -1,8 +1,16 @@
-from vivarium_public_health.risks import RiskEffect as RiskEffect_
-from vivarium_public_health.risks.data_transformations import get_distribution_type, pivot_categorical
+import typing
+
+import pandas as pd
+
+from vivarium_public_health.risks import Risk, RiskEffect as RiskEffect_
+from vivarium_public_health.risks.data_transformations import (get_distribution_type, pivot_categorical,
+                                                               get_exposure_post_processor)
 from vivarium_public_health.utilities import TargetString
 
 from vivarium_csu_zenon import globals as project_globals
+
+if typing.TYPE_CHECKING:
+    from vivarium.framework.engine import Builder
 
 TARGET_MAP = {
     'sequela.acute_myocardial_infarction.incidence_rate': TargetString(project_globals.IHD.ACUTE_MI_INCIDENCE_RATE),
@@ -34,3 +42,55 @@ class RiskEffect(RiskEffect_):
         paf_data = (paf_data[correct_target]
                     .drop(['affected_entity', 'affected_measure'], 'columns'))
         return paf_data
+
+
+class FastingPlasmaGlucose(Risk):
+    # TODO need diabetic_threshold s.t. dist.ppf(Demographic_categories, diabetic_threshold) == 7
+
+    @property
+    def name(self):
+        return 'fasting_plasma_glucose'
+
+    def setup(self, builder: 'Builder'):
+        # need randomness stream
+        # need population_view
+        # make propensity pipeline as in base risk
+        # make exposure pipeline source
+        #
+
+        propensity_col = f'{self.risk.name}_propensity'
+        diabetes_state_col = project_globals.DIABETES_MELLITUS.name
+
+        self.randomness = builder.randomness.get_stream(f'initial_{self.risk.name}_propensity')
+
+        self.propensity = builder.value.register_value_producer(
+            f'{self.risk.name}.propensity',
+            source=lambda index: self.population_view.get(index)[propensity_col],
+            requires_columns=[propensity_col]
+        )
+
+        self.exposure = builder.value.register_value_producer(
+            f'{self.risk.name}.exposure',
+            source=self.get_current_exposure,
+            requires_columns=['age', 'sex', diabetes_state_col],
+            requires_values=[f'{self.risk.name}.propensity'],
+            preferred_post_processor=get_exposure_post_processor(builder, self.risk)
+        )
+
+        builder.population.initializes_simulants(self.on_initialize_simulants, creates_columns=[propensity_col],
+                                                 requires_streams=[f'initial_{self.risk.name}_propensity'])
+
+        self.population_view = builder.population.get_view([propensity_col, diabetes_state_col])
+
+    def get_current_exposure(self, index):
+        # lookup diabetes status in state table (need pop_view)
+        # if not susceptible take propensity and rescale into the interval between threshold and 1
+        # then return ppf(rescaled propensity)
+        # else between 0 and threshold
+
+        # TODO get threshold
+        threshold = self.exposure_distribution.cdf(7)
+        propensity = self.propensity(index)
+
+        propensity
+        return pd.Series(self.exposure_distribution.ppf(propensity), index=index)

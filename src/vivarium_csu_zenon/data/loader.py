@@ -19,7 +19,7 @@ from vivarium_inputs import core, extract, interface, utilities, utility_data, g
 from vivarium_inputs.mapping_extension import alternative_risk_factors
 import vivarium_inputs.validation.sim as validation
 
-from vivarium_csu_zenon import paths, globals as project_globals
+from vivarium_csu_zenon import globals as project_globals
 
 
 def get_data(lookup_key: str, location: str) -> pd.DataFrame:
@@ -115,6 +115,7 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.FPG.EXPOSURE_MEAN: load_standard_data,
         project_globals.FPG.EXPOSURE_SD: load_standard_data,
         project_globals.FPG.EXPOSURE_WEIGHTS: load_standard_data,
+        project_globals.FPG.DIABETES_MELLITUS_THRESHOLD: load_diabetes_fpg_threshold,
         project_globals.FPG.RELATIVE_RISK: load_standard_data,
         project_globals.FPG.PAF: load_standard_data,
         project_globals.FPG.TMRED: load_metadata,
@@ -597,6 +598,11 @@ def load_ikf_paf(key: str, location: str) -> pd.DataFrame:
     data = utilities.split_interval(data, interval_column='age', split_column_prefix='age')
     data = utilities.split_interval(data, interval_column='year', split_column_prefix='year')
     return utilities.sort_hierarchical_data(data)
+
+
+def load_diabetes_fpg_threshold(key: str, location: str) -> pd.DataFrame:
+    fpg_exposure = get_data()
+    fpg_exposure_dist = 
 
 
 def _load_em_from_meid(meid, location):
