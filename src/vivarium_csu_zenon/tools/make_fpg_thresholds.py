@@ -51,9 +51,7 @@ def build_fpg_thresholds(output_dir: Path, verbose: int):
                 shutil.rmtree(path)
             path.mkdir(exist_ok=True, mode=0o775)
 
-            # TODO uncomment
-            # for draw in range(1000):
-            for draw in range(10):
+            for draw in range(1000):
                 job_template = session.createJobTemplate()
                 job_template.remoteCommand = shutil.which("python")
                 job_template.args = [__file__, str(path), f'"{location}"', draw]
@@ -159,9 +157,7 @@ def _get_thresholds(stratifications: List[Tuple], means: pd.DataFrame, sds: pd.D
     ts = time.time()
     print(f'Start: {ts}')
 
-    # TODO uncomment
-    # for i, stratification in enumerate(stratifications):
-    for i, stratification in enumerate(stratifications[-10:]):
+    for i, stratification in enumerate(stratifications):
         mu = means.loc[stratification, col]
         sigma = sds.loc[stratification, col]
         threshold = 0
