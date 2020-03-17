@@ -65,5 +65,6 @@ if __name__ == "__main__":
             make_specs=vivarium_csu_zenon.tools.cli:make_specs
             make_artifacts=vivarium_csu_zenon.tools.cli:make_artifacts
             make_results=vivarium_csu_zenon.tools.cli:make_results
+            make_fpg_exposure_thresholds=vivarium_csu_zenon.tools.cli:make_fpg_exposure_thresholds
         '''
     )
