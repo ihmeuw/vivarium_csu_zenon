@@ -24,103 +24,86 @@ from vivarium_csu_zenon import globals as project_globals
 from vivarium_csu_zenon.utilities import sanitize_location
 
 
-def build_fpg_thresholds(output_dir: Path, verbose: int):
-    """Builds artifacts for all locations in parallel.
-    Parameters
-    ----------
-    output_dir
-        The directory where the artifacts will be built.
-    verbose
-        How noisy the logger should be.
-    Note
-    ----
-        This function should not be called directly.  It is intended to be
-        called by the :func:`build_artifacts` function located in the same
-        module.
-    """
-    output_dir = Path(output_dir)
+def build_fpg_thresholds(location: str, draws: str, concat_only: bool, verbose: int):
+    output_dir = Path('/share/costeffectiveness/auxiliary_data/GBD_2017/03_untracked_data/fpg_diabetes_threshold')
+    locations = project_globals.LOCATIONS if location == 'all' else [location]
 
-    from vivarium_cluster_tools.psimulate.utilities import get_drmaa
-    drmaa = get_drmaa()
+    if not concat_only:
+        from vivarium_cluster_tools.psimulate.utilities import get_drmaa
+        drmaa = get_drmaa()
 
-    jobs = {}
-    with drmaa.Session() as session:
-        for location in project_globals.LOCATIONS:
-            path = output_dir / f'{sanitize_location(location)}'
-            if path.exists():
-                shutil.rmtree(path)
-            path.mkdir(exist_ok=True, mode=0o775)
+        jobs = {}
+        draw_list = range(1000) if draws == 'all' else draws.split(',')
 
-            for draw in range(1000):
-                job_template = session.createJobTemplate()
-                job_template.remoteCommand = shutil.which("python")
-                job_template.args = [__file__, str(path), f'"{location}"', draw]
-                job_template.nativeSpecification = (f'-V '  # Export all environment variables
-                                                    f'-b y '  # Command is a binary (python)
-                                                    f'-P {project_globals.CLUSTER_PROJECT} '  
-                                                    f'-q {project_globals.CLUSTER_QUEUE} '  
-                                                    f'-l fmem={project_globals.MAKE_ARTIFACT_MEM} '
-                                                    f'-l fthread={project_globals.MAKE_ARTIFACT_CPU} '
-                                                    f'-l h_rt={project_globals.MAKE_ARTIFACT_RUNTIME} '
-                                                    f'-l archive=TRUE '  # Need J-drive access for data
-                                                    f'-N {sanitize_location(location)}_artifact')  # Name of the job
-                jobs[location] = (session.runJob(job_template), drmaa.JobState.UNDETERMINED)
-                logger.info(f'Submitted job {jobs[location][0]} to build fpg threshold for {location} and draw {draw}.')
-                session.deleteJobTemplate(job_template)
+        with drmaa.Session() as session:
+            for location in locations:
+                build_fpg_thresholds_single_location(drmaa, jobs, location, draw_list, output_dir, session)
 
-        decodestatus = {drmaa.JobState.UNDETERMINED: 'undetermined',
-                        drmaa.JobState.QUEUED_ACTIVE: 'queued_active',
-                        drmaa.JobState.SYSTEM_ON_HOLD: 'system_hold',
-                        drmaa.JobState.USER_ON_HOLD: 'user_hold',
-                        drmaa.JobState.USER_SYSTEM_ON_HOLD: 'user_system_hold',
-                        drmaa.JobState.RUNNING: 'running',
-                        drmaa.JobState.SYSTEM_SUSPENDED: 'system_suspended',
-                        drmaa.JobState.USER_SUSPENDED: 'user_suspended',
-                        drmaa.JobState.DONE: 'finished',
-                        drmaa.JobState.FAILED: 'failed'}
+            decodestatus = {drmaa.JobState.UNDETERMINED: 'undetermined',
+                            drmaa.JobState.QUEUED_ACTIVE: 'queued_active',
+                            drmaa.JobState.SYSTEM_ON_HOLD: 'system_hold',
+                            drmaa.JobState.USER_ON_HOLD: 'user_hold',
+                            drmaa.JobState.USER_SYSTEM_ON_HOLD: 'user_system_hold',
+                            drmaa.JobState.RUNNING: 'running',
+                            drmaa.JobState.SYSTEM_SUSPENDED: 'system_suspended',
+                            drmaa.JobState.USER_SUSPENDED: 'user_suspended',
+                            drmaa.JobState.DONE: 'finished',
+                            drmaa.JobState.FAILED: 'failed'}
 
-        if verbose:
-            logger.info('Entering monitoring loop.')
-            logger.info('-------------------------')
-            logger.info('')
-
-            while any([job[1] not in [drmaa.JobState.DONE, drmaa.JobState.FAILED] for job in jobs.values()]):
-                for location, (job_id, status) in jobs.items():
-                    jobs[location] = (job_id, session.jobStatus(job_id))
-                    logger.info(f'{location:<35}: {decodestatus[jobs[location][1]]:>15}')
-                logger.info('')
-                time.sleep(project_globals.MAKE_ARTIFACT_SLEEP)
-                logger.info('Checking status again')
-                logger.info('---------------------')
+            if verbose:
+                logger.info('Entering monitoring loop.')
+                logger.info('-------------------------')
                 logger.info('')
 
-    for location in project_globals.LOCATIONS:
+                while any([job[1] not in [drmaa.JobState.DONE, drmaa.JobState.FAILED] for job in jobs.values()]):
+                    for location, (job_id, status) in jobs.items():
+                        jobs[location] = (job_id, session.jobStatus(job_id))
+                        logger.info(f'{location:<35}: {decodestatus[jobs[location][1]]:>15}')
+                    logger.info('')
+                    time.sleep(project_globals.MAKE_ARTIFACT_SLEEP)
+                    logger.info('Checking status again')
+                    logger.info('---------------------')
+                    logger.info('')
+
+    for location in locations:
         sanitized_location = f'{sanitize_location(location)}'
         path = output_dir / sanitized_location
-        threshold_data = pd.concat([pd.read_hdf(file) for file in path.iterdir()], axis=1)
+        existing_data_path = output_dir / f'{sanitized_location}.hdf'
+        existing_data = []
+        if existing_data_path.exists():
+            existing_data.append(pd.read_hdf(output_dir / f'{sanitized_location}.hdf'))
+            existing_data[0].to_hdf(output_dir / f'{sanitized_location}-old.hdf', 'data')
+        threshold_data = pd.concat(existing_data + [pd.read_hdf(file) for file in path.iterdir()], axis=1)
         threshold_data.to_hdf(output_dir / f'{sanitized_location}.hdf', 'data')
         shutil.rmtree(path)
 
     logger.info('**Done**')
 
 
+def build_fpg_thresholds_single_location(drmaa, jobs, location, draws, output_dir, session):
+    path = output_dir / f'{sanitize_location(location)}'
+    if path.exists() and len(draws) == 1000:
+        shutil.rmtree(path)
+    path.mkdir(exist_ok=True, mode=0o775)
+    for draw in draws:
+        job_template = session.createJobTemplate()
+        job_template.remoteCommand = shutil.which("python")
+        job_template.args = [__file__, str(path), f'"{location}"', draw]
+        job_template.nativeSpecification = (f'-V '  # Export all environment variables
+                                            f'-b y '  # Command is a binary (python)
+                                            f'-P {project_globals.CLUSTER_PROJECT} '
+                                            f'-q {project_globals.CLUSTER_QUEUE} '
+                                            f'-l fmem={project_globals.MAKE_ARTIFACT_MEM} '
+                                            f'-l fthread={project_globals.MAKE_ARTIFACT_CPU} '
+                                            f'-l h_rt={project_globals.MAKE_ARTIFACT_RUNTIME} '
+                                            f'-l archive=TRUE '  # Need J-drive access for data
+                                            f'-N {sanitize_location(location)}_artifact')  # Name of the job
+        jobs[location] = (session.runJob(job_template), drmaa.JobState.UNDETERMINED)
+        logger.info(f'Submitted job {jobs[location][0]} to build fpg threshold for {location} and draw {draw}.')
+        session.deleteJobTemplate(job_template)
+
+
 def build_single_location_single_draw(path: Union[str, Path], location: str, draw: int):
-    """Builds an artifact for a single location.
-    Parameters
-    ----------
-    path
-        The full path to the artifact to build.
-    location
-        The location to build the artifact for.  Must be one of the locations
-        specified in the project globals.
-    log_to_file
-        Whether we should write the application logs to a file.
-    Note
-    ----
-        This function should not be called directly.  It is intended to be
-        called by the :func:`build_artifacts` function located in the same
-        module.
-    """
     location = location.strip('"')
     path = Path(path)
 
