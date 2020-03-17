@@ -201,6 +201,7 @@ class __FastingPlasmaGlucose(NamedTuple):
     EXPOSURE_MEAN: str = 'risk_factor.high_fasting_plasma_glucose_continuous.exposure'
     EXPOSURE_SD: str = 'risk_factor.high_fasting_plasma_glucose_continuous.exposure_standard_deviation'
     EXPOSURE_WEIGHTS: str = 'risk_factor.high_fasting_plasma_glucose_continuous.exposure_distribution_weights'
+    DIABETES_MELLITUS_THRESHOLD: str = 'risk_factor.high_fasting_plasma_glucose_continuous.diabetes_mellitus_threshold'
     RELATIVE_RISK: str = 'risk_factor.high_fasting_plasma_glucose_continuous.relative_risk'
     PAF: str = 'risk_factor.high_fasting_plasma_glucose_continuous.population_attributable_fraction'
     TMRED: str = 'risk_factor.high_fasting_plasma_glucose_continuous.tmred'
