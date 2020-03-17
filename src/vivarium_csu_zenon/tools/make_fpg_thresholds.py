@@ -76,7 +76,7 @@ def build_fpg_thresholds(location: str, draws: str, output_dir: str, verbose: in
 
 def build_fpg_thresholds_single_location(drmaa, jobs, location, draws, output_dir, session):
     path = output_dir / f'{sanitize_location(location)}'
-    if path.exists():
+    if path.exists() and len(draws) == 1000:
         shutil.rmtree(path)
     path.mkdir(exist_ok=True, mode=0o775)
     for draw in draws:
