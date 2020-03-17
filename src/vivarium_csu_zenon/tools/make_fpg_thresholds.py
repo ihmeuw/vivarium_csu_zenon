@@ -64,10 +64,12 @@ def build_fpg_thresholds(location: str, draws: str, verbose: int):
                 logger.info('---------------------')
                 logger.info('')
 
-    for location in project_globals.LOCATIONS:
+    for location in locations:
         sanitized_location = f'{sanitize_location(location)}'
         path = output_dir / sanitized_location
-        threshold_data = pd.concat([pd.read_hdf(file) for file in path.iterdir()], axis=1)
+        existing_data = pd.read_hdf(output_dir / f'{sanitized_location}.hdf')
+        existing_data.to_hdf(output_dir / f'{sanitized_location}-old.hdf', 'data')
+        threshold_data = pd.concat([existing_data] + [pd.read_hdf(file) for file in path.iterdir()], axis=1)
         threshold_data.to_hdf(output_dir / f'{sanitized_location}.hdf', 'data')
         shutil.rmtree(path)
 
