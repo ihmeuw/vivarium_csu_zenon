@@ -100,7 +100,7 @@ def build_fpg_thresholds(output_dir: Path, verbose: int):
         sanitized_location = f'{sanitize_location(location)}'
         path = output_dir / sanitized_location
         threshold_data = pd.concat([pd.read_hdf(file) for file in path.iterdir()], axis=1)
-        threshold_data.to_hdf(output_dir / sanitized_location)
+        threshold_data.to_hdf(output_dir / sanitized_location, 'data')
         shutil.rmtree(path)
 
     logger.info('**Done**')
