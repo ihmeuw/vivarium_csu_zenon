@@ -40,6 +40,8 @@ def build_fpg_thresholds(output_dir: Path, verbose: int):
         called by the :func:`build_artifacts` function located in the same
         module.
     """
+    output_dir = Path(output_dir)
+
     from vivarium_cluster_tools.psimulate.utilities import get_drmaa
     drmaa = get_drmaa()
 
