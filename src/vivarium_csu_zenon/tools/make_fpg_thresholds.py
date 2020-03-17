@@ -10,10 +10,8 @@ from pathlib import Path
 import shutil
 import sys
 import time
-from time import time
 from typing import Union, List, Tuple, Dict
 
-import click
 from loguru import logger
 import pandas as pd
 from scipy.optimize import minimize, Bounds
@@ -158,7 +156,7 @@ def _get_thresholds(stratifications: List[Tuple], means: pd.DataFrame, sds: pd.D
     col = f'draw_{draw}'
     thresholds = pd.Series(0, index=means.index, name=col)
 
-    ts = time()
+    ts = time.time()
     print(f'Start: {ts}')
 
     # TODO uncomment
@@ -181,7 +179,7 @@ def _get_thresholds(stratifications: List[Tuple], means: pd.DataFrame, sds: pd.D
         print(f'mu: {mu}, sigma: {sigma}, threshold: {threshold}')
         thresholds.loc[stratification] = threshold
 
-    tf = time()
+    tf = time.time()
     print(f'End: {tf}')
     print(f'Duration: {tf - ts}')
 
