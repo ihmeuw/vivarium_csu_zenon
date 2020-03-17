@@ -45,19 +45,11 @@ class RiskEffect(RiskEffect_):
 
 
 class FastingPlasmaGlucose(Risk):
-    # TODO need diabetic_threshold s.t. dist.ppf(Demographic_categories, diabetic_threshold) == 7
-
     @property
     def name(self):
         return 'fasting_plasma_glucose'
 
     def setup(self, builder: 'Builder'):
-        # need randomness stream
-        # need population_view
-        # make propensity pipeline as in base risk
-        # make exposure pipeline source
-        #
-
         propensity_col = f'{self.risk.name}_propensity'
         diabetes_state_col = project_globals.DIABETES_MELLITUS.name
 
@@ -77,20 +69,25 @@ class FastingPlasmaGlucose(Risk):
             preferred_post_processor=get_exposure_post_processor(builder, self.risk)
         )
 
+        threshold_data = builder.data.load(project_globals.FPG.DIABETES_MELLITUS_THRESHOLD)
+        self.fpg_threshold = builder.lookup.build_table(threshold_data, key_columns=['sex'],
+                                                        parameter_columns=['age', 'year'])
+
         builder.population.initializes_simulants(self.on_initialize_simulants, creates_columns=[propensity_col],
                                                  requires_streams=[f'initial_{self.risk.name}_propensity'])
 
         self.population_view = builder.population.get_view([propensity_col, diabetes_state_col])
 
     def get_current_exposure(self, index):
-        # lookup diabetes status in state table (need pop_view)
-        # if not susceptible take propensity and rescale into the interval between threshold and 1
-        # then return ppf(rescaled propensity)
-        # else between 0 and threshold
+        pop = self.population_view.get(index)
+        diabetes_state = pop.loc[:, project_globals.DIABETES_MELLITUS.name]
+        diabetic_mask = diabetes_state != project_globals.DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME
+        raw_propensity = self.propensity(index)
+        thresholds = self.fpg_threshold(index)
 
-        # TODO get threshold
-        threshold = self.exposure_distribution.cdf(7)
-        propensity = self.propensity(index)
+        propensity = pd.Series(0, index=index)
+        propensity.loc[~diabetic_mask] = raw_propensity.loc[~diabetic_mask] * thresholds.loc[~diabetic_mask]
+        propensity.loc[diabetic_mask] = (thresholds.loc[diabetic_mask]
+                                         + raw_propensity.loc[diabetic_mask] * (1 - thresholds.loc[diabetic_mask]))
 
-        propensity
         return pd.Series(self.exposure_distribution.ppf(propensity), index=index)
