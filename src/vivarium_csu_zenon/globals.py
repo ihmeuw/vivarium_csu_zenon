@@ -110,6 +110,8 @@ class __DiabetesMellitus(NamedTuple):
     SEVERE_DIABETES_DISABILITY_WEIGHT: str = 'sequela.severe_diabetes_mellitus.disability_weight'
     CSMR: str = 'cause.diabetes_mellitus.cause_specific_mortality_rate'
     EMR: str = 'cause.diabetes_mellitus.excess_mortality_rate'
+    MODERATE_DIABETES_EMR: str = 'sequela.moderate_diabetes_mellitus.excess_mortality_rate'
+    SEVERE_DIABETES_EMR: str = 'sequela.severe_diabetes_mellitus.excess_mortality_rate'
     RESTRICTIONS: str = 'cause.diabetes_mellitus.restrictions'
 
     @property
@@ -301,7 +303,7 @@ CKD_MODEL_STATES = (
 )
 CKD_MODEL_TRANSITIONS = ('_to_'.join(p) for p in itertools.permutations(CKD_MODEL_STATES, r=2))
 
-IKF_TO_CKD_MAP = {f'cat{i}': ckd_model_state for i, ckd_model_state in enumerate(CKD_MODEL_STATES[::-1])}
+IKF_TO_CKD_MAP = {f'cat{i+1}': ckd_model_state for i, ckd_model_state in enumerate(CKD_MODEL_STATES[::-1])}
 
 DISEASE_MODELS = (
     IHD_MODEL_NAME,
@@ -335,11 +337,8 @@ TRANSITIONS = tuple(transition for model in DISEASE_MODELS for transition in DIS
 # Risk Model Constants #
 ########################
 
-LDL_C_RISK_CATEGORIES = ('low', 'high')
-LDL_C_CATEGORY_CUTOFF = 4.9
-
-SBP_RISK_CATEGORIES = ('low', 'high')
-SBP_CATEGORY_CUTOFF = 140
+DIABETES_CATEGORIES = [s for s in DIABETES_MELLITUS_MODEL_STATES if s != TRANSIENT_DIABETES_MELLITUS_STATE_NAME]
+CKD_CATEGORIES = CKD_MODEL_STATES
 
 #################################
 # Results columns and variables #
@@ -363,10 +362,10 @@ THROWAWAY_COLUMNS = ([f'{state}_event_count' for state in STATES]
                      + [f'{state}_prevalent_cases_at_sim_end' for state in STATES])
 
 TOTAL_POPULATION_COLUMN_TEMPLATE = 'total_population_{POP_STATE}'
-PERSON_TIME_COLUMN_TEMPLATE = 'person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_sbp_{SBP}_ldl_c_{LDL_C}'
-DEATH_COLUMN_TEMPLATE = 'death_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_sbp_{SBP}_ldl_c_{LDL_C}'
-YLLS_COLUMN_TEMPLATE = 'ylls_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_sbp_{SBP}_ldl_c_{LDL_C}'
-YLDS_COLUMN_TEMPLATE = 'ylds_due_to_{CAUSE_OF_DISABILITY}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_sbp_{SBP}_ldl_c_{LDL_C}'
+PERSON_TIME_COLUMN_TEMPLATE = 'person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
+DEATH_COLUMN_TEMPLATE = 'death_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
+YLLS_COLUMN_TEMPLATE = 'ylls_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
+YLDS_COLUMN_TEMPLATE = 'ylds_due_to_{CAUSE_OF_DISABILITY}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
 STATE_PERSON_TIME_COLUMN_TEMPLATE = '{STATE}_person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}'
 TRANSITION_COUNT_COLUMN_TEMPLATE = '{TRANSITION}_event_count_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}'
 
@@ -426,8 +425,8 @@ TEMPLATE_FIELD_MAP = {
     'CAUSE_OF_DISABILITY': CAUSES_OF_DISABILITY,
     'STATE': STATES,
     'TRANSITION': TRANSITIONS,
-    'LDL_C': LDL_C_RISK_CATEGORIES,
-    'SBP': SBP_RISK_CATEGORIES,
+    'DIABETES': DIABETES_CATEGORIES,
+    'CKD': CKD_CATEGORIES,
 }
 
 

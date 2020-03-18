@@ -17,15 +17,19 @@ class MortalityObserver(MortalityObserver_):
 
     def setup(self, builder):
         super().setup(builder)
-        self.systolic_blood_pressure = builder.value.get_value(f'{project_globals.SBP.name}.exposure')
-        self.ldl_cholesterol = builder.value.get_value(f'{project_globals.LDL_C.name}.exposure')
+        columns_required = ['tracked', 'alive', 'entrance_time', 'exit_time', 'cause_of_death',
+                            'years_of_life_lost', 'age', project_globals.DIABETES_MELLITUS.name,
+                            project_globals.CKD_MODEL_NAME]
+        if self.config.by_sex:
+            columns_required += ['sex']
+        self.population_view = builder.population.get_view(columns_required)
 
     def metrics(self, index, metrics):
         pop = self.population_view.get(index)
-        sbp = pd.cut(self.systolic_blood_pressure(pop.index), (0, project_globals.SBP_CATEGORY_CUTOFF, inf),
-                     labels=project_globals.LDL_C_RISK_CATEGORIES)
-        ldl_c = pd.cut(self.ldl_cholesterol(pop.index), (0, project_globals.LDL_C_CATEGORY_CUTOFF, inf),
-                       labels=project_globals.SBP_RISK_CATEGORIES)
+
+        diabetes = pop.loc[:, project_globals.DIABETES_MELLITUS.name]
+        ckd = pop.loc[:, project_globals.CKD_MODEL_NAME]
+
         pop.loc[pop.exit_time.isnull(), 'exit_time'] = self.clock()
 
         measure_getters = (
@@ -34,15 +38,15 @@ class MortalityObserver(MortalityObserver_):
             (get_years_of_life_lost, (self.life_expectancy, project_globals.CAUSES_OF_DEATH)),
         )
 
-        categories = product(project_globals.SBP_RISK_CATEGORIES, project_globals.LDL_C_RISK_CATEGORIES,)
+        categories = product(project_globals.DIABETES_CATEGORIES, project_globals.CKD_CATEGORIES,)
 
-        for sbp_cat, ldl_c_cat in categories:
-            pop_in_group = pop.loc[(sbp == sbp_cat) & (ldl_c == ldl_c_cat)]
+        for diabetes_cat, ckd_cat in categories:
+            pop_in_group = pop.loc[(diabetes == diabetes_cat) & (ckd == ckd_cat)]
             base_args = (pop_in_group, self.config.to_dict(), self.start_time, self.clock(), self.age_bins)
 
             for measure_getter, extra_args in measure_getters:
                 measure_data = measure_getter(*base_args, *extra_args)
-                measure_data = {f'{k}_sbp_{sbp_cat}_ldl_c_{ldl_c_cat}': v for k, v in measure_data.items()}
+                measure_data = {f'{k}_diabetes_{diabetes_cat}_ckd_{ckd_cat}': v for k, v in measure_data.items()}
                 metrics.update(measure_data)
 
         the_living = pop[(pop.alive == 'alive') & pop.tracked]
@@ -57,10 +61,16 @@ class MortalityObserver(MortalityObserver_):
 class DisabilityObserver(DisabilityObserver_):
     def setup(self, builder):
         super().setup(builder)
+        columns_required = ['tracked', 'alive', 'years_lived_with_disability',
+                            project_globals.DIABETES_MELLITUS.name, project_globals.CKD_MODEL_NAME]
+        if self.config.by_age:
+            columns_required += ['age']
+        if self.config.by_sex:
+            columns_required += ['sex']
+        self.population_view = builder.population.get_view(columns_required)
+
         self.disability_weight_pipelines = {cause: builder.value.get_value(f'{cause}.disability_weight')
                                             for cause in project_globals.CAUSES_OF_DISABILITY}
-        self.systolic_blood_pressure = builder.value.get_value(f'{project_globals.SBP.name}.exposure')
-        self.ldl_cholesterol = builder.value.get_value(f'{project_globals.LDL_C.name}.exposure')
 
     def on_time_step_prepare(self, event):
         pop = self.population_view.get(event.index, query='tracked == True and alive == "alive"')
@@ -70,20 +80,18 @@ class DisabilityObserver(DisabilityObserver_):
         self.population_view.update(pop)
 
     def update_metrics(self, pop):
+        diabetes = pop.loc[:, project_globals.DIABETES_MELLITUS.name]
+        ckd = pop.loc[:, project_globals.CKD_MODEL_NAME]
 
-        sbp = pd.cut(self.systolic_blood_pressure(pop.index), (0, project_globals.SBP_CATEGORY_CUTOFF, inf),
-                     labels=project_globals.LDL_C_RISK_CATEGORIES)
-        ldl_c = pd.cut(self.ldl_cholesterol(pop.index), (0, project_globals.LDL_C_CATEGORY_CUTOFF, inf),
-                       labels=project_globals.SBP_RISK_CATEGORIES)
-        categories = product(project_globals.SBP_RISK_CATEGORIES, project_globals.LDL_C_RISK_CATEGORIES,)
-        for sbp_cat, ldl_c_cat in categories:
-            pop_in_group = pop.loc[(sbp == sbp_cat) & (ldl_c == ldl_c_cat)]
+        categories = product(project_globals.DIABETES_CATEGORIES, project_globals.CKD_CATEGORIES,)
+        for diabetes_cat, ckd_cat in categories:
+            pop_in_group = pop.loc[(diabetes == diabetes_cat) & (ckd == ckd_cat)]
 
             ylds_this_step = get_years_lived_with_disability(pop_in_group, self.config.to_dict(),
                                                              self.clock().year, self.step_size(),
                                                              self.age_bins, self.disability_weight_pipelines,
                                                              project_globals.CAUSES_OF_DISABILITY)
-            ylds_this_step = {f'{k}_sbp_{sbp_cat}_ldl_c_{ldl_c_cat}': v for k, v in ylds_this_step.items()}
+            ylds_this_step = {f'{k}_diabetes_{diabetes_cat}_ckd_{ckd_cat}': v for k, v in ylds_this_step.items()}
             self.years_lived_with_disability.update(ylds_this_step)
 
 
