@@ -110,6 +110,8 @@ class __DiabetesMellitus(NamedTuple):
     SEVERE_DIABETES_DISABILITY_WEIGHT: str = 'sequela.severe_diabetes_mellitus.disability_weight'
     CSMR: str = 'cause.diabetes_mellitus.cause_specific_mortality_rate'
     EMR: str = 'cause.diabetes_mellitus.excess_mortality_rate'
+    MODERATE_DIABETES_EMR: str = 'sequela.moderate_diabetes_mellitus.excess_mortality_rate'
+    SEVERE_DIABETES_EMR: str = 'sequela.severe_diabetes_mellitus.excess_mortality_rate'
     RESTRICTIONS: str = 'cause.diabetes_mellitus.restrictions'
 
     @property
