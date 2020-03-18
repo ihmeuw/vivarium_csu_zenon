@@ -111,7 +111,7 @@ def DiabetesMellitus():
     
     # Remission transitions
     data_funcs = {
-        'transition_rate': lambda _, builder: builder.data.load(
+        'transition_rate': lambda builder, *_: builder.data.load(
             project_globals.DIABETES_MELLITUS.REMISSION_RATE
         )
     }

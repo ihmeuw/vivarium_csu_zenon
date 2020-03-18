@@ -303,7 +303,7 @@ CKD_MODEL_STATES = (
 )
 CKD_MODEL_TRANSITIONS = ('_to_'.join(p) for p in itertools.permutations(CKD_MODEL_STATES, r=2))
 
-IKF_TO_CKD_MAP = {f'cat{i}': ckd_model_state for i, ckd_model_state in enumerate(CKD_MODEL_STATES[::-1])}
+IKF_TO_CKD_MAP = {f'cat{i+1}': ckd_model_state for i, ckd_model_state in enumerate(CKD_MODEL_STATES[::-1])}
 
 DISEASE_MODELS = (
     IHD_MODEL_NAME,

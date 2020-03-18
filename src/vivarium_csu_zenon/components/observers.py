@@ -20,13 +20,15 @@ class MortalityObserver(MortalityObserver_):
         columns_required = ['tracked', 'alive', 'entrance_time', 'exit_time', 'cause_of_death',
                             'years_of_life_lost', 'age', project_globals.DIABETES_MELLITUS.name,
                             project_globals.CKD_MODEL_NAME]
+        if self.config.by_sex:
+            columns_required += ['sex']
         self.population_view = builder.population.get_view(columns_required)
 
     def metrics(self, index, metrics):
         pop = self.population_view.get(index)
 
-        diabetes = pop.loc[project_globals.DIABETES_MELLITUS.name]
-        ckd = pop.loc[project_globals.CKD_MODEL_NAME]
+        diabetes = pop.loc[:, project_globals.DIABETES_MELLITUS.name]
+        ckd = pop.loc[:, project_globals.CKD_MODEL_NAME]
 
         pop.loc[pop.exit_time.isnull(), 'exit_time'] = self.clock()
 
@@ -59,8 +61,12 @@ class MortalityObserver(MortalityObserver_):
 class DisabilityObserver(DisabilityObserver_):
     def setup(self, builder):
         super().setup(builder)
-        columns_required = ['tracked', 'alive', 'years_lived_with_disability', 'age', 'sex',
+        columns_required = ['tracked', 'alive', 'years_lived_with_disability',
                             project_globals.DIABETES_MELLITUS.name, project_globals.CKD_MODEL_NAME]
+        if self.config.by_age:
+            columns_required += ['age']
+        if self.config.by_sex:
+            columns_required += ['sex']
         self.population_view = builder.population.get_view(columns_required)
 
         self.disability_weight_pipelines = {cause: builder.value.get_value(f'{cause}.disability_weight')
@@ -74,8 +80,8 @@ class DisabilityObserver(DisabilityObserver_):
         self.population_view.update(pop)
 
     def update_metrics(self, pop):
-        diabetes = pop.loc[project_globals.DIABETES_MELLITUS.name]
-        ckd = pop.loc[project_globals.CKD_MODEL_NAME]
+        diabetes = pop.loc[:, project_globals.DIABETES_MELLITUS.name]
+        ckd = pop.loc[:, project_globals.CKD_MODEL_NAME]
 
         categories = product(project_globals.DIABETES_CATEGORIES, project_globals.CKD_CATEGORIES,)
         for diabetes_cat, ckd_cat in categories:
