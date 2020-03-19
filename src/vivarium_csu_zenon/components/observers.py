@@ -1,6 +1,4 @@
 from collections import Counter
-from itertools import product
-from math import inf
 
 import pandas as pd
 from vivarium_public_health.metrics import (MortalityObserver as MortalityObserver_,
@@ -18,19 +16,18 @@ class MortalityObserver(MortalityObserver_):
     def setup(self, builder):
         super().setup(builder)
         columns_required = ['tracked', 'alive', 'entrance_time', 'exit_time', 'cause_of_death',
-                            'years_of_life_lost', 'age', project_globals.DIABETES_MELLITUS.name,
-                            project_globals.CKD_MODEL_NAME]
+                            'years_of_life_lost', 'age']
         if self.config.by_sex:
             columns_required += ['sex']
+
+        self.cvd_risk_category = builder.value.get_value('cvd_risk_category')
         self.population_view = builder.population.get_view(columns_required)
 
     def metrics(self, index, metrics):
         pop = self.population_view.get(index)
-
-        diabetes = pop.loc[:, project_globals.DIABETES_MELLITUS.name]
-        ckd = pop.loc[:, project_globals.CKD_MODEL_NAME]
-
         pop.loc[pop.exit_time.isnull(), 'exit_time'] = self.clock()
+
+        cvd_risk = self.cvd_risk_category(index)
 
         measure_getters = (
             (get_person_time, ()),
@@ -38,15 +35,13 @@ class MortalityObserver(MortalityObserver_):
             (get_years_of_life_lost, (self.life_expectancy, project_globals.CAUSES_OF_DEATH)),
         )
 
-        categories = product(project_globals.DIABETES_CATEGORIES, project_globals.CKD_CATEGORIES,)
-
-        for diabetes_cat, ckd_cat in categories:
-            pop_in_group = pop.loc[(diabetes == diabetes_cat) & (ckd == ckd_cat)]
+        for cvd_risk_cat in project_globals.CVD_RISK_CATEGORIES:
+            pop_in_group = pop.loc[cvd_risk == cvd_risk_cat]
             base_args = (pop_in_group, self.config.to_dict(), self.start_time, self.clock(), self.age_bins)
 
             for measure_getter, extra_args in measure_getters:
                 measure_data = measure_getter(*base_args, *extra_args)
-                measure_data = {f'{k}_diabetes_{diabetes_cat}_ckd_{ckd_cat}': v for k, v in measure_data.items()}
+                measure_data = {f'{k}_cvd_{cvd_risk_cat}': v for k, v in measure_data.items()}
                 metrics.update(measure_data)
 
         the_living = pop[(pop.alive == 'alive') & pop.tracked]
@@ -69,6 +64,7 @@ class DisabilityObserver(DisabilityObserver_):
             columns_required += ['sex']
         self.population_view = builder.population.get_view(columns_required)
 
+        self.cvd_risk_category = builder.value.get_value('cvd_risk_category')
         self.disability_weight_pipelines = {cause: builder.value.get_value(f'{cause}.disability_weight')
                                             for cause in project_globals.CAUSES_OF_DISABILITY}
 
@@ -80,18 +76,15 @@ class DisabilityObserver(DisabilityObserver_):
         self.population_view.update(pop)
 
     def update_metrics(self, pop):
-        diabetes = pop.loc[:, project_globals.DIABETES_MELLITUS.name]
-        ckd = pop.loc[:, project_globals.CKD_MODEL_NAME]
+        cvd_risk = self.cvd_risk_category(pop.index)
 
-        categories = product(project_globals.DIABETES_CATEGORIES, project_globals.CKD_CATEGORIES,)
-        for diabetes_cat, ckd_cat in categories:
-            pop_in_group = pop.loc[(diabetes == diabetes_cat) & (ckd == ckd_cat)]
-
+        for cvd_risk_cat in project_globals.CVD_RISK_CATEGORIES:
+            pop_in_group = pop.loc[cvd_risk == cvd_risk_cat]
             ylds_this_step = get_years_lived_with_disability(pop_in_group, self.config.to_dict(),
                                                              self.clock().year, self.step_size(),
                                                              self.age_bins, self.disability_weight_pipelines,
                                                              project_globals.CAUSES_OF_DISABILITY)
-            ylds_this_step = {f'{k}_diabetes_{diabetes_cat}_ckd_{ckd_cat}': v for k, v in ylds_this_step.items()}
+            ylds_this_step = {f'{k}_cvd_{cvd_risk_cat}': v for k, v in ylds_this_step.items()}
             self.years_lived_with_disability.update(ylds_this_step)
 
 

@@ -333,12 +333,17 @@ DISEASE_MODEL_MAP = {
 STATES = tuple(state for model in DISEASE_MODELS for state in DISEASE_MODEL_MAP[model]['states'])
 TRANSITIONS = tuple(transition for model in DISEASE_MODELS for transition in DISEASE_MODEL_MAP[model]['transitions'])
 
+# CVD Risk Categories
+CVD_VERY_HIGH_RISK = 'very_high_risk'
+CVD_HIGH_RISK = 'high_risk'
+CVD_MODERATE_RISK = 'moderate_risk'
+CVD_LOW_RISK = 'low_risk'
+
 ########################
-# Risk Model Constants #
+# Stratification Constants #
 ########################
 
-DIABETES_CATEGORIES = [s for s in DIABETES_MELLITUS_MODEL_STATES if s != TRANSIENT_DIABETES_MELLITUS_STATE_NAME]
-CKD_CATEGORIES = CKD_MODEL_STATES
+CVD_RISK_CATEGORIES = [CVD_VERY_HIGH_RISK, CVD_HIGH_RISK, CVD_MODERATE_RISK, CVD_LOW_RISK]
 
 #################################
 # Results columns and variables #
@@ -362,10 +367,10 @@ THROWAWAY_COLUMNS = ([f'{state}_event_count' for state in STATES]
                      + [f'{state}_prevalent_cases_at_sim_end' for state in STATES])
 
 TOTAL_POPULATION_COLUMN_TEMPLATE = 'total_population_{POP_STATE}'
-PERSON_TIME_COLUMN_TEMPLATE = 'person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
-DEATH_COLUMN_TEMPLATE = 'death_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
-YLLS_COLUMN_TEMPLATE = 'ylls_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
-YLDS_COLUMN_TEMPLATE = 'ylds_due_to_{CAUSE_OF_DISABILITY}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
+PERSON_TIME_COLUMN_TEMPLATE = 'person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_cvd_{CVD_RISK}'
+DEATH_COLUMN_TEMPLATE = 'death_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_cvd_{CVD_RISK}'
+YLLS_COLUMN_TEMPLATE = 'ylls_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_cvd_{CVD_RISK}'
+YLDS_COLUMN_TEMPLATE = 'ylds_due_to_{CAUSE_OF_DISABILITY}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_cvd_{CVD_RISK}'
 STATE_PERSON_TIME_COLUMN_TEMPLATE = '{STATE}_person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}'
 TRANSITION_COUNT_COLUMN_TEMPLATE = '{TRANSITION}_event_count_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}'
 
@@ -425,8 +430,7 @@ TEMPLATE_FIELD_MAP = {
     'CAUSE_OF_DISABILITY': CAUSES_OF_DISABILITY,
     'STATE': STATES,
     'TRANSITION': TRANSITIONS,
-    'DIABETES': DIABETES_CATEGORIES,
-    'CKD': CKD_CATEGORIES,
+    'CVD_RISK': CVD_RISK_CATEGORIES,
 }
 
 

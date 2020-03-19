@@ -1,23 +1,14 @@
 import typing
 
 import pandas as pd
-from vivarium_public_health.disease import (DiseaseState as DiseaseState_, DiseaseModel, SusceptibleState,
-                                            TransientDiseaseState, RateTransition as RateTransition_)
 
 from vivarium_csu_zenon import globals as project_globals
 
 if typing.TYPE_CHECKING:
     from vivarium.framework.engine import Builder
-    from vivarium.framework.population import SimulantData
-    from vivarium.framework.event import Event
 
 
 class CVDRiskAttribute:
-    CVD_VERY_HIGH_RISK = 'very_high_risk'
-    CVD_HIGH_RISK = 'high_risk'
-    CVD_MODERATE_RISK = 'moderate_risk'
-    CVD_LOW_RISK = 'low_risk'
-
     DIABETES_STATE_COL = project_globals.DIABETES_MELLITUS.name
     CKD_STATE_COL = project_globals.CKD_MODEL_NAME
 
@@ -73,8 +64,8 @@ class CVDRiskAttribute:
         low_risk_mask = cvd_risk_score < 1
 
         cvd_risk_categories = pd.Series(0, index=index)
-        cvd_risk_categories[very_high_risk_mask] = self.CVD_VERY_HIGH_RISK
-        cvd_risk_categories[high_risk_mask] = self.CVD_HIGH_RISK
-        cvd_risk_categories[moderate_risk_mask] = self.CVD_MODERATE_RISK
-        cvd_risk_categories[low_risk_mask] = self.CVD_LOW_RISK
+        cvd_risk_categories[very_high_risk_mask] = project_globals.CVD_VERY_HIGH_RISK
+        cvd_risk_categories[high_risk_mask] = project_globals.CVD_HIGH_RISK
+        cvd_risk_categories[moderate_risk_mask] = project_globals.CVD_MODERATE_RISK
+        cvd_risk_categories[low_risk_mask] = project_globals.CVD_LOW_RISK
         return cvd_risk_categories
