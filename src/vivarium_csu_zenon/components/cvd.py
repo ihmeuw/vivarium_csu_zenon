@@ -40,7 +40,7 @@ class CVDRiskAttribute:
         pop = self.population_view.get(index)
         sbp = self.systolic_blood_pressure(index)
         age = pop.loc[:, 'age']
-        sex = pop.loc[:, 'sex']
+        sex = pop.loc[:, 'sex'] == 'Male'
         score = -16.5 + 0.043 * sbp + 0.266 * age + 2.32 * sex
         return score
 
@@ -51,17 +51,24 @@ class CVDRiskAttribute:
         cvd_risk_score = self.cvd_risk_score(index)
         sbp = self.systolic_blood_pressure(index)
 
-        very_high_risk_mask = (diabetes_state == project_globals.SEVERE_DIABETES_MELLITUS_STATE_NAME
-                               or ckd_state == project_globals.STAGE_V_CKD_STATE_NAME
-                               or cvd_risk_score >= 10)
-        high_risk_mask = (5 <= cvd_risk_score < 10
-                          and (diabetes_state == project_globals.MODERATE_DIABETES_MELLITUS_STATE_NAME
-                               or ckd_state in [project_globals.ALBUMINURIA_STATE_NAME,
-                                                project_globals.STAGE_III_CKD_STATE_NAME,
-                                                project_globals.STAGE_IV_CKD_STATE_NAME]
-                               or sbp > 180))
-        moderate_risk_mask = 1 <= cvd_risk_score < 5
-        low_risk_mask = cvd_risk_score < 1
+        high_sbp_mask = sbp > 180
+        moderate_diabetes_mask = diabetes_state == project_globals.MODERATE_DIABETES_MELLITUS_STATE_NAME
+        moderate_ckd_mask = ((ckd_state == project_globals.ALBUMINURIA_STATE_NAME)
+                             | (ckd_state == project_globals.STAGE_III_CKD_STATE_NAME)
+                             | (ckd_state == project_globals.STAGE_IV_CKD_STATE_NAME))
+        low_non_cvd_risk_mask = ((diabetes_state == project_globals.DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME)
+                                 & (ckd_state == project_globals.CKD_SUSCEPTIBLE_STATE_NAME)
+                                 & ~high_sbp_mask)
+
+        very_high_risk_mask = ((diabetes_state == project_globals.SEVERE_DIABETES_MELLITUS_STATE_NAME)
+                               | (ckd_state == project_globals.STAGE_V_CKD_STATE_NAME)
+                               | (cvd_risk_score >= 10))
+        high_risk_mask = (moderate_diabetes_mask
+                          | moderate_ckd_mask
+                          | high_sbp_mask
+                          | (5 <= cvd_risk_score) & (cvd_risk_score < 10))
+        moderate_risk_mask = low_non_cvd_risk_mask & (1 <= cvd_risk_score) & (cvd_risk_score < 5)
+        low_risk_mask = low_non_cvd_risk_mask & (cvd_risk_score < 1)
 
         cvd_risk_categories = pd.Series(0, index=index)
         cvd_risk_categories[very_high_risk_mask] = project_globals.CVD_VERY_HIGH_RISK
