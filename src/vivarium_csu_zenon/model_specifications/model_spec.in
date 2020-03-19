@@ -14,6 +14,8 @@ components:
         - DiabetesMellitus()
         - ChronicKidneyDisease()
 
+        - CVDRiskAttribute()
+
         - RiskEffect('risk_factor.high_ldl_cholesterol', 'sequela.acute_myocardial_infarction.incidence_rate')
         - RiskEffect('risk_factor.high_ldl_cholesterol', 'sequela.acute_ischemic_stroke.incidence_rate')
         - RiskEffect('risk_factor.high_ldl_cholesterol', 'sequela.post_myocardial_infarction_to_acute_myocardial_infarction.transition_rate')
