@@ -143,8 +143,8 @@ def sort_data(data):
 def split_processing_column(data, with_cause, state, transition, risk_factors):
     data['treatment_group'] = 'all'
     if risk_factors:
-        data['process'], data['ldl_cholestrol'] = data.process.str.split('_ldl_c_').str
-        data['process'], data['systolic_blood_pressure'] = data.process.str.split('_sbp_').str
+        data['process'], data['chronic_kidney_disease'] = data.process.str.split('_ckd_').str
+        data['process'], data['diabetes'] = data.process.str.split('_diabetes_').str
     data['process'], data['age_group'] = data.process.str.split('_in_age_group_').str
     data['process'], data['sex'] = data.process.str.split('_among_').str
     data['process'], data['year'] = data.process.str.split('_in_').str
