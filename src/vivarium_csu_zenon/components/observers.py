@@ -148,6 +148,7 @@ class DiseaseObserver:
         self.transitions = project_globals.DISEASE_MODEL_MAP[self.disease]['transitions']
 
         self.previous_state_column = f'previous_{self.disease}'
+        self.cvd_risk_category = builder.value.get_value('cvd_risk_category')
         builder.population.initializes_simulants(self.on_initialize_simulants,
                                                  creates_columns=[self.previous_state_column])
 
@@ -187,9 +188,17 @@ class DiseaseObserver:
     def on_collect_metrics(self, event):
         pop = self.population_view.get(event.index)
         for transition in self.transitions:
-            transition_counts_this_step = get_transition_count(pop, self.config, self.disease, transition,
-                                                               event.time, self.age_bins)
-            self.counts.update(transition_counts_this_step)
+            event_this_step = pop[self.disease] != pop[f'previous_{self.disease}']
+            transitioned_pop = pop.loc[event_this_step]
+            cvd_risk = self.cvd_risk_category(transitioned_pop.index)
+            base_key = get_output_template(**self.config).substitute(measure=f'{transition}_event_count',
+                                                                     year=event.time.year)
+            base_filter = QueryString('')
+            for cvd_risk_cat in project_globals.CVD_RISK_CATEGORIES:
+                pop_in_group = transitioned_pop.loc[cvd_risk == cvd_risk_cat]
+                transition_counts = get_group_counts(pop_in_group, base_filter, base_key, self.config, self.age_bins)
+                transition_counts = {f'{k}_cvd_{cvd_risk_cat}': v for k, v in transition_counts.items()}
+                self.counts.update(transition_counts)
 
     def metrics(self, index, metrics):
         metrics.update(self.counts)
@@ -208,13 +217,3 @@ def get_state_person_time(pop, config, disease, state, current_year, step_size, 
     person_time = get_group_counts(pop, base_filter, base_key, config, age_bins,
                                    aggregate=lambda x: len(x) * to_years(step_size))
     return person_time
-
-
-def get_transition_count(pop, config, disease, transition, event_time, age_bins):
-    event_this_step = pop[disease] != pop[f'previous_{disease}']
-    transitioned_pop = pop.loc[event_this_step]
-    base_key = get_output_template(**config).substitute(measure=f'{transition}_event_count',
-                                                        year=event_time.year)
-    base_filter = QueryString('')
-    transition_count = get_group_counts(transitioned_pop, base_filter, base_key, config, age_bins)
-    return transition_count
