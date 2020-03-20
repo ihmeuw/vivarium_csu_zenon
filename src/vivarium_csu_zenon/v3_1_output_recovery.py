@@ -4,6 +4,8 @@ import re
 import ast
 import pandas as pd
 
+from loguru import logger
+
 from vivarium_csu_zenon import paths, globals as project_globals
 
 version_name = 'v3.1_fpg_ikf_model'
@@ -25,12 +27,14 @@ location_runtimes = {
 }
 
 for location, runtime in location_runtimes.items():
+    logger.info(f'Starting {location}: {runtime}')
     output_dir = version_dir_path / location / runtime
     log_dir = output_dir / 'logs' / f'{runtime}_run' / 'worker_logs'
 
     results_list = []
 
     for filename in log_dir.iterdir():
+        logger.info(f'Processing {filename}')
         with open(filename) as log:
             for line in log:
                 if DRAW_SEED_CODE_LOCATION in line:
@@ -49,3 +53,5 @@ for location, runtime in location_runtimes.items():
 
     output = pd.concat(results_list)
     output.to_hdf(output_dir / 'output.hdf')
+
+logger.info("DONE!")
