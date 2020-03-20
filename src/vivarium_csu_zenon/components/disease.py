@@ -9,7 +9,6 @@ from vivarium_csu_zenon import globals as project_globals
 if typing.TYPE_CHECKING:
     from vivarium.framework.engine import Builder
     from vivarium.framework.population import SimulantData
-    from vivarium.framework.event import Event
 
 
 class RateTransition(RateTransition_):
@@ -141,6 +140,8 @@ class ChronicKidneyDisease:
                                                  creates_columns=[self.name],
                                                  requires_values=[f'{project_globals.IKF.name}.exposure'])
 
+        builder.event.register_listener('time_step', self.on_time_step)
+
         # TODO uncomment and aggregate states once disaggregation not needed
         # disability_weight_data = self.load_disability_weight_data(builder)
         self.base_disability_weight = {}
@@ -184,6 +185,12 @@ class ChronicKidneyDisease:
 
     def on_initialize_simulants(self, pop_data: 'SimulantData'):
         exposure = self.ikf_exposure(pop_data.index)
+        states = exposure.map(project_globals.IKF_TO_CKD_MAP)
+        states.name = self.name
+        self.population_view.update(states)
+
+    def on_time_step(self, event):
+        exposure = self.ikf_exposure(event.index)
         states = exposure.map(project_globals.IKF_TO_CKD_MAP)
         states.name = self.name
         self.population_view.update(states)
