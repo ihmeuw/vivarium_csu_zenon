@@ -104,8 +104,7 @@ def pivot_data(data):
 
 
 def sort_data(data):
-
-    sort_order = [c for c in sort_order if c in data.columns]
+    sort_order = [c for c in OUTPUT_COLUMN_SORT_ORDER if c in data.columns]
     other_cols = [c for c in data.columns if c not in sort_order]
     data = data[sort_order + other_cols].sort_values(sort_order)
     return data.reset_index(drop=True)
