@@ -27,9 +27,9 @@ OUTPUT_COLUMN_SORT_ORDER = [
 
 def make_measure_data(data):
     measure_data = MeasureData(
-        population=get_population_data(data),
-        person_time=get_measure_data(data, 'person_time'),
-        # ylls=get_measure_data(data, 'ylls', risk_factors=True),
+        # population=get_population_data(data),
+        # person_time=get_measure_data(data, 'person_time'),
+        ylls=get_measure_data(data, 'ylls'),
         # ylds=get_measure_data(data, 'ylds', risk_factors=True),
         # deaths=get_measure_data(data, 'deaths', risk_factors=True),
         # state_person_time=get_measure_data(data, 'state_person_time', with_cause=False, state=True),
