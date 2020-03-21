@@ -18,6 +18,8 @@ OUTPUT_COLUMN_SORT_ORDER = [
     'year',
     'risk',
     'cause',
+    'diabetes_state',
+    'ckd_state',
     'measure',
     'input_draw'
 ]
