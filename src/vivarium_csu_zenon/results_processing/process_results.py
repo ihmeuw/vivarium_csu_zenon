@@ -138,5 +138,5 @@ def get_by_cause_measure_data(data, measure):
     import pdb;
     pdb.set_trace()
     data = get_measure_data(data, measure)
-    data['measure'], data['cause'] = data.measure.str.split('_due_to_')
+    data['measure'], data['cause'] = data.measure.str.split('_due_to_').str
     return sort_data(data)
