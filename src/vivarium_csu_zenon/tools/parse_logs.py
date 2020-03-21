@@ -28,7 +28,7 @@ def get_results(log_path: Path) -> Dict[Tuple[int, int], Dict[str, Union[str, fl
         result_dict = parse_result(result)
         # For consistency with psimulate
         # TODO: add scenario specification if necessary.
-        result_dict['input_draw_number'] = draw
+        result_dict['input_draw'] = draw
         result_dict['random_seed'] = seed
         output[(draw, seed)] = result_dict
 
@@ -100,7 +100,7 @@ def build_results_from_logs(log_dir: str, results_path: str):
                 index.append(idx)
                 results.append(output)
     logger.info('Collating results')
-    index = pd.MultiIndex.from_tuples(index, names=['input_draw', 'random_seed'])
+    index = pd.MultiIndex.from_tuples(index, names=['input_draw_number', 'random_seed'])
     output = pd.DataFrame(results, index=index)
     logger.info(f'Writing output to {str(results_path)}')
     output.to_hdf(results_path, key='data')
