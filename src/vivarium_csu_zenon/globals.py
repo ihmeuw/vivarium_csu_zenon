@@ -334,15 +334,8 @@ TRANSITIONS = tuple(transition for model in DISEASE_MODELS for transition in DIS
 # Risk Model Constants #
 ########################
 
-DIABETES_CATEGORIES = {'none': DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME,
-                       'moderate': MODERATE_DIABETES_MELLITUS_STATE_NAME,
-                       'severe': SEVERE_DIABETES_MELLITUS_STATE_NAME}
-CKD_CATEGORIES = {'none': CKD_SUSCEPTIBLE_STATE_NAME,
-                  'albuminuria': ALBUMINURIA_STATE_NAME,
-                  'iii': STAGE_III_CKD_STATE_NAME,
-                  'iv': STAGE_IV_CKD_STATE_NAME,
-                  'v': STAGE_V_CKD_STATE_NAME}
-
+DIABETES_CATEGORIES = DIABETES_MELLITUS_MODEL_STATES
+CKD_CATEGORIES = CKD_MODEL_STATES
 
 #################################
 # Results columns and variables #
