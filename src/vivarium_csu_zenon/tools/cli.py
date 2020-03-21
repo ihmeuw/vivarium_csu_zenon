@@ -10,6 +10,7 @@ from vivarium_csu_zenon.tools import build_model_specifications
 from vivarium_csu_zenon.tools import build_artifacts
 from vivarium_csu_zenon.tools import build_results
 from vivarium_csu_zenon.tools import build_fpg_thresholds
+from vivarium_csu_zenon.tools import build_results_from_logs
 
 
 @click.command()
@@ -122,3 +123,18 @@ def make_fpg_exposure_thresholds(location: str, draws: str, concat_only: bool, v
     configure_logging_to_terminal(verbose)
     main = handle_exceptions(build_fpg_thresholds, logger, with_debugger=with_debugger)
     main(location, draws, concat_only, verbose)
+
+
+@click.command()
+@click.argument('worker_log_directory', type=click.Path(exists=True, file_okay=False))
+@click.argument('output_file', type=click.Path(exists=True, dir_okay=False))
+@click.option('-v', 'verbose',
+              count=True,
+              help='Configure logging verbosity.')
+@click.option('--pdb', 'with_debugger',
+              is_flag=True,
+              help='Drop into python debugger if an error occurs.')
+def parse_logs(worker_log_directory, output_file, verbose, with_debugger):
+    configure_logging_to_terminal(verbose)
+    main = handle_exceptions(build_results_from_logs, logger, with_debugger=with_debugger)
+    main(worker_log_directory, output_file)
