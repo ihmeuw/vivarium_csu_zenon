@@ -112,9 +112,9 @@ def sort_data(data):
 
 def split_processing_column(data):
     data['measure'], year_and_sex, process = data.process.str.split('_in_').str
-    data['year'], data['sex'] = year_and_sex.str.split('_among_')
-    data['age_group'], process = process.str.split('age_group_').str[1].str.split('_diabetes_state_')
-    data['diabetes_state'], data['ckd_state'] = process.str.split('_ckd_')
+    data['year'], data['sex'] = year_and_sex.str.split('_among_').str
+    data['age_group'], process = process.str.split('age_group_').str[1].str.split('_diabetes_state_').str
+    data['diabetes_state'], data['ckd_state'] = process.str.split('_ckd_').str
     return data.drop(columns='process')
 
 
