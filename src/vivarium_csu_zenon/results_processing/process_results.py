@@ -27,12 +27,12 @@ OUTPUT_COLUMN_SORT_ORDER = [
 
 def make_measure_data(data):
     measure_data = MeasureData(
-        # population=get_population_data(data),
-        # person_time=get_measure_data(data, 'person_time'),
-        # ylls=get_by_cause_measure_data(data, 'ylls'),
-        # ylds=get_by_cause_measure_data(data, 'ylds'),
-        # deaths=get_by_cause_measure_data(data, 'deaths'),
-        # state_person_time=get_state_person_time_measure_data(data),
+        population=get_population_data(data),
+        person_time=get_measure_data(data, 'person_time'),
+        ylls=get_by_cause_measure_data(data, 'ylls'),
+        ylds=get_by_cause_measure_data(data, 'ylds'),
+        deaths=get_by_cause_measure_data(data, 'deaths'),
+        state_person_time=get_state_person_time_measure_data(data),
         transition_count=get_transition_count_measure_data(data),
     )
     return measure_data
@@ -159,6 +159,5 @@ def get_transition_count_measure_data(data):
     found = [c for c in data.columns if 'event_count' in c]
     overlap = list(set(expected).intersection(found))
     data = pivot_data(data[overlap + GROUPBY_COLUMNS])
-    import pdb; pdb.set_trace()
     data = split_processing_column(data, stratified=True)
     return sort_data(data)
