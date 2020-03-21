@@ -159,5 +159,6 @@ def get_transition_count_measure_data(data):
     found = [c for c in data.columns if 'event_count' in c]
     overlap = list(set(expected).intersection(found))
     data = pivot_data(data[overlap + GROUPBY_COLUMNS])
+    import pdb; pdb.set_trace()
     data = split_processing_column(data, stratified=True)
     return sort_data(data)
