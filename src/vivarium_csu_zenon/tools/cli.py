@@ -127,7 +127,7 @@ def make_fpg_exposure_thresholds(location: str, draws: str, concat_only: bool, v
 
 @click.command()
 @click.argument('worker_log_directory', type=click.Path(exists=True, file_okay=False))
-@click.argument('output_file', type=click.Path(exists=True, dir_okay=False))
+@click.argument('output_file', type=click.Path(exists=False, dir_okay=False))
 @click.option('-v', 'verbose',
               count=True,
               help='Configure logging verbosity.')
