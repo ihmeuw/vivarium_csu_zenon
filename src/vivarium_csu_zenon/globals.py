@@ -334,8 +334,15 @@ TRANSITIONS = tuple(transition for model in DISEASE_MODELS for transition in DIS
 # Risk Model Constants #
 ########################
 
-DIABETES_CATEGORIES = DIABETES_MELLITUS_MODEL_STATES
-CKD_CATEGORIES = CKD_MODEL_STATES
+DIABETES_CATEGORIES = {'none': DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME,
+                       'moderate': MODERATE_DIABETES_MELLITUS_STATE_NAME,
+                       'severe': SEVERE_DIABETES_MELLITUS_STATE_NAME}
+CKD_CATEGORIES = {'none': CKD_SUSCEPTIBLE_STATE_NAME,
+                  'albuminuria': ALBUMINURIA_STATE_NAME,
+                  'iii': STAGE_III_CKD_STATE_NAME,
+                  'iv': STAGE_IV_CKD_STATE_NAME,
+                  'v': STAGE_V_CKD_STATE_NAME}
+
 
 #################################
 # Results columns and variables #
@@ -361,13 +368,13 @@ THROWAWAY_COLUMNS = ([f'{state}_event_count' for state in STATES]
                      + [f'{state}_prevalent_cases_at_sim_end' for state in STATES])
 
 TOTAL_POPULATION_COLUMN_TEMPLATE = 'total_population_{POP_STATE}'
-PERSON_TIME_COLUMN_TEMPLATE = 'person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_state_{DIABETES}_ckd_{CKD}'
-DEATH_COLUMN_TEMPLATE = 'death_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_state_{DIABETES}_ckd_{CKD}'
-YLLS_COLUMN_TEMPLATE = 'ylls_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_state_{DIABETES}_ckd_{CKD}'
-YLDS_COLUMN_TEMPLATE = 'ylds_due_to_{CAUSE_OF_DISABILITY}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_state_{DIABETES}_ckd_{CKD}'
+PERSON_TIME_COLUMN_TEMPLATE = 'person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
+DEATH_COLUMN_TEMPLATE = 'death_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
+YLLS_COLUMN_TEMPLATE = 'ylls_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
+YLDS_COLUMN_TEMPLATE = 'ylds_due_to_{CAUSE_OF_DISABILITY}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
 
-STATE_PERSON_TIME_COLUMN_TEMPLATE = '{STATE}_person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}'
-TRANSITION_COUNT_COLUMN_TEMPLATE = '{TRANSITION}_event_count_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_state_{DIABETES}_ckd_{CKD}'
+STATE_PERSON_TIME_COLUMN_TEMPLATE = '{STATE}_person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
+TRANSITION_COUNT_COLUMN_TEMPLATE = '{TRANSITION}_event_count_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
 
 COLUMN_TEMPLATES = {
     'population': TOTAL_POPULATION_COLUMN_TEMPLATE,
@@ -425,8 +432,8 @@ TEMPLATE_FIELD_MAP = {
     'CAUSE_OF_DISABILITY': CAUSES_OF_DISABILITY,
     'STATE': STATES,
     'TRANSITION': TRANSITIONS,
-    'DIABETES': DIABETES_CATEGORIES,
-    'CKD': CKD_CATEGORIES,
+    'DIABETES': DIABETES_CATEGORIES.keys(),
+    'CKD': CKD_CATEGORIES.keys(),
 }
 
 

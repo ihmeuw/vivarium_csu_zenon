@@ -11,7 +11,7 @@ def build_results(output_file: str):
     measure_dir = output_file.parent / 'count_data'
     if measure_dir.exists():
         shutil.rmtree(measure_dir)
-        measure_dir.mkdir(exist_ok=True, mode=0o775)
+    measure_dir.mkdir(exist_ok=True, mode=0o775)
 
     logger.info(f'Reading in output data from {str(output_file)}.')
     data, keyspace = process_results.read_data(output_file)
