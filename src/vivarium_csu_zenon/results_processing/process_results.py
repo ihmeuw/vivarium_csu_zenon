@@ -153,6 +153,11 @@ def get_state_person_time_measure_data(data):
 def get_transition_count_measure_data(data):
     # Oops, edge case.
     data = data.drop(columns=[c for c in data.columns if 'event_count' in c and '2025' in c])
-    import pdb; pdb.set_trace()
-    data = get_measure_data(data, 'transition_count')
+    # FIXME:
+    # Handle a missing comma issue in globals when the dataset I'm working with was produced
+    expected = project_globals.RESULT_COLUMNS('transition_count')
+    found = [c for c in data.columns if 'event_count' in c]
+    overlap = list(set(expected).intersection(found))
+    data = pivot_data(data[overlap + GROUPBY_COLUMNS])
+    data = split_processing_column(data, stratified=True)
     return sort_data(data)

@@ -357,6 +357,7 @@ STANDARD_COLUMNS = {
 }
 
 THROWAWAY_COLUMNS = ([f'{state}_event_count' for state in STATES]
+                     + [f'{DIABETES_MELLITUS_MODEL_NAME}_event_count']  # From transient state
                      + [f'{state}_prevalent_cases_at_sim_end' for state in STATES])
 
 TOTAL_POPULATION_COLUMN_TEMPLATE = 'total_population_{POP_STATE}'
