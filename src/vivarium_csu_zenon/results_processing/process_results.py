@@ -33,7 +33,7 @@ def make_measure_data(data):
         # ylds=get_by_cause_measure_data(data, 'ylds'),
         # deaths=get_by_cause_measure_data(data, 'deaths'),
         # state_person_time=get_state_person_time_measure_data(data),
-        transition_count=get_measure_data(data, 'transition_count'),
+        transition_count=get_transition_count_measure_data(data),
     )
     return measure_data
 
@@ -133,7 +133,6 @@ def get_population_data(data):
 
 
 def get_measure_data(data, measure, stratified=True):
-    import pdb; pdb.set_trace()
     data = pivot_data(data[project_globals.RESULT_COLUMNS(measure) + GROUPBY_COLUMNS])
     data = split_processing_column(data, stratified)
     return sort_data(data)
@@ -148,4 +147,12 @@ def get_by_cause_measure_data(data, measure):
 def get_state_person_time_measure_data(data):
     data = get_measure_data(data, 'state_person_time', stratified=False)
     data['measure'], data['cause'] = 'state_person_time', data.measure.str.split('_person_time').str[0]
+    return sort_data(data)
+
+
+def get_transition_count_measure_data(data):
+    # Oops, edge case.
+    data = data.drop(columns=[c for c in data.columns if 'event_count' in c and '2025' in c])
+    import pdb; pdb.set_trace()
+    data = get_measure_data(data, 'transition_count')
     return sort_data(data)
