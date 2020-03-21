@@ -112,11 +112,15 @@ def sort_data(data):
     return data.reset_index(drop=True)
 
 
-def split_processing_column(data):
+def split_processing_column(data, stratified):
     data['measure'], year_and_sex, process = data.process.str.split('_in_').str
     data['year'], data['sex'] = year_and_sex.str.split('_among_').str
-    data['age_group'], process = process.str.split('age_group_').str[1].str.split('_diabetes_state_').str
-    data['diabetes_state'], data['ckd_state'] = process.str.split('_ckd_').str
+    process = process.str.split('age_group_').str[1]
+    if stratified:
+        data['age_group'], process = process.str.split('_diabetes_state_').str
+        data['diabetes_state'], data['ckd_state'] = process.str.split('_ckd_').str
+    else:
+        data['age_group'] = process
     return data.drop(columns='process')
 
 
@@ -128,10 +132,9 @@ def get_population_data(data):
     return sort_data(total_pop)
 
 
-def get_measure_data(data, measure):
-
+def get_measure_data(data, measure, stratified=True):
     data = pivot_data(data[project_globals.RESULT_COLUMNS(measure) + GROUPBY_COLUMNS])
-    data = split_processing_column(data)
+    data = split_processing_column(data, stratified)
     return sort_data(data)
 
 
@@ -142,7 +145,7 @@ def get_by_cause_measure_data(data, measure):
 
 
 def get_state_person_time_measure_data(data):
-    data = get_measure_data(data, 'state_person_time')
+    data = get_measure_data(data, 'state_person_time', stratified=False)
     import pdb
     pdb.set_trace()
     data['measure'], data['cause'] = 'state_person_time', data.measure.str.split('_person_time').str[0]
