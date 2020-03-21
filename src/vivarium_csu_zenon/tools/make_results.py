@@ -9,11 +9,9 @@ from vivarium_csu_zenon.results_processing import process_results
 def build_results(output_file: str):
     output_file = Path(output_file)
     measure_dir = output_file.parent / 'count_data'
-    # results_dir = output_file.parent / 'final_data'
-    for d in [measure_dir]:
-        if d.exists():
-            shutil.rmtree(d)
-        d.mkdir(exist_ok=True, mode=0o775)
+    if measure_dir.exists():
+        shutil.rmtree(measure_dir)
+        measure_dir.mkdir(exist_ok=True, mode=0o775)
 
     logger.info(f'Reading in output data from {str(output_file)}.')
     data, keyspace = process_results.read_data(output_file)
@@ -28,8 +26,4 @@ def build_results(output_file: str):
     measure_data = process_results.make_measure_data(data)
     logger.info(f'Writing raw count and proportion data to {str(measure_dir)}')
     measure_data.dump(measure_dir)
-    # logger.info(f'Computing final_data.')
-    # final_data = process_results.make_final_data(measure_data)
-    # logger.info(f'Writing final data to {str(results_dir)}')
-    # final_data.dump(results_dir)
     logger.info('**DONE**')
