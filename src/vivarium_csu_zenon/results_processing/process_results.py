@@ -29,10 +29,10 @@ def make_measure_data(data):
     measure_data = MeasureData(
         # population=get_population_data(data),
         # person_time=get_measure_data(data, 'person_time'),
-        ylls=get_by_cause_measure_data(data, 'ylls'),
-        # ylds=get_measure_data(data, 'ylds', risk_factors=True),
-        # deaths=get_measure_data(data, 'deaths', risk_factors=True),
-        # state_person_time=get_measure_data(data, 'state_person_time', with_cause=False, state=True),
+        # ylls=get_by_cause_measure_data(data, 'ylls'),
+        # ylds=get_by_cause_measure_data(data, 'ylds'),
+        # deaths=get_by_cause_measure_data(data, 'deaths'),
+        state_person_time=get_measure_data(data, 'state_person_time'),
         # transition_count=get_measure_data(data, 'transition_count', with_cause=False, transition=True),
     )
     return measure_data
@@ -129,14 +129,13 @@ def get_population_data(data):
 
 
 def get_measure_data(data, measure):
+    import pdb; pdb.set_trace()
     data = pivot_data(data[project_globals.RESULT_COLUMNS(measure) + GROUPBY_COLUMNS])
     data = split_processing_column(data)
     return sort_data(data)
 
 
 def get_by_cause_measure_data(data, measure):
-    import pdb;
-    pdb.set_trace()
     data = get_measure_data(data, measure)
     data['measure'], data['cause'] = data.measure.str.split('_due_to_').str
     return sort_data(data)
