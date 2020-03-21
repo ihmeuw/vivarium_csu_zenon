@@ -298,7 +298,7 @@ CKD_MODEL_STATES = (
     STAGE_IV_CKD_STATE_NAME,
     STAGE_V_CKD_STATE_NAME
 )
-CKD_MODEL_TRANSITIONS = ('_to_'.join(p) for p in itertools.permutations(CKD_MODEL_STATES, r=2))
+CKD_MODEL_TRANSITIONS = tuple('_to_'.join(p) for p in zip(CKD_MODEL_STATES[:-1], CKD_MODEL_STATES[1:]))
 
 IKF_TO_CKD_MAP = {f'cat{i+1}': ckd_model_state for i, ckd_model_state in enumerate(CKD_MODEL_STATES[::-1])}
 
