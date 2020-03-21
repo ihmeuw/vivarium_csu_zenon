@@ -26,7 +26,7 @@ OUTPUT_COLUMN_SORT_ORDER = [
 def make_measure_data(data):
     measure_data = MeasureData(
         population=get_population_data(data),
-        person_time=get_measure_data(data, 'person_time', with_cause=False, risk_factors=True),
+        person_time=get_measure_data(data, 'person_time'),
         # ylls=get_measure_data(data, 'ylls', risk_factors=True),
         # ylds=get_measure_data(data, 'ylds', risk_factors=True),
         # deaths=get_measure_data(data, 'deaths', risk_factors=True),
@@ -110,22 +110,11 @@ def sort_data(data):
     return data.reset_index(drop=True)
 
 
-def split_processing_column(data, with_cause, state, transition, risk_factors):
-    if risk_factors:
-        data['process'], data['ldl_cholestrol'] = data.process.str.split('_ldl_c_').str
-        data['process'], data['systolic_blood_pressure'] = data.process.str.split('_sbp_').str
-    data['process'], data['age_group'] = data.process.str.split('_in_age_group_').str
-    data['process'], data['sex'] = data.process.str.split('_among_').str
-    data['process'], data['year'] = data.process.str.split('_in_').str
-    if with_cause:
-        data['measure'], data['cause'] = data.process.str.split('_due_to_').str
-    elif state:
-        data['state'], _ = data.process.str.split('_person_time').str
-        data['measure'] = 'person_time'
-    elif transition:
-        data['measure'], _ = data.process.str.split('_event_count').str
-    else:
-        data['measure'] = data['process']
+def split_processing_column(data):
+    data['measure'], year_and_sex, process = data.process.str.split('_in_').str
+    data['year'], data['sex'] = year_and_sex.str.split('_among_')
+    data['age_group'], process = process.str.split('age_group_').str[1].str.split('_diabetes_state_')
+    data['diabetes_state'], data['ckd_state'] = process.str.split('_ckd_')
     return data.drop(columns='process')
 
 
@@ -137,9 +126,9 @@ def get_population_data(data):
     return sort_data(total_pop)
 
 
-def get_measure_data(data, measure, with_cause=True, state=False, transition=False, risk_factors=False):
+def get_measure_data(data, measure):
     import pdb;
     pdb.set_trace()
     data = pivot_data(data[project_globals.RESULT_COLUMNS(measure) + GROUPBY_COLUMNS])
-    data = split_processing_column(data, with_cause, state, transition, risk_factors)
+    data = split_processing_column(data)
     return sort_data(data)
