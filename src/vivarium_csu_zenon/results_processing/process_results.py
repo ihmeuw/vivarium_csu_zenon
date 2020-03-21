@@ -26,7 +26,7 @@ OUTPUT_COLUMN_SORT_ORDER = [
 def make_measure_data(data):
     measure_data = MeasureData(
         population=get_population_data(data),
-        # person_time=get_measure_data(data, 'person_time', with_cause=False, risk_factors=True),
+        person_time=get_measure_data(data, 'person_time', with_cause=False, risk_factors=True),
         # ylls=get_measure_data(data, 'ylls', risk_factors=True),
         # ylds=get_measure_data(data, 'ylds', risk_factors=True),
         # deaths=get_measure_data(data, 'deaths', risk_factors=True),
@@ -130,7 +130,6 @@ def split_processing_column(data, with_cause, state, transition, risk_factors):
 
 
 def get_population_data(data):
-    import pdb; pdb.set_trace()
     total_pop = pivot_data(data[[project_globals.TOTAL_POPULATION_COLUMN]
                                 + project_globals.RESULT_COLUMNS('population')
                                 + GROUPBY_COLUMNS])
@@ -139,6 +138,8 @@ def get_population_data(data):
 
 
 def get_measure_data(data, measure, with_cause=True, state=False, transition=False, risk_factors=False):
+    import pdb;
+    pdb.set_trace()
     data = pivot_data(data[project_globals.RESULT_COLUMNS(measure) + GROUPBY_COLUMNS])
     data = split_processing_column(data, with_cause, state, transition, risk_factors)
     return sort_data(data)
