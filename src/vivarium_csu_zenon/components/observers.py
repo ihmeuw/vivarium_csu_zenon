@@ -42,7 +42,7 @@ class ResultsStratifier:
             project_globals.CKD_MODEL_NAME
         ])
 
-    def group(self, population: pd.DataFrame) -> Iterable[(Tuple[str, ...], pd.DataFrame)]:
+    def group(self, population: pd.DataFrame) -> Iterable[Tuple[Tuple[str, ...], pd.DataFrame]]:
         """Takes the full population and yields stratified subgroups.
 
         Parameters
