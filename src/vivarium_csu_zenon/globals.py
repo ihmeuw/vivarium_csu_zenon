@@ -302,15 +302,12 @@ STAGE_IV_CKD_STATE_NAME = f'stage_iv_{CKD_MODEL_NAME}'
 STAGE_V_CKD_STATE_NAME = f'stage_v_{CKD_MODEL_NAME}'
 CKD_MODEL_STATES = (
     CKD_SUSCEPTIBLE_STATE_NAME,
-    ALBUMINURIA_STATE_NAME,
-    STAGE_III_CKD_STATE_NAME,
-    STAGE_IV_CKD_STATE_NAME,
-    STAGE_V_CKD_STATE_NAME
+    CKD_MODEL_NAME
 )
-CKD_MODEL_TRANSITIONS = tuple(TransitionString('_TO_'.join(p))
-                              for p in zip(CKD_MODEL_STATES[:-1], CKD_MODEL_STATES[1:]))
-
-IKF_TO_CKD_MAP = {f'cat{i+1}': ckd_model_state for i, ckd_model_state in enumerate(CKD_MODEL_STATES[::-1])}
+CKD_MODEL_TRANSITIONS = (
+    TransitionString(f'{CKD_SUSCEPTIBLE_STATE_NAME}_TO_{CKD_MODEL_NAME}'),
+    TransitionString(f'{CKD_MODEL_NAME}_TO_{CKD_SUSCEPTIBLE_STATE_NAME}'),
+)
 IKF_TMREL_CATEGORY = 'cat5'
 
 DISEASE_MODELS = (

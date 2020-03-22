@@ -173,22 +173,44 @@ class ChronicKidneyDisease:
         self.ikf_exposure = builder.value.get_value(f'{project_globals.IKF.name}.exposure')
 
     def on_initialize_simulants(self, pop_data: 'SimulantData'):
-        exposure = self.ikf_exposure(pop_data.index)
-        states = exposure.map(project_globals.IKF_TO_CKD_MAP)
-        states.name = self.name
-        self.population_view.update(states)
+        self.population_view.update(self.get_states(pop_data.index))
 
     def on_time_step(self, event: 'Event'):
-        exposure = self.ikf_exposure(event.index)
-        states = exposure.map(project_globals.IKF_TO_CKD_MAP)
+        self.population_view.update(self.get_states(event.index))
+
+    def get_states(self, index: pd.Index) -> pd.Series:
+        exposure = self.ikf_exposure(index)
+        unexposed = exposure == project_globals.IKF_TMREL_CATEGORY
+        states = unexposed.map({True: project_globals.CKD_SUSCEPTIBLE_STATE_NAME,
+                               False: project_globals.CKD_MODEL_NAME})
         states.name = self.name
-        self.population_view.update(states)
+        return states
 
     def adjust_cause_specific_mortality_rate(self, index, rate):
         return rate + self.cause_specific_mortality_rate(index)
 
-    # leave this here
-    def load_disability_weight_data(self, builder: 'Builder'):
+    def compute_disability_weight(self, index: pd.Index) -> pd.Series:
+        """Gets the disability weight associated with this state."""
+        exposure = self.ikf_exposure(index)
+        weights = self.base_disability_weight(index)
+        return weights.lookup(index, exposure)
+
+    def compute_excess_mortality_rate(self, index: pd.Index) -> pd.Series:
+        """Compute the excess mortality rate based on ckd status."""
+        excess_mortality_rate = pd.Series(0, index=index)
+        with_condition = index[self.ikf_exposure(index) != project_globals.IKF_TMREL_CATEGORY]
+        excess_mortality_rate.loc[with_condition] = self.base_excess_mortality_rate(with_condition)
+        return excess_mortality_rate
+
+    def adjust_mortality_rate(self, index: pd.Index, rates_df: pd.DataFrame) -> pd.DataFrame:
+        """Modifies the baseline mortality rate for a simulant if they are in this state."""
+        rate = self.excess_mortality_rate(index, skip_post_processor=True)
+        rates_df[self.name] = rate
+        return rates_df
+
+    @staticmethod
+    def load_disability_weight_data(builder: 'Builder'):
+        """Get ckd disability weight data."""
         dfs = []
         for i, disability_weight_key in enumerate(project_globals.IKF.disability_weights):
             col_name = f'cat{i+1}'
@@ -197,46 +219,7 @@ class ChronicKidneyDisease:
             df = df.set_index([c for c in df.columns if c != col_name])
             dfs.append(df)
 
+        # Output is a table with demography columns and then columns
+        # `cat1`, ..., `cat5` representing the disability weight for
+        # each demographic group for each exposure category.
         return pd.concat(dfs, axis=1).reset_index()
-
-    def compute_disability_weight(self, index):
-        """Gets the disability weight associated with this state.
-
-        Parameters
-        ----------
-        index : iterable of ints
-            An iterable of integer labels for the simulants.
-        category:
-            IKF category
-
-        Returns
-        -------
-        `pandas.Series`
-            An iterable of disability weights indexed by the provided `index`.
-        """
-        disability_weight = pd.Series(0, index=index)
-        with_condition = index[self.ikf_exposure(index) != project_globals.IKF_TMREL_CATEGORY]
-        disability_weight.loc[with_condition] = self.base_disability_weight(with_condition)
-        return disability_weight
-
-    def compute_excess_mortality_rate(self, index):
-        excess_mortality_rate = pd.Series(0, index=index)
-        with_condition = index[self.ikf_exposure(index) != project_globals.IKF_TMREL_CATEGORY]
-        excess_mortality_rate.loc[with_condition] = self.base_excess_mortality_rate(with_condition)
-        return excess_mortality_rate
-
-    def adjust_mortality_rate(self, index, rates_df):
-        """Modifies the baseline mortality rate for a simulant if they are in this state.
-
-        Parameters
-        ----------
-        index : iterable of ints
-            An iterable of integer labels for the simulants.
-        category
-            IKF category
-        rates_df : `pandas.DataFrame`
-
-        """
-        rate = self.excess_mortality_rate(index, skip_post_processor=True)
-        rates_df[self.name] = rate
-        return rates_df
