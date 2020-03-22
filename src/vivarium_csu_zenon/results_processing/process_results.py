@@ -112,6 +112,7 @@ def sort_data(data):
     return data.reset_index(drop=True)
 
 
+
 def split_processing_column(data, stratified):
     data['measure'], year_and_sex, process = data.process.str.split('_in_').str
     data['year'], data['sex'] = year_and_sex.str.split('_among_').str
