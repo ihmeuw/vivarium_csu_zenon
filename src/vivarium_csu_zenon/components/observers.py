@@ -1,5 +1,4 @@
 from collections import Counter
-from itertools import product
 import typing
 from typing import Dict, Iterable, List, Tuple, Union
 
