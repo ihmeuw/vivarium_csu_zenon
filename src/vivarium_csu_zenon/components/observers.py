@@ -81,10 +81,8 @@ class ResultsStratifier:
             labels.
 
         """
-        diabetes_cat, ckd_cat = labels
-        diabetes_short = project_globals.DIABETES_CATEGORIES[diabetes_cat]
-        ckd_short = project_globals.CKD_CATEGORIES[ckd_cat]
-        measure_data = {f'{k}_diabetes_{diabetes_short}_ckd_{ckd_short}': v for k, v in measure_data.items()}
+        cvd_risk = labels[0]
+        measure_data = {f'{k}_cvd_{cvd_risk}': v for k, v in measure_data.items()}
         return measure_data
 
 
