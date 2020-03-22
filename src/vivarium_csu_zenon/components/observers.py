@@ -39,7 +39,8 @@ class ResultsStratifier:
         # results stratification.
         self.population_view = builder.population.get_view([
             project_globals.DIABETES_MELLITUS.name,
-            project_globals.CKD_MODEL_NAME
+            project_globals.CKD_MODEL_NAME,
+            'tracked'  # Ensure we always get the full population from the view.
         ])
 
     def group(self, population: pd.DataFrame) -> Iterable[Tuple[Tuple[str, ...], pd.DataFrame]]:
@@ -56,13 +57,17 @@ class ResultsStratifier:
             corresponding to those labels.
 
         """
+
         stratification_criteria = self.population_view.get(population.index)
         diabetes = stratification_criteria.loc[:, project_globals.DIABETES_MELLITUS.name]
         ckd = stratification_criteria.loc[:, project_globals.CKD_MODEL_NAME]
 
         categories = product(project_globals.DIABETES_CATEGORIES, project_globals.CKD_CATEGORIES)
         for diabetes_cat, ckd_cat in categories:
-            pop_in_group = population.loc[(diabetes == diabetes_cat) & (ckd == ckd_cat)]
+            if population:
+                pop_in_group = population
+            else:
+                pop_in_group = population.loc[(diabetes == diabetes_cat) & (ckd == ckd_cat)]
             yield (diabetes_cat, ckd_cat), pop_in_group
 
     @staticmethod
