@@ -47,7 +47,10 @@ class RiskEffect(RiskEffect_):
 class FastingPlasmaGlucose(Risk):
     @property
     def name(self):
-        return 'fasting_plasma_glucose'
+        return f'risk_factor.{project_globals.FPG.name}'
+
+    def __init__(self):
+        super().__init__(self.name)
 
     def setup(self, builder: 'Builder'):
         propensity_col = f'{self.risk.name}_propensity'
@@ -77,6 +80,11 @@ class FastingPlasmaGlucose(Risk):
                                                  requires_streams=[f'initial_{self.risk.name}_propensity'])
 
         self.population_view = builder.population.get_view([propensity_col, diabetes_state_col])
+
+    def on_initialize_simulants(self, pop_data):
+        propensity = pd.Series(self.randomness.get_draw(pop_data.index),
+                               name='high_fasting_plasma_glucose_continuous_propensity')
+        self.population_view.update(propensity)
 
     def get_current_exposure(self, index):
         pop = self.population_view.get(index)

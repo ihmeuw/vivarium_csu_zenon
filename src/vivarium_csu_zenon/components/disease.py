@@ -94,7 +94,7 @@ def DiabetesMellitus():
 
     # Transitions from Susceptible
     susceptible.add_transition(transient, source_data_type='rate')
-    
+
     # Transitions from Transient
     data_funcs = {
         'proportion': lambda _, builder: builder.data.load(
@@ -108,7 +108,7 @@ def DiabetesMellitus():
         )
     }
     transient.add_transition(severe, source_data_type='proportion', get_data_functions=data_funcs)
-    
+
     # Remission transitions
     data_funcs = {
         'transition_rate': lambda builder, *_: builder.data.load(
@@ -140,6 +140,8 @@ class ChronicKidneyDisease:
         builder.population.initializes_simulants(self.on_initialize_simulants,
                                                  creates_columns=[self.name],
                                                  requires_values=[f'{project_globals.IKF.name}.exposure'])
+
+        builder.event.register_listener('time_step', self.on_time_step)
 
         # TODO uncomment and aggregate states once disaggregation not needed
         # disability_weight_data = self.load_disability_weight_data(builder)
@@ -184,6 +186,12 @@ class ChronicKidneyDisease:
 
     def on_initialize_simulants(self, pop_data: 'SimulantData'):
         exposure = self.ikf_exposure(pop_data.index)
+        states = exposure.map(project_globals.IKF_TO_CKD_MAP)
+        states.name = self.name
+        self.population_view.update(states)
+
+    def on_time_step(self, event: 'Event'):
+        exposure = self.ikf_exposure(event.index)
         states = exposure.map(project_globals.IKF_TO_CKD_MAP)
         states.name = self.name
         self.population_view.update(states)
