@@ -1,6 +1,5 @@
 from collections import Counter
 from itertools import product
-from math import inf
 
 import pandas as pd
 from vivarium_public_health.metrics import (MortalityObserver as MortalityObserver_,
@@ -11,42 +10,73 @@ from vivarium_public_health.metrics.utilities import (get_output_template, get_g
                                                       get_years_lived_with_disability, get_age_bins)
 
 from vivarium_csu_zenon import globals as project_globals
+from vivarium_csu_zenon.components.disease import ChronicKidneyDisease
+
+
+class ResultsStratifier:
+
+    def __init__(self, observer_name):
+        self.name = f'{observer_name}_results_stratifier'
+
+    def setup(self, builder):
+        self.population_view = builder.population.get_view([
+            project_globals.DIABETES_MELLITUS.name,
+            project_globals.CKD_MODEL_NAME
+        ])
+
+    def group(self, population):
+        stratification_criteria = self.population_view.get(population.index)
+        diabetes = stratification_criteria.loc[:, project_globals.DIABETES_MELLITUS.name]
+        ckd = stratification_criteria.loc[:, project_globals.CKD_MODEL_NAME]
+
+        categories = product(project_globals.DIABETES_CATEGORIES, project_globals.CKD_CATEGORIES)
+        for diabetes_cat, ckd_cat in categories:
+            pop_in_group = population.loc[(diabetes == diabetes_cat) & (ckd == ckd_cat)]
+            yield (diabetes_cat, ckd_cat), pop_in_group
+
+    def update_labels(self, measure_data, labels):
+        diabetes_cat, ckd_cat = labels
+        diabetes_short = project_globals.DIABETES_CATEGORIES[diabetes_cat]
+        ckd_short = project_globals.CKD_CATEGORIES[ckd_cat]
+        measure_data = {f'{k}_diabetes_{diabetes_short}_ckd_{ckd_short}': v for k, v in measure_data.items()}
+        return measure_data
 
 
 class MortalityObserver(MortalityObserver_):
 
+    def __init__(self):
+        super().__init__()
+        self.stratifier = ResultsStratifier(self.name)
+
+    @property
+    def sub_components(self):
+        return [self.stratifier]
+
     def setup(self, builder):
         super().setup(builder)
-        columns_required = ['tracked', 'alive', 'entrance_time', 'exit_time', 'cause_of_death',
-                            'years_of_life_lost', 'age', project_globals.DIABETES_MELLITUS.name,
-                            project_globals.CKD_MODEL_NAME]
-        if self.config.by_sex:
-            columns_required += ['sex']
-        self.population_view = builder.population.get_view(columns_required)
+        if builder.components.get_components_by_type(ChronicKidneyDisease):
+            # TODO: Just want CKD total here after model 3.
+            self.causes += [project_globals.ALBUMINURIA_STATE_NAME,
+                            project_globals.STAGE_III_CKD_STATE_NAME,
+                            project_globals.STAGE_IV_CKD_STATE_NAME,
+                            project_globals.STAGE_V_CKD_STATE_NAME]
 
     def metrics(self, index, metrics):
         pop = self.population_view.get(index)
-
-        diabetes = pop.loc[:, project_globals.DIABETES_MELLITUS.name]
-        ckd = pop.loc[:, project_globals.CKD_MODEL_NAME]
-
         pop.loc[pop.exit_time.isnull(), 'exit_time'] = self.clock()
 
         measure_getters = (
             (get_person_time, ()),
-            (get_deaths, (project_globals.CAUSES_OF_DEATH,)),
-            (get_years_of_life_lost, (self.life_expectancy, project_globals.CAUSES_OF_DEATH)),
+            (get_deaths, (self.causes,)),
+            (get_years_of_life_lost, (self.life_expectancy, self.causes)),
         )
 
-        categories = product(project_globals.DIABETES_MELLITUS_MODEL_STATES, project_globals.CKD_MODEL_STATES,)
-
-        for diabetes_cat, ckd_cat in categories:
-            pop_in_group = pop.loc[(diabetes == diabetes_cat) & (ckd == ckd_cat)]
+        for labels, pop_in_group in self.stratifier.group(pop):
             base_args = (pop_in_group, self.config.to_dict(), self.start_time, self.clock(), self.age_bins)
 
             for measure_getter, extra_args in measure_getters:
                 measure_data = measure_getter(*base_args, *extra_args)
-                measure_data = {f'{k}_diabetes_state_{diabetes_cat}_ckd_{ckd_cat}': v for k, v in measure_data.items()}
+                measure_data = self.stratifier.update_labels(measure_data, labels)
                 metrics.update(measure_data)
 
         the_living = pop[(pop.alive == 'alive') & pop.tracked]
@@ -59,18 +89,25 @@ class MortalityObserver(MortalityObserver_):
 
 
 class DisabilityObserver(DisabilityObserver_):
+
+    def __init__(self):
+        super().__init__()
+        self.stratifier = ResultsStratifier(self.name)
+
+    @property
+    def sub_components(self):
+        return [self.stratifier]
+
     def setup(self, builder):
         super().setup(builder)
-        columns_required = ['tracked', 'alive', 'years_lived_with_disability',
-                            project_globals.DIABETES_MELLITUS.name, project_globals.CKD_MODEL_NAME]
-        if self.config.by_age:
-            columns_required += ['age']
-        if self.config.by_sex:
-            columns_required += ['sex']
-        self.population_view = builder.population.get_view(columns_required)
-
-        self.disability_weight_pipelines = {cause: builder.value.get_value(f'{cause}.disability_weight')
-                                            for cause in project_globals.CAUSES_OF_DISABILITY}
+        if builder.components.get_components_by_type(ChronicKidneyDisease):
+            # TODO: Just want CKD total here after model 3.
+            self.causes += [project_globals.ALBUMINURIA_STATE_NAME,
+                            project_globals.STAGE_III_CKD_STATE_NAME,
+                            project_globals.STAGE_IV_CKD_STATE_NAME,
+                            project_globals.STAGE_V_CKD_STATE_NAME]
+            self.disability_weight_pipelines = {cause: builder.value.get_value(f'{cause}.disability_weight')
+                                                for cause in self.causes}
 
     def on_time_step_prepare(self, event):
         pop = self.population_view.get(event.index, query='tracked == True and alive == "alive"')
@@ -80,18 +117,12 @@ class DisabilityObserver(DisabilityObserver_):
         self.population_view.update(pop)
 
     def update_metrics(self, pop):
-        diabetes = pop.loc[:, project_globals.DIABETES_MELLITUS.name]
-        ckd = pop.loc[:, project_globals.CKD_MODEL_NAME]
-
-        categories = product(project_globals.DIABETES_MELLITUS_MODEL_STATES, project_globals.CKD_MODEL_STATES,)
-        for diabetes_cat, ckd_cat in categories:
-            pop_in_group = pop.loc[(diabetes == diabetes_cat) & (ckd == ckd_cat)]
-
+        for labels, pop_in_group in self.stratifier.group(pop):
             ylds_this_step = get_years_lived_with_disability(pop_in_group, self.config.to_dict(),
                                                              self.clock().year, self.step_size(),
                                                              self.age_bins, self.disability_weight_pipelines,
-                                                             project_globals.CAUSES_OF_DISABILITY)
-            ylds_this_step = {f'{k}_diabetes_state_{diabetes_cat}_ckd_{ckd_cat}': v for k, v in ylds_this_step.items()}
+                                                             self.causes)
+            ylds_this_step = self.stratifier.update_labels(ylds_this_step, labels)
             self.years_lived_with_disability.update(ylds_this_step)
 
 
@@ -139,10 +170,15 @@ class DiseaseObserver:
         self.configuration_defaults = {
             'metrics': {f'{disease}_observer': DiseaseObserver.configuration_defaults['metrics']['disease_observer']}
         }
+        self.stratifier = ResultsStratifier(self.name)
 
     @property
     def name(self):
         return f'disease_observer.{self.disease}'
+
+    @property
+    def sub_components(self):
+        return [self.stratifier]
 
     def setup(self, builder):
         self.config = builder.configuration['metrics'][f'{self.disease}_observer'].to_dict()
@@ -181,10 +217,12 @@ class DiseaseObserver:
         pop = self.population_view.get(event.index)
         # Ignoring the edge case where the step spans a new year.
         # Accrue all counts and time to the current year.
-        for state in self.states:
-            state_person_time_this_step = get_state_person_time(pop, self.config, self.disease, state,
-                                                                self.clock().year, event.step_size, self.age_bins)
-            self.person_time.update(state_person_time_this_step)
+        for labels, pop_in_group in self.stratifier.group(pop):
+            for state in self.states:
+                state_person_time_this_step = get_state_person_time(pop_in_group, self.config, self.disease, state,
+                                                                    self.clock().year, event.step_size, self.age_bins)
+                state_person_time_this_step = self.stratifier.update_labels(state_person_time_this_step, labels)
+                self.person_time.update(state_person_time_this_step)
 
         # This enables tracking of transitions between states
         prior_state_pop = self.population_view.get(event.index)
@@ -193,22 +231,13 @@ class DiseaseObserver:
 
     def on_collect_metrics(self, event):
         pop = self.population_view.get(event.index)
-        for transition in self.transitions:
-            event_this_step = pop[self.disease] != pop[f'previous_{self.disease}']
-            transitioned_pop = pop.loc[event_this_step]
-            diabetes = transitioned_pop.loc[:, project_globals.DIABETES_MELLITUS.name]
-            ckd = transitioned_pop.loc[:, project_globals.CKD_MODEL_NAME]
-            base_key = get_output_template(**self.config).substitute(measure=f'{transition}_event_count',
-                                                                     year=event.time.year)
-            base_filter = QueryString('')
 
-            categories = product(project_globals.DIABETES_MELLITUS_MODEL_STATES, project_globals.CKD_MODEL_STATES,)
-            for diabetes_cat, ckd_cat in categories:
-                pop_in_group = transitioned_pop.loc[(diabetes == diabetes_cat) & (ckd == ckd_cat)]
-                transition_counts = get_group_counts(pop_in_group, base_filter, base_key, self.config, self.age_bins)
-                transition_counts = {f'{k}_diabetes_state_{diabetes_cat}_ckd_{ckd_cat}': v
-                                     for k, v in transition_counts.items()}
-                self.counts.update(transition_counts)
+        for labels, pop_in_group in self.stratifier.group(pop):
+            for transition in self.transitions:
+                transition_counts_this_step = get_transition_count(pop_in_group, self.config, self.disease, transition,
+                                                                   event.time, self.age_bins)
+                transition_counts_this_step = self.stratifier.update_labels(transition_counts_this_step, labels)
+                self.counts.update(transition_counts_this_step)
 
     def metrics(self, index, metrics):
         metrics.update(self.counts)
@@ -217,8 +246,8 @@ class DiseaseObserver:
 
     def __repr__(self):
         return f"DiseaseObserver({self.disease})"
-        
-    
+
+
 def get_state_person_time(pop, config, disease, state, current_year, step_size, age_bins):
     """Custom person time getter that handles state column name assumptions"""
     base_key = get_output_template(**config).substitute(measure=f'{state}_person_time',
@@ -227,3 +256,13 @@ def get_state_person_time(pop, config, disease, state, current_year, step_size, 
     person_time = get_group_counts(pop, base_filter, base_key, config, age_bins,
                                    aggregate=lambda x: len(x) * to_years(step_size))
     return person_time
+
+def get_transition_count(pop, config, disease, transition, event_time, age_bins):
+    event_this_step = ((pop[f'previous_{disease}'] == transition.from_state)
+                       & (pop[disease] == transition.to_state))
+    transitioned_pop = pop.loc[event_this_step]
+    base_key = get_output_template(**config).substitute(measure=f'{transition}_event_count',
+                                                        year=event_time.year)
+    base_filter = QueryString('')
+    transition_count = get_group_counts(transitioned_pop, base_filter, base_key, config, age_bins)
+    return transition_count

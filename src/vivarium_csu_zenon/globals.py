@@ -243,15 +243,24 @@ MAKE_ARTIFACT_KEY_GROUPS = [
 # Disease Model variables #
 ###########################
 
+
+class TransitionString(str):
+
+    def __new__(cls, value):
+        obj = str.__new__(cls, value.lower())
+        obj.from_state, obj.to_state = value.split('_TO_')
+        return obj
+
+
 IHD_MODEL_NAME = 'ischemic_heart_disease'
 IHD_SUSCEPTIBLE_STATE_NAME = f'susceptible_to_{IHD_MODEL_NAME}'
 ACUTE_MI_STATE_NAME = 'acute_myocardial_infarction'
 POST_MI_STATE_NAME = 'post_myocardial_infarction'
 IHD_MODEL_STATES = (IHD_SUSCEPTIBLE_STATE_NAME, ACUTE_MI_STATE_NAME, POST_MI_STATE_NAME)
 IHD_MODEL_TRANSITIONS = (
-    f'{IHD_SUSCEPTIBLE_STATE_NAME}_to_{ACUTE_MI_STATE_NAME}',
-    f'{ACUTE_MI_STATE_NAME}_to_{POST_MI_STATE_NAME}',
-    f'{POST_MI_STATE_NAME}_to_{ACUTE_MI_STATE_NAME}'
+    TransitionString(f'{IHD_SUSCEPTIBLE_STATE_NAME}_TO_{ACUTE_MI_STATE_NAME}'),
+    TransitionString(f'{ACUTE_MI_STATE_NAME}_TO_{POST_MI_STATE_NAME}'),
+    TransitionString(f'{POST_MI_STATE_NAME}_TO_{ACUTE_MI_STATE_NAME}')
 )
 
 ISCHEMIC_STROKE_MODEL_NAME = 'ischemic_stroke'
@@ -264,9 +273,9 @@ ISCHEMIC_STROKE_MODEL_STATES = (
     POST_ISCHEMIC_STROKE_STATE_NAME
 )
 ISCHEMIC_STROKE_MODEL_TRANSITIONS = (
-    f'{ISCHEMIC_STROKE_SUSCEPTIBLE_STATE_NAME}_to_{ACUTE_ISCHEMIC_STROKE_STATE_NAME}',
-    f'{ACUTE_ISCHEMIC_STROKE_STATE_NAME}_to_{POST_ISCHEMIC_STROKE_STATE_NAME}',
-    f'{POST_ISCHEMIC_STROKE_STATE_NAME}_to_{ACUTE_ISCHEMIC_STROKE_STATE_NAME}'
+    TransitionString(f'{ISCHEMIC_STROKE_SUSCEPTIBLE_STATE_NAME}_TO_{ACUTE_ISCHEMIC_STROKE_STATE_NAME}'),
+    TransitionString(f'{ACUTE_ISCHEMIC_STROKE_STATE_NAME}_TO_{POST_ISCHEMIC_STROKE_STATE_NAME}'),
+    TransitionString(f'{POST_ISCHEMIC_STROKE_STATE_NAME}_TO_{ACUTE_ISCHEMIC_STROKE_STATE_NAME}')
 )
 
 DIABETES_MELLITUS_MODEL_NAME = 'diabetes_mellitus'
@@ -279,10 +288,10 @@ DIABETES_MELLITUS_MODEL_STATES = (
     SEVERE_DIABETES_MELLITUS_STATE_NAME
 )
 DIABETES_MELLITUS_MODEL_TRANSITIONS = (
-    f'{DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME}_to_{MODERATE_DIABETES_MELLITUS_STATE_NAME}'
-    f'{DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME}_to_{SEVERE_DIABETES_MELLITUS_STATE_NAME}',
-    f'{MODERATE_DIABETES_MELLITUS_STATE_NAME}_to_{DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME}',
-    f'{SEVERE_DIABETES_MELLITUS_STATE_NAME}_to_{DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME}',
+    TransitionString(f'{DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME}_TO_{MODERATE_DIABETES_MELLITUS_STATE_NAME}'),
+    TransitionString(f'{DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME}_TO_{SEVERE_DIABETES_MELLITUS_STATE_NAME}'),
+    TransitionString(f'{MODERATE_DIABETES_MELLITUS_STATE_NAME}_TO_{DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME}'),
+    TransitionString(f'{SEVERE_DIABETES_MELLITUS_STATE_NAME}_TO_{DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME}'),
 )
 
 CKD_MODEL_NAME = 'chronic_kidney_disease'
@@ -298,7 +307,8 @@ CKD_MODEL_STATES = (
     STAGE_IV_CKD_STATE_NAME,
     STAGE_V_CKD_STATE_NAME
 )
-CKD_MODEL_TRANSITIONS = tuple('_to_'.join(p) for p in zip(CKD_MODEL_STATES[:-1], CKD_MODEL_STATES[1:]))
+CKD_MODEL_TRANSITIONS = tuple(TransitionString('_TO_'.join(p))
+                              for p in zip(CKD_MODEL_STATES[:-1], CKD_MODEL_STATES[1:]))
 
 IKF_TO_CKD_MAP = {f'cat{i+1}': ckd_model_state for i, ckd_model_state in enumerate(CKD_MODEL_STATES[::-1])}
 
@@ -334,8 +344,14 @@ TRANSITIONS = tuple(transition for model in DISEASE_MODELS for transition in DIS
 # Risk Model Constants #
 ########################
 
-DIABETES_CATEGORIES = DIABETES_MELLITUS_MODEL_STATES
-CKD_CATEGORIES = CKD_MODEL_STATES
+DIABETES_CATEGORIES = {DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME: 'none',
+                       MODERATE_DIABETES_MELLITUS_STATE_NAME: 'moderate',
+                       SEVERE_DIABETES_MELLITUS_STATE_NAME: 'severe'}
+CKD_CATEGORIES = {CKD_SUSCEPTIBLE_STATE_NAME: 'none',
+                  ALBUMINURIA_STATE_NAME: 'ii',
+                  STAGE_III_CKD_STATE_NAME: 'iii',
+                  STAGE_IV_CKD_STATE_NAME: 'iv',
+                  STAGE_V_CKD_STATE_NAME: 'v'}
 
 
 #################################
@@ -362,12 +378,13 @@ THROWAWAY_COLUMNS = ([f'{state}_event_count' for state in STATES]
                      + [f'{state}_prevalent_cases_at_sim_end' for state in STATES])
 
 TOTAL_POPULATION_COLUMN_TEMPLATE = 'total_population_{POP_STATE}'
-PERSON_TIME_COLUMN_TEMPLATE = 'person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_state_{DIABETES}_ckd_{CKD}'
-DEATH_COLUMN_TEMPLATE = 'death_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_state_{DIABETES}_ckd_{CKD}'
-YLLS_COLUMN_TEMPLATE = 'ylls_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_state_{DIABETES}_ckd_{CKD}'
-YLDS_COLUMN_TEMPLATE = 'ylds_due_to_{CAUSE_OF_DISABILITY}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_state_{DIABETES}_ckd_{CKD}'
-STATE_PERSON_TIME_COLUMN_TEMPLATE = '{STATE}_person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}'
-TRANSITION_COUNT_COLUMN_TEMPLATE = '{TRANSITION}_event_count_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_state_{DIABETES}_ckd_{CKD}'
+PERSON_TIME_COLUMN_TEMPLATE = 'person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
+DEATH_COLUMN_TEMPLATE = 'death_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
+YLLS_COLUMN_TEMPLATE = 'ylls_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
+YLDS_COLUMN_TEMPLATE = 'ylds_due_to_{CAUSE_OF_DISABILITY}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
+STATE_PERSON_TIME_COLUMN_TEMPLATE = '{STATE}_person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
+TRANSITION_COUNT_COLUMN_TEMPLATE = '{TRANSITION}_event_count_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
+
 
 COLUMN_TEMPLATES = {
     'population': TOTAL_POPULATION_COLUMN_TEMPLATE,
@@ -425,8 +442,8 @@ TEMPLATE_FIELD_MAP = {
     'CAUSE_OF_DISABILITY': CAUSES_OF_DISABILITY,
     'STATE': STATES,
     'TRANSITION': TRANSITIONS,
-    'DIABETES': DIABETES_MELLITUS_MODEL_STATES,
-    'CKD': CKD_MODEL_STATES,
+    'DIABETES': DIABETES_CATEGORIES.keys(),
+    'CKD': CKD_CATEGORIES.keys(),
 }
 
 
