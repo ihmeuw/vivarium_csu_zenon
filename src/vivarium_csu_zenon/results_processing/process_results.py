@@ -12,37 +12,30 @@ GROUPBY_COLUMNS = [
     project_globals.INPUT_DRAW_COLUMN,
     # SCENARIO_COLUMN
 ]
-PERSON_YEAR_SCALE = 100_000
-DROP_COLUMNS = ['measure']
-# SHARED_COLUMNS = [
-#     'age_group',
-#     'treatment_group',
-#     'input_draw',
-#     # 'scenario'
-# ]
+OUTPUT_COLUMN_SORT_ORDER = [
+    'age_group',
+    'sex',
+    'year',
+    'risk',
+    'cause',
+    'diabetes_state',
+    'ckd_state',
+    'measure',
+    'input_draw'
+]
 
 
 def make_measure_data(data):
     measure_data = MeasureData(
         population=get_population_data(data),
-        person_time=get_measure_data(data, 'person_time', with_cause=False, risk_factors=True),
-        ylls=get_measure_data(data, 'ylls', risk_factors=True),
-        ylds=get_measure_data(data, 'ylds', risk_factors=True),
-        deaths=get_measure_data(data, 'deaths', risk_factors=True),
-        state_person_time=get_measure_data(data, 'state_person_time', with_cause=False, state=True),
-        transition_count=get_measure_data(data, 'transition_count', with_cause=False, transition=True),
+        person_time=get_measure_data(data, 'person_time'),
+        ylls=get_by_cause_measure_data(data, 'ylls'),
+        ylds=get_by_cause_measure_data(data, 'ylds'),
+        deaths=get_by_cause_measure_data(data, 'deaths'),
+        state_person_time=get_state_person_time_measure_data(data),
+        transition_count=get_transition_count_measure_data(data),
     )
     return measure_data
-
-
-# def make_final_data(measure_data):
-#     final_data = FinalData(
-#         mortality_rate=get_rate_data(measure_data, 'deaths', 'mortality_rate'),
-#         ylls=get_rate_data(measure_data, 'ylls', 'ylls'),
-#         ylds=get_rate_data(measure_data, 'ylds', 'ylds'),
-#         dalys=get_dalys(measure_data),
-#     )
-#     return final_data
 
 
 class MeasureData(NamedTuple):
@@ -53,18 +46,6 @@ class MeasureData(NamedTuple):
     deaths: pd.DataFrame
     state_person_time: pd.DataFrame
     transition_count: pd.DataFrame
-
-    def dump(self, output_dir: Path):
-        for key, df in self._asdict().items():
-            df.to_hdf(output_dir / f'{key}.hdf', key=key)
-            df.to_csv(output_dir / f'{key}.csv')
-
-
-class FinalData(NamedTuple):
-    mortality_rate: pd.DataFrame
-    ylls: pd.DataFrame
-    ylds: pd.DataFrame
-    dalys: pd.DataFrame
 
     def dump(self, output_dir: Path):
         for key, df in self._asdict().items():
@@ -93,11 +74,10 @@ def filter_out_incomplete(data, keyspace):
         # For each draw, gather all random seeds completed for all scenarios.
         random_seeds = set(keyspace[project_globals.RANDOM_SEED_COLUMN])
         draw_data = data.loc[data[project_globals.INPUT_DRAW_COLUMN] == draw]
-        # TODO: add back when we have scenarios
-        # for scenario in keyspace[project_globals.OUTPUT_SCENARIO_COLUMN]:
-        #     seeds_in_data = draw_data.loc[data[SCENARIO_COLUMN] == scenario,
-        #                                   project_globals.RANDOM_SEED_COLUMN].unique()
-        #     random_seeds = random_seeds.intersection(seeds_in_data)
+        for scenario in keyspace[project_globals.OUTPUT_SCENARIO_COLUMN]:
+            seeds_in_data = draw_data.loc[data[SCENARIO_COLUMN] == scenario,
+                                          project_globals.RANDOM_SEED_COLUMN].unique()
+            random_seeds = random_seeds.intersection(seeds_in_data)
         draw_data = draw_data.loc[draw_data[project_globals.RANDOM_SEED_COLUMN].isin(random_seeds)]
         output.append(draw_data)
     return pd.concat(output, ignore_index=True).reset_index(drop=True)
@@ -126,37 +106,22 @@ def pivot_data(data):
 
 
 def sort_data(data):
-    sort_order = [
-        'age_group',
-        'risk',
-        'cause',
-        'treatment_group',
-        'measure',
-        'input_draw'
-    ]
-    sort_order = [c for c in sort_order if c in data.columns]
+    sort_order = [c for c in OUTPUT_COLUMN_SORT_ORDER if c in data.columns]
     other_cols = [c for c in data.columns if c not in sort_order]
     data = data[sort_order + other_cols].sort_values(sort_order)
     return data.reset_index(drop=True)
 
 
-def split_processing_column(data, with_cause, state, transition, risk_factors):
-    data['treatment_group'] = 'all'
-    if risk_factors:
-        data['process'], data['chronic_kidney_disease'] = data.process.str.split('_ckd_').str
-        data['process'], data['diabetes'] = data.process.str.split('_diabetes_state_').str
-    data['process'], data['age_group'] = data.process.str.split('_in_age_group_').str
-    data['process'], data['sex'] = data.process.str.split('_among_').str
-    data['process'], data['year'] = data.process.str.split('_in_').str
-    if with_cause:
-        data['measure'], data['cause'] = data.process.str.split('_due_to_').str
-    elif state:
-        data['state'], _ = data.process.str.split('_person_time').str
-        data['measure'] = 'person_time'
-    elif transition:
-        data['measure'], _ = data.process.str.split('_event_count').str
+
+def split_processing_column(data, stratified):
+    data['measure'], year_and_sex, process = data.process.str.split('_in_').str
+    data['year'], data['sex'] = year_and_sex.str.split('_among_').str
+    process = process.str.split('age_group_').str[1]
+    if stratified:
+        data['age_group'], process = process.str.split('_diabetes_state_').str
+        data['diabetes_state'], data['ckd_state'] = process.str.split('_ckd_').str
     else:
-        data['measure'] = data['process']
+        data['age_group'] = process
     return data.drop(columns='process')
 
 
@@ -165,47 +130,35 @@ def get_population_data(data):
                                 + project_globals.RESULT_COLUMNS('population')
                                 + GROUPBY_COLUMNS])
     total_pop = total_pop.rename(columns={'process': 'measure'})
-    total_pop['treatment_group'] = 'all'
     return sort_data(total_pop)
 
 
-def get_measure_data(data, measure, with_cause=True, state=False, transition=False, risk_factors=False):
+def get_measure_data(data, measure, stratified=True):
     data = pivot_data(data[project_globals.RESULT_COLUMNS(measure) + GROUPBY_COLUMNS])
-    data = split_processing_column(data, with_cause, state, transition, risk_factors)
+    data = split_processing_column(data, stratified)
     return sort_data(data)
 
 
-# def get_risk_categories(data):
-#     data = pivot_data(data[project_globals.RESULT_COLUMNS('category_counts') + GROUPBY_COLUMNS])
-#     data['risk'], data['process'] = data.process.str.split('_cat').str
-#     data['measure'] = data['measure'].apply(lambda x: f'cat{x}')
-#     data = data.drop(columns='process')
-#     return sort_data(data)
+def get_by_cause_measure_data(data, measure):
+    data = get_measure_data(data, measure)
+    data['measure'], data['cause'] = data.measure.str.split('_due_to_').str
+    return sort_data(data)
 
 
-# def get_rate_numerator(measure_data: MeasureData, numerator_label: str):
-#     numerator = getattr(measure_data, numerator_label).drop(columns=DROP_COLUMNS)
-#     all_cause_numerator = numerator.groupby(SHARED_COLUMNS).value.sum().reset_index()
-#     all_cause_numerator['cause'] = 'all_causes'
-#     return pd.concat([numerator, all_cause_numerator], ignore_index=True).set_index(SHARED_COLUMNS + ['cause'])
+def get_state_person_time_measure_data(data):
+    data = get_measure_data(data, 'state_person_time', stratified=False)
+    data['measure'], data['cause'] = 'state_person_time', data.measure.str.split('_person_time').str[0]
+    return sort_data(data)
 
 
-# def compute_rate(measure_data: MeasureData, numerator: pd.DataFrame, measure: str):
-#     person_time = measure_data.person_time.drop(columns=DROP_COLUMNS).set_index(SHARED_COLUMNS)
-#     rate_data = (numerator / person_time * PERSON_YEAR_SCALE).fillna(0).reset_index()
-#     rate_data['measure'] = f'{measure}_per_100k_py'
-#     return rate_data
-
-
-# def get_rate_data(measure_data: MeasureData, numerator_label: str, measure: str) -> pd.DataFrame:
-#     numerator = get_rate_numerator(measure_data, numerator_label)
-#     rate_data = compute_rate(measure_data, numerator, measure)
-#     return sort_data(rate_data)
-
-
-# def get_dalys(measure_data: MeasureData):
-#     ylls = get_rate_numerator(measure_data, 'ylls')
-#     ylds = get_rate_numerator(measure_data, 'ylds')
-#     ylls.loc[ylds.index] += ylds
-#     dalys = compute_rate(measure_data, ylls, 'dalys')
-#     return sort_data(dalys)
+def get_transition_count_measure_data(data):
+    # Oops, edge case.
+    data = data.drop(columns=[c for c in data.columns if 'event_count' in c and '2025' in c])
+    # FIXME:
+    # Handle a missing comma issue in globals when the dataset I'm working with was produced
+    expected = project_globals.RESULT_COLUMNS('transition_count')
+    found = [c for c in data.columns if 'event_count' in c]
+    overlap = list(set(expected).intersection(found))
+    data = pivot_data(data[overlap + GROUPBY_COLUMNS])
+    data = split_processing_column(data, stratified=True)
+    return sort_data(data)

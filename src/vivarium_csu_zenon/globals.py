@@ -334,6 +334,9 @@ TRANSITIONS = tuple(transition for model in DISEASE_MODELS for transition in DIS
 # Risk Model Constants #
 ########################
 
+DIABETES_CATEGORIES = DIABETES_MELLITUS_MODEL_STATES
+CKD_CATEGORIES = CKD_MODEL_STATES
+
 
 #################################
 # Results columns and variables #
@@ -346,6 +349,7 @@ TOTAL_YLLS_COLUMN = 'years_of_life_lost'
 # Columns from parallel runs
 INPUT_DRAW_COLUMN = 'input_draw'
 RANDOM_SEED_COLUMN = 'random_seed'
+OUTPUT_SCENARIO_COLUMN = 'scenario'
 
 STANDARD_COLUMNS = {
     'total_population': TOTAL_POPULATION_COLUMN,
@@ -354,6 +358,7 @@ STANDARD_COLUMNS = {
 }
 
 THROWAWAY_COLUMNS = ([f'{state}_event_count' for state in STATES]
+                     + [f'{DIABETES_MELLITUS_MODEL_NAME}_event_count']  # From transient state
                      + [f'{state}_prevalent_cases_at_sim_end' for state in STATES])
 
 TOTAL_POPULATION_COLUMN_TEMPLATE = 'total_population_{POP_STATE}'
@@ -362,7 +367,7 @@ DEATH_COLUMN_TEMPLATE = 'death_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_
 YLLS_COLUMN_TEMPLATE = 'ylls_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_state_{DIABETES}_ckd_{CKD}'
 YLDS_COLUMN_TEMPLATE = 'ylds_due_to_{CAUSE_OF_DISABILITY}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_state_{DIABETES}_ckd_{CKD}'
 STATE_PERSON_TIME_COLUMN_TEMPLATE = '{STATE}_person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}'
-TRANSITION_COUNT_COLUMN_TEMPLATE = '{TRANSITION}_event_count_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}'
+TRANSITION_COUNT_COLUMN_TEMPLATE = '{TRANSITION}_event_count_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_state_{DIABETES}_ckd_{CKD}'
 
 COLUMN_TEMPLATES = {
     'population': TOTAL_POPULATION_COLUMN_TEMPLATE,

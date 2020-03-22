@@ -28,7 +28,8 @@ if __name__ == "__main__":
         'pandas<0.25',
         'scipy',
         'tables<=3.4.0',
-        'pyyaml'
+        'pyyaml',
+        'tqdm'
     ]
 
     # use "pip install -e .[dev]" to install required components + extra components
@@ -66,5 +67,6 @@ if __name__ == "__main__":
             make_artifacts=vivarium_csu_zenon.tools.cli:make_artifacts
             make_results=vivarium_csu_zenon.tools.cli:make_results
             make_fpg_exposure_thresholds=vivarium_csu_zenon.tools.cli:make_fpg_exposure_thresholds
+            parse_logs=vivarium_csu_zenon.tools.cli:parse_logs
         '''
     )
