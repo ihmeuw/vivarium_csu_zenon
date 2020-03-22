@@ -64,7 +64,7 @@ class ResultsStratifier:
 
         categories = product(project_globals.DIABETES_CATEGORIES, project_globals.CKD_CATEGORIES)
         for diabetes_cat, ckd_cat in categories:
-            if population:
+            if population.empty:
                 pop_in_group = population
             else:
                 pop_in_group = population.loc[(diabetes == diabetes_cat) & (ckd == ckd_cat)]
