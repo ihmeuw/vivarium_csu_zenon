@@ -199,7 +199,6 @@ class DiseaseObserver:
         self.transitions = project_globals.DISEASE_MODEL_MAP[self.disease]['transitions']
 
         self.previous_state_column = f'previous_{self.disease}'
-        self.cvd_risk_category = builder.value.get_value('cvd_risk_category')
         builder.population.initializes_simulants(self.on_initialize_simulants,
                                                  creates_columns=[self.previous_state_column])
 
@@ -226,6 +225,7 @@ class DiseaseObserver:
         # Accrue all counts and time to the current year.
         for labels, pop_in_group in self.stratifier.group(pop):
             for state in self.states:
+                # noinspection PyTypeChecker
                 state_person_time_this_step = get_state_person_time(pop_in_group, self.config, self.disease, state,
                                                                     self.clock().year, event.step_size, self.age_bins)
                 state_person_time_this_step = self.stratifier.update_labels(state_person_time_this_step, labels)
@@ -240,6 +240,7 @@ class DiseaseObserver:
         pop = self.population_view.get(event.index)
         for labels, pop_in_group in self.stratifier.group(pop):
             for transition in self.transitions:
+                # noinspection PyTypeChecker
                 transition_counts_this_step = get_transition_count(pop_in_group, self.config, self.disease, transition,
                                                                    event.time, self.age_bins)
                 transition_counts_this_step = self.stratifier.update_labels(transition_counts_this_step, labels)
