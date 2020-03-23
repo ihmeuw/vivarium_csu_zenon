@@ -20,6 +20,7 @@ OUTPUT_COLUMN_SORT_ORDER = [
     'cause',
     'diabetes_state',
     'ckd_state',
+    'cvd_risk_category'
     'measure',
     'input_draw'
 ]
