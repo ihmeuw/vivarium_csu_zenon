@@ -98,7 +98,6 @@ class MortalityObserver(MortalityObserver_):
     def setup(self, builder: 'Builder'):
         super().setup(builder)
         if builder.components.get_components_by_type(ChronicKidneyDisease):
-            # TODO: Just want CKD total here after model 3.
             self.causes += [project_globals.CKD_MODEL_NAME]
 
     def metrics(self, index: pd.Index, metrics: Dict[str, float]) -> Dict[str, float]:
