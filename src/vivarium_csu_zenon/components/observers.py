@@ -203,9 +203,7 @@ class DiseaseObserver:
         builder.population.initializes_simulants(self.on_initialize_simulants,
                                                  creates_columns=[self.previous_state_column])
 
-        columns_required = list({'alive', f'{self.disease}', self.previous_state_column,
-                                 project_globals.DIABETES_MELLITUS.name,
-                                 project_globals.CKD_MODEL_NAME})
+        columns_required = ['alive', f'{self.disease}', self.previous_state_column]
         if self.config['by_age']:
             columns_required += ['age']
         if self.config['by_sex']:
