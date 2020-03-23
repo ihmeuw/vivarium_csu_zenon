@@ -63,7 +63,7 @@ class CVDRiskAttribute:
         score = -16.5 + 0.043 * sbp + 0.266 * age + 2.32 * sex
         return score
 
-    def get_cvd_risk_category(self, index):
+    def get_cvd_risk_category(self, index: pd.Index) -> pd.Series:
         """Source for the cvd risk category pipeline."""
         pop = self.population_view.get(index)
         diabetes_state = pop.loc[:, self.DIABETES_STATE_COL]
