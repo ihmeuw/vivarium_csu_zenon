@@ -99,16 +99,11 @@ class MortalityObserver(MortalityObserver_):
         super().setup(builder)
         if builder.components.get_components_by_type(ChronicKidneyDisease):
             # TODO: Just want CKD total here after model 3.
-            self.causes += [project_globals.ALBUMINURIA_STATE_NAME,
-                            project_globals.STAGE_III_CKD_STATE_NAME,
-                            project_globals.STAGE_IV_CKD_STATE_NAME,
-                            project_globals.STAGE_V_CKD_STATE_NAME]
+            self.causes += [project_globals.CKD_MODEL_NAME]
 
     def metrics(self, index: pd.Index, metrics: Dict[str, float]) -> Dict[str, float]:
         pop = self.population_view.get(index)
         pop.loc[pop.exit_time.isnull(), 'exit_time'] = self.clock()
-
-        cvd_risk = self.cvd_risk_category(index)
 
         measure_getters = (
             (get_person_time, ()),
@@ -146,11 +141,7 @@ class DisabilityObserver(DisabilityObserver_):
     def setup(self, builder: 'Builder'):
         super().setup(builder)
         if builder.components.get_components_by_type(ChronicKidneyDisease):
-            # TODO: Just want CKD total here after model 3.
-            self.causes += [project_globals.ALBUMINURIA_STATE_NAME,
-                            project_globals.STAGE_III_CKD_STATE_NAME,
-                            project_globals.STAGE_IV_CKD_STATE_NAME,
-                            project_globals.STAGE_V_CKD_STATE_NAME]
+            self.causes += [project_globals.CKD_MODEL_NAME]
             self.disability_weight_pipelines = {cause: builder.value.get_value(f'{cause}.disability_weight')
                                                 for cause in self.causes}
 
