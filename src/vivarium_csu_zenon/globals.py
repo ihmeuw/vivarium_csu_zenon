@@ -347,11 +347,14 @@ TRANSITIONS = tuple(transition for model in DISEASE_MODELS for transition in DIS
 DIABETES_CATEGORIES = {DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME: 'none',
                        MODERATE_DIABETES_MELLITUS_STATE_NAME: 'moderate',
                        SEVERE_DIABETES_MELLITUS_STATE_NAME: 'severe'}
+DIABETES_SHORT_TO_LONG_MAP = {v: k for k, v in DIABETES_CATEGORIES.items()}
 CKD_CATEGORIES = {CKD_SUSCEPTIBLE_STATE_NAME: 'none',
                   ALBUMINURIA_STATE_NAME: 'ii',
                   STAGE_III_CKD_STATE_NAME: 'iii',
                   STAGE_IV_CKD_STATE_NAME: 'iv',
                   STAGE_V_CKD_STATE_NAME: 'v'}
+CKD_SHORT_TO_LONG_MAP = {v: k for k, v in CKD_CATEGORIES.items()}
+
 
 
 #################################
@@ -442,8 +445,8 @@ TEMPLATE_FIELD_MAP = {
     'CAUSE_OF_DISABILITY': CAUSES_OF_DISABILITY,
     'STATE': STATES,
     'TRANSITION': TRANSITIONS,
-    'DIABETES': DIABETES_CATEGORIES.keys(),
-    'CKD': CKD_CATEGORIES.keys(),
+    'DIABETES': DIABETES_CATEGORIES.values(),
+    'CKD': CKD_CATEGORIES.values(),
 }
 
 

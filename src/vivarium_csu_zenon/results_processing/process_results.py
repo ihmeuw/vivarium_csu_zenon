@@ -112,16 +112,14 @@ def sort_data(data):
     return data.reset_index(drop=True)
 
 
-
-def split_processing_column(data, stratified):
+def split_processing_column(data):
     data['measure'], year_and_sex, process = data.process.str.split('_in_').str
     data['year'], data['sex'] = year_and_sex.str.split('_among_').str
     process = process.str.split('age_group_').str[1]
-    if stratified:
-        data['age_group'], process = process.str.split('_diabetes_state_').str
-        data['diabetes_state'], data['ckd_state'] = process.str.split('_ckd_').str
-    else:
-        data['age_group'] = process
+    data['age_group'], process = process.str.split('_diabetes_').str
+    data['diabetes_state'], data['ckd_state'] = process.str.split('_ckd_').str
+    data['diabetes_state'] = data['diabetes_state'].map(project_globals.DIABETES_SHORT_TO_LONG_MAP)
+    data['ckd_state'] = data['ckd_state'].map(project_globals.CKD_SHORT_TO_LONG_MAP)
     return data.drop(columns='process')
 
 
@@ -133,9 +131,9 @@ def get_population_data(data):
     return sort_data(total_pop)
 
 
-def get_measure_data(data, measure, stratified=True):
+def get_measure_data(data, measure):
     data = pivot_data(data[project_globals.RESULT_COLUMNS(measure) + GROUPBY_COLUMNS])
-    data = split_processing_column(data, stratified)
+    data = split_processing_column(data)
     return sort_data(data)
 
 
@@ -146,7 +144,7 @@ def get_by_cause_measure_data(data, measure):
 
 
 def get_state_person_time_measure_data(data):
-    data = get_measure_data(data, 'state_person_time', stratified=False)
+    data = get_measure_data(data, 'state_person_time')
     data['measure'], data['cause'] = 'state_person_time', data.measure.str.split('_person_time').str[0]
     return sort_data(data)
 
@@ -154,11 +152,6 @@ def get_state_person_time_measure_data(data):
 def get_transition_count_measure_data(data):
     # Oops, edge case.
     data = data.drop(columns=[c for c in data.columns if 'event_count' in c and '2025' in c])
-    # FIXME:
-    # Handle a missing comma issue in globals when the dataset I'm working with was produced
-    expected = project_globals.RESULT_COLUMNS('transition_count')
-    found = [c for c in data.columns if 'event_count' in c]
-    overlap = list(set(expected).intersection(found))
-    data = pivot_data(data[overlap + GROUPBY_COLUMNS])
-    data = split_processing_column(data, stratified=True)
+    data = pivot_data(data[project_globals.RESULT_COLUMNS('transition_count') + GROUPBY_COLUMNS])
+    data = split_processing_column(data)
     return sort_data(data)
