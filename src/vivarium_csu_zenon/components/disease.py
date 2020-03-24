@@ -81,6 +81,75 @@ def IschemicStroke():
     return DiseaseModel('ischemic_stroke', states=[susceptible, acute_stroke, post_stroke])
 
 
+class DiabetesDiseaseModel(DiseaseModel):
+
+    def setup(self, builder):
+        # HACK: Skip parent setup and directly use Machine
+        super(DiseaseModel, self).setup(builder)
+
+        self.configuration_age_start = builder.configuration.population.age_start
+        self.configuration_age_end = builder.configuration.population.age_end
+
+        cause_specific_mortality_rate = self.load_cause_specific_mortality_rate_data(builder)
+        self.cause_specific_mortality_rate = builder.lookup.build_table(cause_specific_mortality_rate,
+                                                                        key_columns=['sex'],
+                                                                        parameter_columns=['age', 'year'])
+        builder.value.register_value_modifier('cause_specific_mortality_rate',
+                                              self.adjust_cause_specific_mortality_rate,
+                                              requires_columns=['age', 'sex'])
+
+        builder.value.register_value_modifier('metrics', modifier=self.metrics)
+
+        self.population_view = builder.population.get_view(['age', 'sex', self.state_column])
+        builder.population.initializes_simulants(self.on_initialize_simulants,
+                                                 creates_columns=[self.state_column],
+                                                 requires_columns=['age', 'sex',
+                                                                   # Only real addition to normal setup.
+                                                                   project_globals.DIABETES_PROPENSITY_COLUMN],
+                                                 requires_streams=[f'{self.state_column}_initial_states'])
+
+        builder.event.register_listener('time_step', self.on_time_step)
+        builder.event.register_listener('time_step__cleanup', self.on_time_step_cleanup)
+
+    def on_initialize_simulants(self, pop_data):
+        population = (self.population_view
+                      .subview(['age', 'sex', project_globals.DIABETES_PROPENSITY_COLUMN])
+                      .get(pop_data.index))
+
+        assert self.initial_state in {s.state_id for s in self.states}
+
+        # FIXME: this is a hack to figure out whether or not we're at the simulation start based on the fact that the
+        #  fertility components create this user data
+        if pop_data.user_data['sim_state'] == 'setup':  # simulation start
+            if self.configuration_age_start != self.configuration_age_end != 0:
+                state_names, weights_bins = self.get_state_weights(pop_data.index, "prevalence")
+            else:
+                raise NotImplementedError('We do not currently support an age 0 cohort. '
+                                          'configuration.population.age_start and configuration.population.age_end '
+                                          'cannot both be 0.')
+
+        else:  # on time step
+            if pop_data.user_data['age_start'] == pop_data.user_data['age_end'] == 0:
+                state_names, weights_bins = self.get_state_weights(pop_data.index, "birth_prevalence")
+            else:
+                state_names, weights_bins = self.get_state_weights(pop_data.index, "prevalence")
+
+        if state_names and not population.empty:
+            # only do this if there are states in the model that supply prevalence data
+            population['sex_id'] = population.sex.apply({'Male': 1, 'Female': 2}.get)
+
+            condition_column = self.assign_initial_status_to_simulants(
+                population, state_names, weights_bins, population[project_globals.DIABETES_PROPENSITY_COLUMN]
+            )
+
+            condition_column = condition_column.rename(columns={'condition_state': self.state_column})
+        else:
+            condition_column = pd.Series(self.initial_state, index=population.index, name=self.state_column)
+        self.population_view.update(condition_column)
+
+
+
+
 def DiabetesMellitus():
     susceptible = SusceptibleState(project_globals.DIABETES_MELLITUS.name)
     transient = TransientDiseaseState(project_globals.DIABETES_MELLITUS.name)
@@ -118,7 +187,8 @@ def DiabetesMellitus():
     moderate.add_transition(susceptible, source_data_type='rate', get_data_functions=data_funcs)
     severe.add_transition(susceptible, source_data_type='rate', get_data_functions=data_funcs)
 
-    return DiseaseModel(project_globals.DIABETES_MELLITUS.name, states=[susceptible, transient, moderate, severe])
+    return DiabetesDiseaseModel(project_globals.DIABETES_MELLITUS.name,
+                                states=[susceptible, transient, moderate, severe])
 
 
 class ChronicKidneyDisease:

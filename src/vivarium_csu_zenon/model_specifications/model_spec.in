@@ -4,34 +4,35 @@ components:
             - BasePopulation()
             - Mortality()
         risks:
-            - Risk('risk_factor.high_ldl_cholesterol')
-            - Risk('risk_factor.high_systolic_blood_pressure')
-            - Risk('risk_factor.impaired_kidney_function')
+
 
     vivarium_csu_zenon.components:
         - IschemicHeartDisease()
         - IschemicStroke()
         - DiabetesMellitus()
         - ChronicKidneyDisease()
-        - FastingPlasmaGlucose()
 
         - CVDRiskAttribute()
 
+        - Risk('risk_factor.high_ldl_cholesterol')
         - RiskEffect('risk_factor.high_ldl_cholesterol', 'sequela.acute_myocardial_infarction.incidence_rate')
         - RiskEffect('risk_factor.high_ldl_cholesterol', 'sequela.acute_ischemic_stroke.incidence_rate')
         - RiskEffect('risk_factor.high_ldl_cholesterol', 'sequela.post_myocardial_infarction_to_acute_myocardial_infarction.transition_rate')
         - RiskEffect('risk_factor.high_ldl_cholesterol', 'sequela.post_ischemic_stroke_to_acute_ischemic_stroke.transition_rate')
 
+        - Risk('risk_factor.high_systolic_blood_pressure')
         - RiskEffect('risk_factor.high_systolic_blood_pressure', 'sequela.acute_myocardial_infarction.incidence_rate')
         - RiskEffect('risk_factor.high_systolic_blood_pressure', 'sequela.acute_ischemic_stroke.incidence_rate')
         - RiskEffect('risk_factor.high_systolic_blood_pressure', 'sequela.post_myocardial_infarction_to_acute_myocardial_infarction.transition_rate')
         - RiskEffect('risk_factor.high_systolic_blood_pressure', 'sequela.post_ischemic_stroke_to_acute_ischemic_stroke.transition_rate')
 
+        - FastingPlasmaGlucose()
         - RiskEffect('risk_factor.high_fasting_plasma_glucose_continuous', 'sequela.acute_myocardial_infarction.incidence_rate')
         - RiskEffect('risk_factor.high_fasting_plasma_glucose_continuous', 'sequela.acute_ischemic_stroke.incidence_rate')
         - RiskEffect('risk_factor.high_fasting_plasma_glucose_continuous', 'sequela.post_myocardial_infarction_to_acute_myocardial_infarction.transition_rate')
         - RiskEffect('risk_factor.high_fasting_plasma_glucose_continuous', 'sequela.post_ischemic_stroke_to_acute_ischemic_stroke.transition_rate')
 
+        - Risk('risk_factor.impaired_kidney_function')
         - RiskEffect('risk_factor.impaired_kidney_function', 'sequela.acute_myocardial_infarction.incidence_rate')
         - RiskEffect('risk_factor.impaired_kidney_function', 'sequela.acute_ischemic_stroke.incidence_rate')
         - RiskEffect('risk_factor.impaired_kidney_function', 'sequela.post_myocardial_infarction_to_acute_myocardial_infarction.transition_rate')
