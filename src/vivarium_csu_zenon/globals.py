@@ -226,6 +226,8 @@ class __ImpairedKidneyFunction(NamedTuple):
 
 IKF = __ImpairedKidneyFunction()
 
+PROPENSITY_CORRELATION_DATA = 'propensity.correlation_data'
+
 MAKE_ARTIFACT_KEY_GROUPS = [
     POPULATION,
     IHD,
@@ -235,6 +237,7 @@ MAKE_ARTIFACT_KEY_GROUPS = [
     SBP,
     FPG,
     IKF,
+    [PROPENSITY_CORRELATION_DATA],
 ]
 
 ###########################

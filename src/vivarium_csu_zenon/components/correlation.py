@@ -48,16 +48,23 @@ class CorrelatedPropensityGenerator:
         return f'correlated_propensities_location_{location}_draw_{draw}'
 
     @staticmethod
-    def load_correlation_data(builder: 'Builder') -> Dict[Tuple[float, float], pd.DataFrame]:
-        data = {
-            (0., 125.): pd.DataFrame(data=[[1.0, 0.5, 0.5, 0.5, 0.5],
-                                           [0.5, 1.0, 0.5, 0.5, 0.0],
-                                           [0.5, 0.5, 1.0, 0.5, 0.5],
-                                           [0.5, 0.5, 0.5, 1.0, 0.5],
-                                           [0.5, 0.0, 0.5, 0.5, 1.0]],
-                                     index=project_globals.CORRELATED_PROPENSITY_COLUMNS,
-                                     columns=project_globals.CORRELATED_PROPENSITY_COLUMNS)
-        }
+    def load_correlation_data(builder: 'Builder') -> Dict[Tuple[int, int], pd.DataFrame]:
+        raw_data = builder.data.load(project_globals.PROPENSITY_CORRELATION_DATA)
+        data = {}
+        for label, group in raw_data.groupby(['age_group']):
+            group_matrix = group.set_index(['risk_a', 'risk_b']).value.unstack()
+            group_matrix.index.name = None
+            group_matrix.columns.name = None
+            fpg = group_matrix.loc[project_globals.FPG_PROPENSITY_COLUMN].copy()
+            fpg.loc[project_globals.FPG_PROPENSITY_COLUMN] = 0.
+            group_matrix[project_globals.DIABETES_PROPENSITY_COLUMN] = fpg
+            fpg.loc[project_globals.DIABETES_PROPENSITY_COLUMN] = 1.
+            group_matrix.loc[project_globals.DIABETES_PROPENSITY_COLUMN] = fpg
+            age_start, age_end = [int(age) for age in label.split('_to_')]
+            age_start = 0 if age_start == 30 else age_start
+            age_end = 125 if age_end == 79 else age_end
+            data_key = (age_start, age_end)
+            data[data_key] = group_matrix
         return data
 
 
