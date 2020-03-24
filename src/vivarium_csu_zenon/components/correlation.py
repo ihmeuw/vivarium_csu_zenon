@@ -20,7 +20,7 @@ class CorrelatedPropensityGenerator:
         return 'correlated_propensity_generator'
 
     def setup(self, builder: 'Builder'):
-        self.seed = self.get_seed(builder)
+        self.randomness_key = self.get_randomness_key(builder)
         self.randomness = builder.randomness.get_stream(self.name)
         self.correlation = self.load_correlation_data(builder)
         columns_created = project_globals.CORRELATED_PROPENSITY_COLUMNS
@@ -35,18 +35,17 @@ class CorrelatedPropensityGenerator:
         propensities = pd.DataFrame(data=0,
                                     columns=project_globals.CORRELATED_PROPENSITY_COLUMNS,
                                     index=pop_data.index)
-        np.random.seed(self.seed)
         for (age_start, age_end), correlation in self.correlation.items():
+            randomness_key = self.randomness_key + str((age_start, age_end))
             in_group_idx = age[(age_start <= age) & (age < age_end)].index
-            dist = scipy.stats.multivariate_normal(cov=correlation)
-            propensities.loc[in_group_idx, :] = scipy.stats.norm().cdf(dist.rvs(len(in_group_idx)))
+            propensities.loc[in_group_idx, :] = copula_sample(correlation, len(in_group_idx), randomness_key)
         self.population_view.update(propensities)
 
     @staticmethod
-    def get_seed(builder: 'Builder'):
+    def get_randomness_key(builder: 'Builder'):
         location = builder.configuration.input_data.location
         draw = builder.configuration.input_data.input_draw_number
-        return get_hash(f'correlated_propensities_location_{location}_draw_{draw}')
+        return f'correlated_propensities_location_{location}_draw_{draw}'
 
     @staticmethod
     def load_correlation_data(builder: 'Builder') -> Dict[Tuple[float, float], pd.DataFrame]:
@@ -61,3 +60,9 @@ class CorrelatedPropensityGenerator:
         }
         return data
 
+
+def copula_sample(correlation_matrix, samples, randomness_key):
+    seed = get_hash(randomness_key)
+    np.random.seed(seed)
+    dist = scipy.stats.multivariate_normal(cov=correlation_matrix)
+    return scipy.stats.norm().cdf(dist.rvs(samples))
