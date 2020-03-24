@@ -247,6 +247,7 @@ MAKE_ARTIFACT_KEY_GROUPS = [
 class TransitionString(str):
 
     def __new__(cls, value):
+        # noinspection PyArgumentList
         obj = str.__new__(cls, value.lower())
         obj.from_state, obj.to_state = value.split('_TO_')
         return obj
@@ -302,15 +303,20 @@ STAGE_IV_CKD_STATE_NAME = f'stage_iv_{CKD_MODEL_NAME}'
 STAGE_V_CKD_STATE_NAME = f'stage_v_{CKD_MODEL_NAME}'
 CKD_MODEL_STATES = (
     CKD_SUSCEPTIBLE_STATE_NAME,
-    ALBUMINURIA_STATE_NAME,
-    STAGE_III_CKD_STATE_NAME,
-    STAGE_IV_CKD_STATE_NAME,
-    STAGE_V_CKD_STATE_NAME
+    CKD_MODEL_NAME
 )
-CKD_MODEL_TRANSITIONS = tuple(TransitionString('_TO_'.join(p))
-                              for p in zip(CKD_MODEL_STATES[:-1], CKD_MODEL_STATES[1:]))
-
-IKF_TO_CKD_MAP = {f'cat{i+1}': ckd_model_state for i, ckd_model_state in enumerate(CKD_MODEL_STATES[::-1])}
+CKD_MODEL_TRANSITIONS = (
+    TransitionString(f'{CKD_SUSCEPTIBLE_STATE_NAME}_TO_{CKD_MODEL_NAME}'),
+    TransitionString(f'{CKD_MODEL_NAME}_TO_{CKD_SUSCEPTIBLE_STATE_NAME}'),
+)
+IKF_TMREL_CATEGORY = 'cat5'
+CKD_IKF_MAP = {
+    CKD_SUSCEPTIBLE_STATE_NAME: 'cat5',
+    ALBUMINURIA_STATE_NAME: 'cat4',
+    STAGE_III_CKD_STATE_NAME: 'cat3',
+    STAGE_IV_CKD_STATE_NAME: 'cat2',
+    STAGE_V_CKD_STATE_NAME: 'cat1',
+}
 
 DISEASE_MODELS = (
     IHD_MODEL_NAME,
@@ -340,22 +346,17 @@ DISEASE_MODEL_MAP = {
 STATES = tuple(state for model in DISEASE_MODELS for state in DISEASE_MODEL_MAP[model]['states'])
 TRANSITIONS = tuple(transition for model in DISEASE_MODELS for transition in DISEASE_MODEL_MAP[model]['transitions'])
 
+# CVD Risk Categories
+CVD_VERY_HIGH_RISK = 'very_high_risk'
+CVD_HIGH_RISK = 'high_risk'
+CVD_MODERATE_RISK = 'moderate_risk'
+CVD_LOW_RISK = 'low_risk'
+
 ########################
-# Risk Model Constants #
+# Stratification Constants #
 ########################
 
-DIABETES_CATEGORIES = {DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME: 'none',
-                       MODERATE_DIABETES_MELLITUS_STATE_NAME: 'moderate',
-                       SEVERE_DIABETES_MELLITUS_STATE_NAME: 'severe'}
-DIABETES_SHORT_TO_LONG_MAP = {v: k for k, v in DIABETES_CATEGORIES.items()}
-CKD_CATEGORIES = {CKD_SUSCEPTIBLE_STATE_NAME: 'none',
-                  ALBUMINURIA_STATE_NAME: 'ii',
-                  STAGE_III_CKD_STATE_NAME: 'iii',
-                  STAGE_IV_CKD_STATE_NAME: 'iv',
-                  STAGE_V_CKD_STATE_NAME: 'v'}
-CKD_SHORT_TO_LONG_MAP = {v: k for k, v in CKD_CATEGORIES.items()}
-
-
+CVD_RISK_CATEGORIES = [CVD_VERY_HIGH_RISK, CVD_HIGH_RISK, CVD_MODERATE_RISK, CVD_LOW_RISK]
 
 #################################
 # Results columns and variables #
@@ -381,13 +382,12 @@ THROWAWAY_COLUMNS = ([f'{state}_event_count' for state in STATES]
                      + [f'{state}_prevalent_cases_at_sim_end' for state in STATES])
 
 TOTAL_POPULATION_COLUMN_TEMPLATE = 'total_population_{POP_STATE}'
-PERSON_TIME_COLUMN_TEMPLATE = 'person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
-DEATH_COLUMN_TEMPLATE = 'death_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
-YLLS_COLUMN_TEMPLATE = 'ylls_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
-YLDS_COLUMN_TEMPLATE = 'ylds_due_to_{CAUSE_OF_DISABILITY}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
-STATE_PERSON_TIME_COLUMN_TEMPLATE = '{STATE}_person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
-TRANSITION_COUNT_COLUMN_TEMPLATE = '{TRANSITION}_event_count_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_diabetes_{DIABETES}_ckd_{CKD}'
-
+PERSON_TIME_COLUMN_TEMPLATE = 'person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_cvd_{CVD_RISK}'
+DEATH_COLUMN_TEMPLATE = 'death_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_cvd_{CVD_RISK}'
+YLLS_COLUMN_TEMPLATE = 'ylls_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_cvd_{CVD_RISK}'
+YLDS_COLUMN_TEMPLATE = 'ylds_due_to_{CAUSE_OF_DISABILITY}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_cvd_{CVD_RISK}'
+STATE_PERSON_TIME_COLUMN_TEMPLATE = '{STATE}_person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_cvd_{CVD_RISK}'
+TRANSITION_COUNT_COLUMN_TEMPLATE = '{TRANSITION}_event_count_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_cvd_{CVD_RISK}'
 
 COLUMN_TEMPLATES = {
     'population': TOTAL_POPULATION_COLUMN_TEMPLATE,
@@ -429,10 +429,7 @@ CAUSES_OF_DISABILITY = (
     POST_ISCHEMIC_STROKE_STATE_NAME,
     MODERATE_DIABETES_MELLITUS_STATE_NAME,
     SEVERE_DIABETES_MELLITUS_STATE_NAME,
-    ALBUMINURIA_STATE_NAME,
-    STAGE_III_CKD_STATE_NAME,
-    STAGE_IV_CKD_STATE_NAME,
-    STAGE_V_CKD_STATE_NAME,
+    CKD_MODEL_NAME,
 )
 CAUSES_OF_DEATH = CAUSES_OF_DISABILITY + ('other_causes',)
 
@@ -445,8 +442,7 @@ TEMPLATE_FIELD_MAP = {
     'CAUSE_OF_DISABILITY': CAUSES_OF_DISABILITY,
     'STATE': STATES,
     'TRANSITION': TRANSITIONS,
-    'DIABETES': DIABETES_CATEGORIES.values(),
-    'CKD': CKD_CATEGORIES.values(),
+    'CVD_RISK': CVD_RISK_CATEGORIES,
 }
 
 

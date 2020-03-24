@@ -1,5 +1,4 @@
 from collections import Counter
-from itertools import product
 import typing
 from typing import Dict, Iterable, List, Tuple, Union
 
@@ -37,11 +36,7 @@ class ResultsStratifier:
         """Perform this component's setup."""
         # The only thing you should request here are resources necessary for
         # results stratification.
-        self.population_view = builder.population.get_view([
-            project_globals.DIABETES_MELLITUS.name,
-            project_globals.CKD_MODEL_NAME,
-            'tracked'  # Ensure we always get the full population from the view.
-        ])
+        self.cvd_risk_category = builder.value.get_value('cvd_risk_category')
 
     def group(self, population: pd.DataFrame) -> Iterable[Tuple[Tuple[str, ...], pd.DataFrame]]:
         """Takes the full population and yields stratified subgroups.
@@ -58,17 +53,13 @@ class ResultsStratifier:
 
         """
 
-        stratification_criteria = self.population_view.get(population.index)
-        diabetes = stratification_criteria.loc[:, project_globals.DIABETES_MELLITUS.name]
-        ckd = stratification_criteria.loc[:, project_globals.CKD_MODEL_NAME]
-
-        categories = product(project_globals.DIABETES_CATEGORIES, project_globals.CKD_CATEGORIES)
-        for diabetes_cat, ckd_cat in categories:
+        cvd_risk = self.cvd_risk_category(population.index)
+        for cvd_risk_cat in project_globals.CVD_RISK_CATEGORIES:
             if population.empty:
                 pop_in_group = population
             else:
-                pop_in_group = population.loc[(diabetes == diabetes_cat) & (ckd == ckd_cat)]
-            yield (diabetes_cat, ckd_cat), pop_in_group
+                pop_in_group = population.loc[cvd_risk == cvd_risk_cat]
+            yield (cvd_risk_cat,), pop_in_group
 
     @staticmethod
     def update_labels(measure_data: Dict[str, float], labels: Tuple[str, ...]) -> Dict[str, float]:
@@ -89,10 +80,8 @@ class ResultsStratifier:
             labels.
 
         """
-        diabetes_cat, ckd_cat = labels
-        diabetes_short = project_globals.DIABETES_CATEGORIES[diabetes_cat]
-        ckd_short = project_globals.CKD_CATEGORIES[ckd_cat]
-        measure_data = {f'{k}_diabetes_{diabetes_short}_ckd_{ckd_short}': v for k, v in measure_data.items()}
+        cvd_risk = labels[0]
+        measure_data = {f'{k}_cvd_{cvd_risk}': v for k, v in measure_data.items()}
         return measure_data
 
 
@@ -109,11 +98,7 @@ class MortalityObserver(MortalityObserver_):
     def setup(self, builder: 'Builder'):
         super().setup(builder)
         if builder.components.get_components_by_type(ChronicKidneyDisease):
-            # TODO: Just want CKD total here after model 3.
-            self.causes += [project_globals.ALBUMINURIA_STATE_NAME,
-                            project_globals.STAGE_III_CKD_STATE_NAME,
-                            project_globals.STAGE_IV_CKD_STATE_NAME,
-                            project_globals.STAGE_V_CKD_STATE_NAME]
+            self.causes += [project_globals.CKD_MODEL_NAME]
 
     def metrics(self, index: pd.Index, metrics: Dict[str, float]) -> Dict[str, float]:
         pop = self.population_view.get(index)
@@ -155,11 +140,7 @@ class DisabilityObserver(DisabilityObserver_):
     def setup(self, builder: 'Builder'):
         super().setup(builder)
         if builder.components.get_components_by_type(ChronicKidneyDisease):
-            # TODO: Just want CKD total here after model 3.
-            self.causes += [project_globals.ALBUMINURIA_STATE_NAME,
-                            project_globals.STAGE_III_CKD_STATE_NAME,
-                            project_globals.STAGE_IV_CKD_STATE_NAME,
-                            project_globals.STAGE_V_CKD_STATE_NAME]
+            self.causes += [project_globals.CKD_MODEL_NAME]
             self.disability_weight_pipelines = {cause: builder.value.get_value(f'{cause}.disability_weight')
                                                 for cause in self.causes}
 
@@ -221,9 +202,7 @@ class DiseaseObserver:
         builder.population.initializes_simulants(self.on_initialize_simulants,
                                                  creates_columns=[self.previous_state_column])
 
-        columns_required = list({'alive', f'{self.disease}', self.previous_state_column,
-                                 project_globals.DIABETES_MELLITUS.name,
-                                 project_globals.CKD_MODEL_NAME})
+        columns_required = ['alive', f'{self.disease}', self.previous_state_column]
         if self.config['by_age']:
             columns_required += ['age']
         if self.config['by_sex']:
@@ -246,6 +225,7 @@ class DiseaseObserver:
         # Accrue all counts and time to the current year.
         for labels, pop_in_group in self.stratifier.group(pop):
             for state in self.states:
+                # noinspection PyTypeChecker
                 state_person_time_this_step = get_state_person_time(pop_in_group, self.config, self.disease, state,
                                                                     self.clock().year, event.step_size, self.age_bins)
                 state_person_time_this_step = self.stratifier.update_labels(state_person_time_this_step, labels)
@@ -258,9 +238,9 @@ class DiseaseObserver:
 
     def on_collect_metrics(self, event: 'Event'):
         pop = self.population_view.get(event.index)
-
         for labels, pop_in_group in self.stratifier.group(pop):
             for transition in self.transitions:
+                # noinspection PyTypeChecker
                 transition_counts_this_step = get_transition_count(pop_in_group, self.config, self.disease, transition,
                                                                    event.time, self.age_bins)
                 transition_counts_this_step = self.stratifier.update_labels(transition_counts_this_step, labels)
