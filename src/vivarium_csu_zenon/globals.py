@@ -247,6 +247,7 @@ MAKE_ARTIFACT_KEY_GROUPS = [
 class TransitionString(str):
 
     def __new__(cls, value):
+        # noinspection PyArgumentList
         obj = str.__new__(cls, value.lower())
         obj.from_state, obj.to_state = value.split('_TO_')
         return obj
@@ -302,15 +303,20 @@ STAGE_IV_CKD_STATE_NAME = f'stage_iv_{CKD_MODEL_NAME}'
 STAGE_V_CKD_STATE_NAME = f'stage_v_{CKD_MODEL_NAME}'
 CKD_MODEL_STATES = (
     CKD_SUSCEPTIBLE_STATE_NAME,
-    ALBUMINURIA_STATE_NAME,
-    STAGE_III_CKD_STATE_NAME,
-    STAGE_IV_CKD_STATE_NAME,
-    STAGE_V_CKD_STATE_NAME
+    CKD_MODEL_NAME
 )
-CKD_MODEL_TRANSITIONS = tuple(TransitionString('_TO_'.join(p))
-                              for p in zip(CKD_MODEL_STATES[:-1], CKD_MODEL_STATES[1:]))
-
-IKF_TO_CKD_MAP = {f'cat{i+1}': ckd_model_state for i, ckd_model_state in enumerate(CKD_MODEL_STATES[::-1])}
+CKD_MODEL_TRANSITIONS = (
+    TransitionString(f'{CKD_SUSCEPTIBLE_STATE_NAME}_TO_{CKD_MODEL_NAME}'),
+    TransitionString(f'{CKD_MODEL_NAME}_TO_{CKD_SUSCEPTIBLE_STATE_NAME}'),
+)
+IKF_TMREL_CATEGORY = 'cat5'
+CKD_IKF_MAP = {
+    CKD_SUSCEPTIBLE_STATE_NAME: 'cat5',
+    ALBUMINURIA_STATE_NAME: 'cat4',
+    STAGE_III_CKD_STATE_NAME: 'cat3',
+    STAGE_IV_CKD_STATE_NAME: 'cat2',
+    STAGE_V_CKD_STATE_NAME: 'cat1',
+}
 
 DISEASE_MODELS = (
     IHD_MODEL_NAME,
@@ -423,10 +429,7 @@ CAUSES_OF_DISABILITY = (
     POST_ISCHEMIC_STROKE_STATE_NAME,
     MODERATE_DIABETES_MELLITUS_STATE_NAME,
     SEVERE_DIABETES_MELLITUS_STATE_NAME,
-    ALBUMINURIA_STATE_NAME,
-    STAGE_III_CKD_STATE_NAME,
-    STAGE_IV_CKD_STATE_NAME,
-    STAGE_V_CKD_STATE_NAME,
+    CKD_MODEL_NAME,
 )
 CAUSES_OF_DEATH = CAUSES_OF_DISABILITY + ('other_causes',)
 
