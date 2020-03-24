@@ -2,3 +2,4 @@ from .disease import IschemicHeartDisease, IschemicStroke, DiabetesMellitus, Chr
 from .observers import DiseaseObserver, MortalityObserver, DisabilityObserver
 from .risk import RiskEffect, FastingPlasmaGlucose
 from .cvd import CVDRiskAttribute
+from .correlation import CorrelatedPropensityGenerator
