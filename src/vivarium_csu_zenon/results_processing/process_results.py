@@ -20,6 +20,7 @@ OUTPUT_COLUMN_SORT_ORDER = [
     'cause',
     'diabetes_state',
     'ckd_state',
+    'cvd_risk_category'
     'measure',
     'input_draw'
 ]
@@ -116,10 +117,7 @@ def split_processing_column(data):
     data['measure'], year_and_sex, process = data.process.str.split('_in_').str
     data['year'], data['sex'] = year_and_sex.str.split('_among_').str
     process = process.str.split('age_group_').str[1]
-    data['age_group'], process = process.str.split('_diabetes_').str
-    data['diabetes_state'], data['ckd_state'] = process.str.split('_ckd_').str
-    data['diabetes_state'] = data['diabetes_state'].map(project_globals.DIABETES_SHORT_TO_LONG_MAP)
-    data['ckd_state'] = data['ckd_state'].map(project_globals.CKD_SHORT_TO_LONG_MAP)
+    data['age_group'], data['cvd_risk_category'] = process.str.split('_cvd_').str
     return data.drop(columns='process')
 
 
