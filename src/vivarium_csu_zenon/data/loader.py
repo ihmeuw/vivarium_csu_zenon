@@ -383,13 +383,15 @@ def load_ikf_disability_weight(key: str, location: str) -> pd.DataFrame:
     sequelae_for_category = category_sequelae_map[key]
 
     prevalence_disability_weights = []
+    category_prevalences = []
     for sequela in sequelae_for_category:
         prevalence = interface.get_measure(sequela, 'prevalence', location)
+        category_prevalences.append(prevalence)
+
         disability_weight = interface.get_measure(sequela, 'disability_weight', location)
         prevalence_disability_weights.append(prevalence * disability_weight)
 
-    ckd_prevalence = interface.get_measure(causes.chronic_kidney_disease, 'prevalence', location)
-    ikf_category_disability_weight = (sum(prevalence_disability_weights) / ckd_prevalence).fillna(0)
+    ikf_category_disability_weight = (sum(prevalence_disability_weights) / sum(category_prevalences)).fillna(0)
     return ikf_category_disability_weight
 
 
