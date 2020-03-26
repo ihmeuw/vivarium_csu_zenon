@@ -71,16 +71,6 @@ def build_joint_pafs_single_location(drmaa, jobs, correlation_data_path, locatio
         shutil.rmtree(path)
     path.mkdir(exist_ok=True, mode=0o775)
 
-    exposure_data_path = path / 'temp_exposure_data.hdf'
-    hdf.touch(exposure_data_path)
-    for risk in ALL_RISKS:
-        hdf.write(exposure_data_path, f'{risk.name}.exposure', load_exposure_data(risk, location))
-    
-    rr_data_path = path / 'temp_rr_data.hdf'
-    hdf.touch(rr_data_path)
-    for risk in ALL_RISKS:
-        hdf.write(rr_data_path, f'{risk.name}.rr', load_relative_risk_data(risk, location))
-
     try:
         for draw in range(1000):
             job_template = session.createJobTemplate()
@@ -104,10 +94,6 @@ def build_joint_pafs_single_location(drmaa, jobs, correlation_data_path, locatio
         joint_paf_data = pd.concat([pd.read_hdf(file) for file in path.iterdir()], axis=1)
         joint_paf_data.to_hdf(output_dir / f'{sanitized_location}.hdf', 'data')
         shutil.rmtree(path)
-
-        # Clean up temporary data
-        os.remove(exposure_data_path)
-        os.remove(exposure_data_path)
 
 
 def build_joint_paf_single_draw(output_path: Union[str, Path], correlation_data_path: Union[str, Path],
