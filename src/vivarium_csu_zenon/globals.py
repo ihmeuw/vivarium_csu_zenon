@@ -198,7 +198,6 @@ class __ImpairedKidneyFunction(NamedTuple):
     DISTRIBUTION: str = 'risk_factor.impaired_kidney_function.distribution'
     EXPOSURE: str = 'risk_factor.impaired_kidney_function.exposure'
     RELATIVE_RISK: str = 'risk_factor.impaired_kidney_function.relative_risk'
-    CAT_5_DISABILITY_WEIGHT: str = 'risk_factor.cat_5_impaired_kidney_function.disability_weight'
     CAT_4_DISABILITY_WEIGHT: str = 'risk_factor.cat_4_impaired_kidney_function.disability_weight'
     CAT_3_DISABILITY_WEIGHT: str = 'risk_factor.cat_3_impaired_kidney_function.disability_weight'
     CAT_2_DISABILITY_WEIGHT: str = 'risk_factor.cat_2_impaired_kidney_function.disability_weight'
@@ -222,7 +221,6 @@ class __ImpairedKidneyFunction(NamedTuple):
             self.CAT_2_DISABILITY_WEIGHT,
             self.CAT_3_DISABILITY_WEIGHT,
             self.CAT_4_DISABILITY_WEIGHT,
-            self.CAT_5_DISABILITY_WEIGHT,
         ]
 
 
