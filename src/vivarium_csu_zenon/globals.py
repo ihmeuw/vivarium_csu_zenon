@@ -228,6 +228,8 @@ class __ImpairedKidneyFunction(NamedTuple):
 
 IKF = __ImpairedKidneyFunction()
 
+PROPENSITY_CORRELATION_DATA = 'propensity.correlation_data'
+
 MAKE_ARTIFACT_KEY_GROUPS = [
     POPULATION,
     IHD,
@@ -237,6 +239,7 @@ MAKE_ARTIFACT_KEY_GROUPS = [
     SBP,
     FPG,
     IKF,
+    [PROPENSITY_CORRELATION_DATA],
 ]
 
 ###########################
@@ -351,6 +354,22 @@ CVD_VERY_HIGH_RISK = 'very_high_risk'
 CVD_HIGH_RISK = 'high_risk'
 CVD_MODERATE_RISK = 'moderate_risk'
 CVD_LOW_RISK = 'low_risk'
+
+# Correlated propensity columns
+SBP_PROPENSITY_COLUMN = f'{SBP.name}_propensity'
+FPG_PROPENSITY_COLUMN = f'{FPG.name}_propensity'
+IKF_PROPENSITY_COLUMN = f'{IKF.name}_propensity'
+LDL_C_PROPENSITY_COLUMN = f'{LDL_C.name}_propensity'
+DIABETES_PROPENSITY_COLUMN = f'{DIABETES_MELLITUS.name}_propensity'
+CORRELATED_PROPENSITY_COLUMNS = [
+    SBP_PROPENSITY_COLUMN,
+    FPG_PROPENSITY_COLUMN,
+    IKF_PROPENSITY_COLUMN,
+    LDL_C_PROPENSITY_COLUMN,
+    DIABETES_PROPENSITY_COLUMN,
+]
+
+
 
 ########################
 # Stratification Constants #
