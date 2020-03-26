@@ -156,6 +156,7 @@ def build_joint_paf_single_draw(output_path: Union[str, Path], correlation_data_
 
     (joint_pafs.stack()
      .reset_index()
+     .rename(columns={draw: f'draw_{draw}'})
      .to_hdf(output_path / f'draw_{draw_number}.hdf', 'data'))
     logger.info('**DONE**')
 
