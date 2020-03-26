@@ -132,16 +132,21 @@ def make_fpg_exposure_thresholds(location: str, draws: str, concat_only: bool, v
               show_default=True,
               type=click.Choice(project_globals.LOCATIONS + ['all']),
               help='Location to make joint pafs for.')
+@click.option('-q', '--queue',
+              default=project_globals.ALL_QUEUE,
+              show_default=True,
+              type=click.Choice(project_globals.CLUSTER_QUEUES),
+              help='Queue to run calculations on.')
 @click.option('-v', 'verbose',
               count=True,
               help='Configure logging verbosity.')
 @click.option('--pdb', 'with_debugger',
               is_flag=True,
               help='Drop into python debugger if an error occurs.')
-def make_joint_pafs(location: str, verbose: int, with_debugger: bool) -> None:
+def make_joint_pafs(location: str, verbose: int, with_debugger: bool, queue: str) -> None:
     configure_logging_to_terminal(verbose)
     main = handle_exceptions(build_joint_pafs, logger, with_debugger=with_debugger)
-    main(location, verbose)
+    main(location, verbose, queue)
 
 
 @click.command()

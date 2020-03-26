@@ -29,7 +29,7 @@ AFFECTED_CAUSES = [causes.ischemic_heart_disease.name, causes.ischemic_stroke.na
 INDEX_COLS = ['location', 'sex', 'age_start', 'age_end', 'year_start', 'year_end']
 
 
-def build_joint_pafs(location: str, verbose: int):
+def build_joint_pafs(location: str, verbose: int, queue: str):
     output_dir = paths.JOINT_PAF_DIR
     locations = project_globals.LOCATIONS if location == 'all' else [location]
 
@@ -42,7 +42,7 @@ def build_joint_pafs(location: str, verbose: int):
     jobs = {}
     with drmaa.Session() as session:
         for location in locations:
-            build_joint_pafs_single_location(drmaa, jobs, correlation_data_path, location, output_dir, session)
+            build_joint_pafs_single_location(drmaa, queue, jobs, correlation_data_path, location, output_dir, session)
 
         if verbose:
             logger.info('Entering monitoring loop.')
@@ -65,13 +65,14 @@ def build_joint_pafs(location: str, verbose: int):
         joint_paf_data = pd.concat([pd.read_hdf(file) for file in path.iterdir()], axis=1)
         joint_paf_data.to_hdf(output_dir / f'{sanitized_location}.hdf', 'data')
         shutil.rmtree(path)
-        
+
     os.remove(correlation_data_path)
 
     logger.info('**Done**')
 
 
-def build_joint_pafs_single_location(drmaa, jobs, correlation_data_path, location, output_dir, session):
+def build_joint_pafs_single_location(drmaa, queue: str, jobs: Dict, correlation_data_path: Path, location: str,
+                                     output_dir: Path, session):
     sanitized_location = sanitize_location(location)
     path = output_dir / sanitized_location
     if path.exists():
@@ -85,7 +86,7 @@ def build_joint_pafs_single_location(drmaa, jobs, correlation_data_path, locatio
         job_template.nativeSpecification = (f'-V '  # Export all environment variables
                                             f'-b y '  # Command is a binary (python)
                                             f'-P {project_globals.CLUSTER_PROJECT} '
-                                            f'-q {project_globals.CLUSTER_QUEUE} '
+                                            f'-q {queue} '
                                             f'-l fmem={project_globals.MAKE_ARTIFACT_MEM} '
                                             f'-l fthread={project_globals.MAKE_ARTIFACT_CPU} '
                                             f'-l h_rt={project_globals.MAKE_ARTIFACT_RUNTIME} '
