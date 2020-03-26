@@ -104,7 +104,7 @@ def make_results(output_file: str, verbose: int, with_debugger: bool) -> None:
               default='all',
               show_default=True,
               type=click.Choice(project_globals.LOCATIONS + ['all']),
-              help='Location to make fpg threasholds for.')
+              help='Location to make fpg thresholds for.')
 @click.option('-d', '--draws',
               default='all',
               show_default=True,
@@ -123,6 +123,24 @@ def make_fpg_exposure_thresholds(location: str, draws: str, concat_only: bool, v
     configure_logging_to_terminal(verbose)
     main = handle_exceptions(build_fpg_thresholds, logger, with_debugger=with_debugger)
     main(location, draws, concat_only, verbose)
+
+
+@click.command()
+@click.option('-l', '--location',
+              default='all',
+              show_default=True,
+              type=click.Choice(project_globals.LOCATIONS + ['all']),
+              help='Location to make joint pafs for.')
+@click.option('-v', 'verbose',
+              count=True,
+              help='Configure logging verbosity.')
+@click.option('--pdb', 'with_debugger',
+              is_flag=True,
+              help='Drop into python debugger if an error occurs.')
+def make_joint_pafs(location: str, verbose: int, with_debugger: bool) -> None:
+    configure_logging_to_terminal(verbose)
+    main = handle_exceptions(build_fpg_thresholds, logger, with_debugger=with_debugger)
+    main(location, verbose)
 
 
 @click.command()
