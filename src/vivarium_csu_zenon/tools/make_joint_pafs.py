@@ -75,8 +75,7 @@ def build_joint_pafs_single_location(drmaa, jobs, correlation_data_path, locatio
         for draw in range(1000):
             job_template = session.createJobTemplate()
             job_template.remoteCommand = shutil.which("python")
-            job_template.args = [__file__, str(path), correlation_data_path, exposure_data_path, rr_data_path,
-                                 f'"{location}"', draw]
+            job_template.args = [__file__, str(path), correlation_data_path, f'"{location}"', draw]
             job_template.nativeSpecification = (f'-V '  # Export all environment variables
                                                 f'-b y '  # Command is a binary (python)
                                                 f'-P {project_globals.CLUSTER_PROJECT} '
@@ -271,9 +270,6 @@ def get_rr(rr_params, affected_cause, stratification, draw):
 if __name__ == "__main__":
     joint_paf_output_path = sys.argv[1]
     correlation_path = sys.argv[2]
-    exposure_path = sys.argv[3]
-    rr_path = sys.argv[4]
-    joint_paf_location = sys.argv[5]
-    joint_paf_draw = sys.argv[6]
-    build_joint_paf_single_draw(joint_paf_output_path, correlation_path, exposure_path, rr_path,
-                                joint_paf_location, joint_paf_draw)
+    joint_paf_location = sys.argv[3]
+    joint_paf_draw = sys.argv[4]
+    build_joint_paf_single_draw(joint_paf_output_path, correlation_path, joint_paf_location, joint_paf_draw)
