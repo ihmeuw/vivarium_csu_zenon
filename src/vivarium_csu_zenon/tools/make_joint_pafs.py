@@ -4,14 +4,13 @@ import pickle
 import shutil
 import sys
 import time
-from typing import Union, List, Tuple, Dict
+from typing import Union, Dict
 
 import numpy as np
 import pandas as pd
 import scipy.stats
 from loguru import logger
 
-from vivarium.framework.artifact import hdf
 from vivarium_inputs.interface import get_measure
 from gbd_mapping import risk_factors, causes
 from risk_distributions import EnsembleDistribution
@@ -126,7 +125,7 @@ def build_joint_paf_single_draw(output_path: Union[str, Path], correlation_data_
                       for risk_name, dist_params in exposure_data.items()}
 
         for risk, dist in risk_dists.items():
-            samples.loc[:, risk] = dist.ppf(propensities.loc[:, risk])
+            samples.loc[:, risk] = dist.ppf(propensities.loc[:, risk]) if dist else 0.0
 
         # Drop nan rows
         samples = samples[samples.isnull().sum(axis=1) == 0].reset_index(drop=True)
@@ -217,6 +216,13 @@ class IKFDist:
 
     def __init__(self, pmf):
         self.bins = [0] + pmf.cumsum().tolist()
+        # set value to next float value if value is equal to previous value (as long as it's less than 1)
+        for i in range(1, len(self.bins)):
+            self.bins[i] = self.bins[i] if self.bins[i-1] < self.bins[i] else np.nextafter(self.bins[i], 1)
+        # do the same in reverse in case there are multiple values equal to 1.0
+        for i in range(len(self.bins) - 1, 0, -1):
+            self.bins[i-1] = self.bins[i-1] if self.bins[i-1] < self.bins[i] else np.nextafter(self.bins[i-1], 0)
+
         self.labels = pmf.index
 
     def ppf(self, propensity):
