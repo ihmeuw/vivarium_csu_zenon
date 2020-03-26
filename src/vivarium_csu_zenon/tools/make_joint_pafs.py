@@ -59,6 +59,13 @@ def build_joint_pafs(location: str, verbose: int):
                 logger.info('---------------------')
                 logger.info('')
 
+    for location in locations:
+        sanitized_location = sanitize_location(location)
+        path = output_dir / sanitized_location
+        joint_paf_data = pd.concat([pd.read_hdf(file) for file in path.iterdir()], axis=1)
+        joint_paf_data.to_hdf(output_dir / f'{sanitized_location}.hdf', 'data')
+        shutil.rmtree(path)
+        
     os.remove(correlation_data_path)
 
     logger.info('**Done**')
@@ -71,28 +78,22 @@ def build_joint_pafs_single_location(drmaa, jobs, correlation_data_path, locatio
         shutil.rmtree(path)
     path.mkdir(exist_ok=True, mode=0o775)
 
-    try:
-        for draw in range(1000):
-            job_template = session.createJobTemplate()
-            job_template.remoteCommand = shutil.which("python")
-            job_template.args = [__file__, str(path), correlation_data_path, f'"{location}"', draw]
-            job_template.nativeSpecification = (f'-V '  # Export all environment variables
-                                                f'-b y '  # Command is a binary (python)
-                                                f'-P {project_globals.CLUSTER_PROJECT} '
-                                                f'-q {project_globals.CLUSTER_QUEUE} '
-                                                f'-l fmem={project_globals.MAKE_ARTIFACT_MEM} '
-                                                f'-l fthread={project_globals.MAKE_ARTIFACT_CPU} '
-                                                f'-l h_rt={project_globals.MAKE_ARTIFACT_RUNTIME} '
-                                                f'-l archive=TRUE '  # Need J-drive access for data
-                                                f'-N {sanitize_location(location)}_artifact')  # Name of the job
-            jobs[location] = (session.runJob(job_template), drmaa.JobState.UNDETERMINED)
-            logger.info(f'Submitted job {jobs[location][0]} to build joint pafs for {location} and draw {draw}.')
-            session.deleteJobTemplate(job_template)
-
-    finally:
-        joint_paf_data = pd.concat([pd.read_hdf(file) for file in path.iterdir()], axis=1)
-        joint_paf_data.to_hdf(output_dir / f'{sanitized_location}.hdf', 'data')
-        shutil.rmtree(path)
+    for draw in range(1000):
+        job_template = session.createJobTemplate()
+        job_template.remoteCommand = shutil.which("python")
+        job_template.args = [__file__, str(path), correlation_data_path, f'"{location}"', draw]
+        job_template.nativeSpecification = (f'-V '  # Export all environment variables
+                                            f'-b y '  # Command is a binary (python)
+                                            f'-P {project_globals.CLUSTER_PROJECT} '
+                                            f'-q {project_globals.CLUSTER_QUEUE} '
+                                            f'-l fmem={project_globals.MAKE_ARTIFACT_MEM} '
+                                            f'-l fthread={project_globals.MAKE_ARTIFACT_CPU} '
+                                            f'-l h_rt={project_globals.MAKE_ARTIFACT_RUNTIME} '
+                                            f'-l archive=TRUE '  # Need J-drive access for data
+                                            f'-N {sanitize_location(location)}_artifact')  # Name of the job
+        jobs[location] = (session.runJob(job_template), drmaa.JobState.UNDETERMINED)
+        logger.info(f'Submitted job {jobs[location][0]} to build joint pafs for {location} and draw {draw}.')
+        session.deleteJobTemplate(job_template)
 
 
 def build_joint_paf_single_draw(output_path: Union[str, Path], correlation_data_path: Union[str, Path],
