@@ -393,7 +393,7 @@ def load_ikf_disability_weight(key: str, location: str) -> pd.DataFrame:
 
     ikf_category_disability_weight = (
         (sum(prevalence_disability_weights) / sum(category_prevalences)) if category_prevalences
-        else get_data(project_globals.IKF.EXPOSURE, location) * 0
+        else get_data(project_globals.IKF.CSMR, location) * 0
     ).fillna(0)
     return ikf_category_disability_weight
 
