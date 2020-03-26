@@ -222,4 +222,6 @@ class ChronicKidneyDisease:
         # Output is a table with demography columns and then columns
         # `cat1`, ..., `cat5` representing the disability weight for
         # each demographic group for each exposure category.
-        return pd.concat(dfs, axis=1).reset_index()
+        df = pd.concat(dfs, axis=1).reset_index()
+        df['cat5'] = 0
+        return df
