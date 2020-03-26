@@ -10,7 +10,10 @@ import itertools
 PROJECT_NAME = 'vivarium_csu_zenon'
 CLUSTER_PROJECT = 'proj_csu'
 
-CLUSTER_QUEUE = 'all.q'
+ALL_QUEUE = 'all.q'
+LONG_QUEUE = 'long.q'
+CLUSTER_QUEUES = [ALL_QUEUE, LONG_QUEUE]
+
 MAKE_ARTIFACT_MEM = '3G'
 MAKE_ARTIFACT_CPU = '1'
 MAKE_ARTIFACT_RUNTIME = '3:00:00'

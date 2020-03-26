@@ -82,7 +82,7 @@ def build_fpg_thresholds_single_location(drmaa, jobs, location, draws, output_di
         job_template.nativeSpecification = (f'-V '  # Export all environment variables
                                             f'-b y '  # Command is a binary (python)
                                             f'-P {project_globals.CLUSTER_PROJECT} '
-                                            f'-q {project_globals.CLUSTER_QUEUE} '
+                                            f'-q {project_globals.ALL_QUEUE} '
                                             f'-l fmem={project_globals.MAKE_ARTIFACT_MEM} '
                                             f'-l fthread={project_globals.MAKE_ARTIFACT_CPU} '
                                             f'-l h_rt={project_globals.MAKE_ARTIFACT_RUNTIME} '

@@ -100,7 +100,7 @@ def build_all_artifacts(output_dir: Path, verbose: int):
             job_template.nativeSpecification = (f'-V '  # Export all environment variables
                                                 f'-b y '  # Command is a binary (python)
                                                 f'-P {project_globals.CLUSTER_PROJECT} '  
-                                                f'-q {project_globals.CLUSTER_QUEUE} '  
+                                                f'-q {project_globals.ALL_QUEUE} '  
                                                 f'-l fmem={project_globals.MAKE_ARTIFACT_MEM} '
                                                 f'-l fthread={project_globals.MAKE_ARTIFACT_CPU} '
                                                 f'-l h_rt={project_globals.MAKE_ARTIFACT_RUNTIME} '
