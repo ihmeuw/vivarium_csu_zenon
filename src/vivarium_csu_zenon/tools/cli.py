@@ -11,6 +11,7 @@ from vivarium_csu_zenon.tools import build_artifacts
 from vivarium_csu_zenon.tools import build_results
 from vivarium_csu_zenon.tools import build_fpg_thresholds
 from vivarium_csu_zenon.tools import build_results_from_logs
+from vivarium_csu_zenon.tools import build_joint_pafs
 
 
 @click.command()
@@ -139,7 +140,7 @@ def make_fpg_exposure_thresholds(location: str, draws: str, concat_only: bool, v
               help='Drop into python debugger if an error occurs.')
 def make_joint_pafs(location: str, verbose: int, with_debugger: bool) -> None:
     configure_logging_to_terminal(verbose)
-    main = handle_exceptions(build_fpg_thresholds, logger, with_debugger=with_debugger)
+    main = handle_exceptions(build_joint_pafs, logger, with_debugger=with_debugger)
     main(location, verbose)
 
 
