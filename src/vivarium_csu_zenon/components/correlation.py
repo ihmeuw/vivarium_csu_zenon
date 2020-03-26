@@ -62,7 +62,7 @@ class CorrelatedPropensityGenerator:
             group_matrix.loc[project_globals.DIABETES_PROPENSITY_COLUMN] = fpg
             age_start, age_end = [int(age) for age in label.split('_to_')]
             age_start = 0 if age_start == 30 else age_start
-            age_end = 125 if age_end == 79 else age_end
+            age_end = 125 if age_end == 79 else age_end + 1
             data_key = (age_start, age_end)
             data[data_key] = group_matrix
         return data
