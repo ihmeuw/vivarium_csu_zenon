@@ -392,7 +392,7 @@ def load_ikf_disability_weight(key: str, location: str) -> pd.DataFrame:
         prevalence_disability_weights.append(prevalence * disability_weight)
 
     ikf_category_disability_weight = ((sum(prevalence_disability_weights) / sum(category_prevalences)).fillna(0)
-                                      if category_prevalences else sum(prevalence_disability_weights) * 0).fillna(0)
+                                      if category_prevalences else sum(prevalence_disability_weights) * 0)
     return ikf_category_disability_weight
 
 
