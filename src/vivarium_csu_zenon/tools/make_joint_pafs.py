@@ -74,7 +74,8 @@ def build_joint_pafs_single_location(drmaa, queue: str, jobs: Dict, location: st
     for draw in range(1000):
         job_template = session.createJobTemplate()
         job_template.remoteCommand = shutil.which("python")
-        job_template.errorPath = f":{output_dir}/logs"
+        job_template.outputPath = f":{output_dir}/output_logs"
+        job_template.errorPath = f":{output_dir}/error_logs"
         job_template.args = [__file__, str(path), f'"{location}"', draw]
         job_template.nativeSpecification = (f'-V '  # Export all environment variables
                                             f'-b y '  # Command is a binary (python)
@@ -91,6 +92,8 @@ def build_joint_pafs_single_location(drmaa, queue: str, jobs: Dict, location: st
 
 
 def build_joint_paf_single_draw(output_path: Union[str, Path], location: str, draw_number: int):
+    # NOTE: This is 100% necessary or the qsub will fail
+    location = location.strip('"')
     output_path = Path(output_path)
 
     correlation_data = load_correlation_data()
