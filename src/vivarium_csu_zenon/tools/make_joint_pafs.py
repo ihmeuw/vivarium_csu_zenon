@@ -1,6 +1,4 @@
-import os
 from pathlib import Path
-import pickle
 import shutil
 import sys
 import time
@@ -28,16 +26,20 @@ AFFECTED_CAUSES = [causes.ischemic_heart_disease.name, causes.ischemic_stroke.na
 INDEX_COLS = ['location', 'sex', 'age_start', 'age_end', 'year_start', 'year_end']
 
 
-def build_joint_pafs(location: str, verbose: int, queue: str):
+def build_joint_pafs(location: str, draws: str, verbose: int, queue: str):
     output_dir = paths.JOINT_PAF_DIR
     locations = project_globals.LOCATIONS if location == 'all' else [location]
 
     from vivarium_cluster_tools.psimulate.utilities import get_drmaa
     drmaa = get_drmaa()
     jobs = {}
+    draw_list = {
+        'all': range(1000),
+        'none': []
+    }.get(draws, draws.split(','))
     with drmaa.Session() as session:
         for location in locations:
-            build_joint_pafs_single_location(drmaa, queue, jobs, location, output_dir, session)
+            build_joint_pafs_single_location(drmaa, queue, jobs, location, draw_list, output_dir, session)
 
         if verbose:
             logger.info('Entering monitoring loop.')
@@ -56,22 +58,36 @@ def build_joint_pafs(location: str, verbose: int, queue: str):
 
     for location in locations:
         sanitized_location = sanitize_location(location)
-        path = output_dir / sanitized_location
-        joint_paf_data = pd.concat([pd.read_hdf(file) for file in path.iterdir()], axis=1)
+        location_dir = paths.JOINT_PAF_DIR / sanitized_location
+
+        existing_data_path = output_dir / f'{sanitized_location}.hdf'
+        joint_pafs = []
+        if existing_data_path.exists():
+            joint_pafs.append(pd.read_hdf(output_dir / f'{sanitized_location}.hdf'))
+            joint_pafs[0].to_hdf(output_dir / f'{sanitized_location}-old.hdf', 'data')
+
+        for file_path in location_dir.iterdir():
+            draw = file_path.parts[-1].split('.')[0]
+            draw_joint_paf = pd.read_hdf(file_path).rename(columns={0: draw})
+            draw_joint_paf['affected_measure'] = 'incidence_rate'
+            draw_joint_paf = draw_joint_paf.set_index(list(draw_joint_paf.columns.drop(draw)))
+            joint_pafs.append(draw_joint_paf)
+
+        joint_paf_data = pd.concat(joint_pafs, axis=1)
         joint_paf_data.to_hdf(output_dir / f'{sanitized_location}.hdf', 'data')
-        shutil.rmtree(path)
+        shutil.rmtree(location_dir)
 
     logger.info('**Done**')
 
 
-def build_joint_pafs_single_location(drmaa, queue: str, jobs: Dict, location: str, output_dir: Path, session):
+def build_joint_pafs_single_location(drmaa, queue: str, jobs: Dict, location: str, draws, output_dir: Path, session):
     sanitized_location = sanitize_location(location)
     path = output_dir / sanitized_location
-    if path.exists():
+    if path.exists() and len(draws) == 1000:
         shutil.rmtree(path)
     path.mkdir(exist_ok=True, mode=0o775)
 
-    for draw in range(1000):
+    for draw in draws:
         job_template = session.createJobTemplate()
         job_template.remoteCommand = shutil.which("python")
         job_template.outputPath = f":{output_dir}/output_logs"
