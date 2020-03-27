@@ -132,6 +132,10 @@ def make_fpg_exposure_thresholds(location: str, draws: str, concat_only: bool, v
               show_default=True,
               type=click.Choice(project_globals.LOCATIONS + ['all']),
               help='Location to make joint pafs for.')
+@click.option('-d', '--draws',
+              default='all',
+              show_default=True,
+              help='Comma separated list of draws to make fpg thresholds for. None if post-processing only')
 @click.option('-q', '--queue',
               default=project_globals.ALL_QUEUE,
               show_default=True,
@@ -143,10 +147,10 @@ def make_fpg_exposure_thresholds(location: str, draws: str, concat_only: bool, v
 @click.option('--pdb', 'with_debugger',
               is_flag=True,
               help='Drop into python debugger if an error occurs.')
-def make_joint_pafs(location: str, verbose: int, with_debugger: bool, queue: str) -> None:
+def make_joint_pafs(location: str, draws: str, verbose: int, with_debugger: bool, queue: str) -> None:
     configure_logging_to_terminal(verbose)
     main = handle_exceptions(build_joint_pafs, logger, with_debugger=with_debugger)
-    main(location, verbose, queue)
+    main(location, draws, verbose, queue)
 
 
 @click.command()
