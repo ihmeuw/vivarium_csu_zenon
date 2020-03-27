@@ -83,7 +83,7 @@ def build_joint_pafs_single_location(drmaa, queue: str, jobs: Dict, location: st
                                             f'-l fthread={project_globals.MAKE_ARTIFACT_CPU} '
                                             f'-l h_rt={project_globals.MAKE_ARTIFACT_RUNTIME} '
                                             f'-l archive=TRUE '  # Need J-drive access for data
-                                            f'-N {sanitize_location(location)}_artifact')  # Name of the job
+                                            f'-N {sanitize_location(location)}_joint_pafs')  # Name of the job
         jobs[location] = (session.runJob(job_template), drmaa.JobState.UNDETERMINED)
         logger.info(f'Submitted job {jobs[location][0]} to build joint pafs for {location} and draw {draw}.')
         session.deleteJobTemplate(job_template)
@@ -268,6 +268,6 @@ def get_rr(rr_params, affected_cause, stratification, draw):
 
 if __name__ == "__main__":
     joint_paf_output_path = sys.argv[1]
-    joint_paf_location = sys.argv[3]
-    joint_paf_draw = sys.argv[4]
+    joint_paf_location = sys.argv[2]
+    joint_paf_draw = sys.argv[3]
     build_joint_paf_single_draw(joint_paf_output_path, joint_paf_location, joint_paf_draw)
