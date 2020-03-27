@@ -123,7 +123,8 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.IKF.EMR: load_ckd_standard_data,
         project_globals.IKF.PAF: load_ikf_paf,
 
-        project_globals.PROPENSITY_CORRELATION_DATA: load_propensity_correlation_data
+        project_globals.PROPENSITY_CORRELATION_DATA: load_propensity_correlation_data,
+        project_globals.JOINT_PAF_DATA: load_joint_paf_data,
     }
     return mapping[lookup_key](lookup_key, location)
 
@@ -610,6 +611,12 @@ def load_propensity_correlation_data(key: str, location: str) -> pd.DataFrame:
     data.columns.name = 'risk_b'
     data = data.stack().to_frame().rename(columns={0: 'value'})
     return data
+
+
+def load_joint_paf_data(key: str, location: str) -> pd.DataFrame:
+    data_path = paths.JOINT_PAF_DIR / f'{sanitize_location(location)}.hdf'
+    joint_paf = pd.read_hdf(data_path)
+    return joint_paf
 
 
 def _load_em_from_meid(meid, location):
