@@ -32,16 +32,12 @@ def build_joint_pafs(location: str, verbose: int, queue: str):
     output_dir = paths.JOINT_PAF_DIR
     locations = project_globals.LOCATIONS if location == 'all' else [location]
 
-    correlation_data_path = output_dir / 'temp_correlation_data.pkl'
-    with open(correlation_data_path, 'wb') as f:
-        pickle.dump(load_correlation_data(), f)
-
     from vivarium_cluster_tools.psimulate.utilities import get_drmaa
     drmaa = get_drmaa()
     jobs = {}
     with drmaa.Session() as session:
         for location in locations:
-            build_joint_pafs_single_location(drmaa, queue, jobs, correlation_data_path, location, output_dir, session)
+            build_joint_pafs_single_location(drmaa, queue, jobs, location, output_dir, session)
 
         if verbose:
             logger.info('Entering monitoring loop.')
@@ -65,13 +61,10 @@ def build_joint_pafs(location: str, verbose: int, queue: str):
         joint_paf_data.to_hdf(output_dir / f'{sanitized_location}.hdf', 'data')
         shutil.rmtree(path)
 
-    os.remove(correlation_data_path)
-
     logger.info('**Done**')
 
 
-def build_joint_pafs_single_location(drmaa, queue: str, jobs: Dict, correlation_data_path: Path, location: str,
-                                     output_dir: Path, session):
+def build_joint_pafs_single_location(drmaa, queue: str, jobs: Dict, location: str, output_dir: Path, session):
     sanitized_location = sanitize_location(location)
     path = output_dir / sanitized_location
     if path.exists():
@@ -81,7 +74,7 @@ def build_joint_pafs_single_location(drmaa, queue: str, jobs: Dict, correlation_
     for draw in range(1000):
         job_template = session.createJobTemplate()
         job_template.remoteCommand = shutil.which("python")
-        job_template.args = [__file__, str(path), correlation_data_path, f'"{location}"', draw]
+        job_template.args = [__file__, str(path), f'"{location}"', draw]
         job_template.nativeSpecification = (f'-V '  # Export all environment variables
                                             f'-b y '  # Command is a binary (python)
                                             f'-P {project_globals.CLUSTER_PROJECT} '
@@ -96,12 +89,10 @@ def build_joint_pafs_single_location(drmaa, queue: str, jobs: Dict, correlation_
         session.deleteJobTemplate(job_template)
 
 
-def build_joint_paf_single_draw(output_path: Union[str, Path], correlation_data_path: Union[str, Path],
-                                location: str, draw_number: int):
+def build_joint_paf_single_draw(output_path: Union[str, Path], location: str, draw_number: int):
     output_path = Path(output_path)
-    with open(correlation_data_path, 'rb') as f:
-        correlation_data = pickle.load(f)
 
+    correlation_data = load_correlation_data()
     exposure_data = {risk.name: load_exposure_data(risk, location) for risk in ALL_RISKS}
     rr_data = {risk.name: load_relative_risk_data(risk, location) for risk in ALL_RISKS}
 
@@ -277,7 +268,6 @@ def get_rr(rr_params, affected_cause, stratification, draw):
 
 if __name__ == "__main__":
     joint_paf_output_path = sys.argv[1]
-    correlation_path = sys.argv[2]
     joint_paf_location = sys.argv[3]
     joint_paf_draw = sys.argv[4]
-    build_joint_paf_single_draw(joint_paf_output_path, correlation_path, joint_paf_location, joint_paf_draw)
+    build_joint_paf_single_draw(joint_paf_output_path, joint_paf_location, joint_paf_draw)
