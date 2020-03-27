@@ -24,7 +24,7 @@ class RiskEffect(RiskEffect_):
     def load_relative_risk_data(self, builder):
         relative_risk_data = builder.data.load(f'{self.risk}.relative_risk')
         correct_target = ((relative_risk_data['affected_entity'] == TARGET_MAP[self.target].name)
-                          & (relative_risk_data['affected_measure'] == TARGET_MAP[self.target].measure))
+                          & (relative_risk_data['affected_measure'] == TARGET_MAP[self.target].measurriske))
         relative_risk_data = (relative_risk_data[correct_target]
                               .drop(['affected_entity', 'affected_measure'], 'columns'))
 
