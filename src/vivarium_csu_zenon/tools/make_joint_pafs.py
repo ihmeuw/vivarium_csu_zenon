@@ -9,6 +9,7 @@ import pandas as pd
 import scipy.stats
 from loguru import logger
 
+from vivarium_inputs import globals as vi_globals, utilities
 from vivarium_inputs.interface import get_measure
 from gbd_mapping import risk_factors, causes
 from risk_distributions import EnsembleDistribution
@@ -75,6 +76,8 @@ def build_joint_pafs(location: str, draws: str, verbose: int, queue: str):
             joint_pafs.append(draw_joint_paf)
 
         joint_paf_data = pd.concat(joint_pafs, axis=1)
+        joint_paf_data = joint_paf_data[vi_globals.DRAW_COLUMNS]  # sort the columns
+        joint_paf_data = utilities.sort_hierarchical_data(joint_paf_data)
         joint_paf_data.to_hdf(output_dir / f'{sanitized_location}.hdf', 'data')
         shutil.rmtree(location_dir)
 
