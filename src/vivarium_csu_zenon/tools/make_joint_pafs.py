@@ -57,6 +57,7 @@ def build_joint_pafs(location: str, draws: str, verbose: int, queue: str):
                 logger.info('')
 
     for location in locations:
+        logger.info(f'Merging data for location - {location}')
         sanitized_location = sanitize_location(location)
         location_dir = paths.JOINT_PAF_DIR / sanitized_location
 
