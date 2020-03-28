@@ -2,6 +2,7 @@ from typing import NamedTuple
 
 import itertools
 
+from vivarium_public_health.utilities import TargetString
 
 ####################
 # Project metadata #
@@ -233,6 +234,13 @@ IKF = __ImpairedKidneyFunction()
 
 PROPENSITY_CORRELATION_DATA = 'risk_factor.joint_risk_factors.propensity_correlation_data'
 JOINT_PAF_DATA = 'risk_factor.joint_risk_factors.population_attributable_fraction'
+
+RATE_TARGET_MAP = {
+    'sequela.acute_myocardial_infarction.incidence_rate': TargetString(IHD.ACUTE_MI_INCIDENCE_RATE),
+    'sequela.post_myocardial_infarction_to_acute_myocardial_infarction.transition_rate': TargetString(IHD.ACUTE_MI_INCIDENCE_RATE),
+    'sequela.acute_ischemic_stroke.incidence_rate': TargetString(ISCHEMIC_STROKE.ACUTE_STROKE_INCIDENCE_RATE),
+    'sequela.post_ischemic_stroke_to_acute_ischemic_stroke.transition_rate': TargetString(ISCHEMIC_STROKE.ACUTE_STROKE_INCIDENCE_RATE),
+}
 
 MAKE_ARTIFACT_KEY_GROUPS = [
     POPULATION,
