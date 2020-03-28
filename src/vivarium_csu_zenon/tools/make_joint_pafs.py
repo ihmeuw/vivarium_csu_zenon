@@ -77,7 +77,7 @@ def build_joint_pafs(location: str, draws: str, verbose: int, queue: str):
 
         joint_paf_data = pd.concat(joint_pafs, axis=1)
         joint_paf_data = joint_paf_data[vi_globals.DRAW_COLUMNS]  # sort the columns
-        joint_paf_data = utilities.sort_hierarchical_data(joint_paf_data)
+        joint_paf_data = utilities.sort_hierarchical_data(joint_paf_data).convert_objects()
         joint_paf_data.to_hdf(output_dir / f'{sanitized_location}.hdf', 'data')
         shutil.rmtree(location_dir)
 
