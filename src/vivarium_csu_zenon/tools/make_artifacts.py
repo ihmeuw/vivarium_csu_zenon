@@ -17,7 +17,7 @@ from loguru import logger
 
 from vivarium_csu_zenon import globals as project_globals
 from vivarium_csu_zenon.utilities import sanitize_location
-from vivarium_csu_zenon.tools.app_logging import add_logging_sink
+from vivarium_csu_zenon.tools.app_logging import add_logging_sink, decode_status
 
 
 def build_artifacts(location: str, output_dir: str, append: bool, verbose: int):
@@ -100,7 +100,7 @@ def build_all_artifacts(output_dir: Path, verbose: int):
             job_template.nativeSpecification = (f'-V '  # Export all environment variables
                                                 f'-b y '  # Command is a binary (python)
                                                 f'-P {project_globals.CLUSTER_PROJECT} '  
-                                                f'-q {project_globals.CLUSTER_QUEUE} '  
+                                                f'-q {project_globals.ALL_QUEUE} '  
                                                 f'-l fmem={project_globals.MAKE_ARTIFACT_MEM} '
                                                 f'-l fthread={project_globals.MAKE_ARTIFACT_CPU} '
                                                 f'-l h_rt={project_globals.MAKE_ARTIFACT_RUNTIME} '
@@ -110,17 +110,6 @@ def build_all_artifacts(output_dir: Path, verbose: int):
             logger.info(f'Submitted job {jobs[location][0]} to build artifact for {location}.')
             session.deleteJobTemplate(job_template)
 
-        decodestatus = {drmaa.JobState.UNDETERMINED: 'undetermined',
-                        drmaa.JobState.QUEUED_ACTIVE: 'queued_active',
-                        drmaa.JobState.SYSTEM_ON_HOLD: 'system_hold',
-                        drmaa.JobState.USER_ON_HOLD: 'user_hold',
-                        drmaa.JobState.USER_SYSTEM_ON_HOLD: 'user_system_hold',
-                        drmaa.JobState.RUNNING: 'running',
-                        drmaa.JobState.SYSTEM_SUSPENDED: 'system_suspended',
-                        drmaa.JobState.USER_SUSPENDED: 'user_suspended',
-                        drmaa.JobState.DONE: 'finished',
-                        drmaa.JobState.FAILED: 'failed'}
-
         if verbose:
             logger.info('Entering monitoring loop.')
             logger.info('-------------------------')
@@ -129,7 +118,7 @@ def build_all_artifacts(output_dir: Path, verbose: int):
             while any([job[1] not in [drmaa.JobState.DONE, drmaa.JobState.FAILED] for job in jobs.values()]):
                 for location, (job_id, status) in jobs.items():
                     jobs[location] = (job_id, session.jobStatus(job_id))
-                    logger.info(f'{location:<35}: {decodestatus[jobs[location][1]]:>15}')
+                    logger.info(f'{location:<35}: {decode_status(drmaa, jobs[location][1]):>15}')
                 logger.info('')
                 time.sleep(project_globals.MAKE_ARTIFACT_SLEEP)
                 logger.info('Checking status again')
