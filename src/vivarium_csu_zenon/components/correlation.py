@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import scipy.stats
 from vivarium.framework.randomness import get_hash
+from vivarium_public_health.utilities import TargetString
 
 from vivarium_csu_zenon import globals as project_globals
 
@@ -29,6 +30,15 @@ class CorrelatedPropensityGenerator:
                                                  creates_columns=columns_created,
                                                  requires_columns=['age'],
                                                  requires_streams=[self.name])
+
+        for rate in project_globals.RATE_TARGET_MAP.values():
+            population_attributable_fraction_data = self.load_population_attributable_fraction_data(builder, rate)
+            population_attributable_fraction = builder.lookup.build_table(population_attributable_fraction_data, 
+                                                                          key_columns=['sex'],
+                                                                          parameter_columns=['age', 'year'])
+            builder.value.register_value_modifier(f'{rate.name}.{rate.measure}.paf',
+                                                  modifier=population_attributable_fraction,
+                                                  requires_columns=['age', 'sex'])
 
     def on_initialize_simulants(self, pop_data: 'SimulantData'):
         age = self.population_view.subview(['age']).get(pop_data.index).age
@@ -66,6 +76,13 @@ class CorrelatedPropensityGenerator:
             data_key = (age_start, age_end)
             data[data_key] = group_matrix
         return data
+
+    @staticmethod
+    def load_population_attributable_fraction_data(builder: 'Builder', rate: TargetString):
+        paf_data = builder.data.load(project_globals.JOINT_PAF_DATA)
+        correct_target = ((paf_data['affected_entity'] == rate.name) & (paf_data['affected_measure'] == rate.measure))
+        paf_data = paf_data[correct_target].drop(['affected_entity', 'affected_measure'], 'columns')
+        return paf_data
 
 
 def copula_sample(correlation_matrix, samples, randomness_key):
