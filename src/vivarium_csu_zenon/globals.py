@@ -42,6 +42,8 @@ class __Population(NamedTuple):
     DEMOGRAPHY: str = 'population.demographic_dimensions'
     TMRLE: str = 'population.theoretical_minimum_risk_life_expectancy'
     ACMR: str = 'cause.all_causes.cause_specific_mortality_rate'
+    PROPENSITY_CORRELATION_DATA: str = 'risk_factor.joint_risk_factors.propensity_correlation_data'
+    JOINT_PAF_DATA: str = 'risk_factor.joint_risk_factors.population_attributable_fraction'
 
     @property
     def name(self):
@@ -231,8 +233,6 @@ class __ImpairedKidneyFunction(NamedTuple):
 
 IKF = __ImpairedKidneyFunction()
 
-PROPENSITY_CORRELATION_DATA = 'risk_factor.joint_risk_factors.propensity_correlation_data'
-JOINT_PAF_DATA = 'risk_factor.joint_risk_factors.population_attributable_fraction'
 
 MAKE_ARTIFACT_KEY_GROUPS = [
     POPULATION,
@@ -243,7 +243,6 @@ MAKE_ARTIFACT_KEY_GROUPS = [
     SBP,
     FPG,
     IKF,
-    [PROPENSITY_CORRELATION_DATA],
 ]
 
 ###########################
