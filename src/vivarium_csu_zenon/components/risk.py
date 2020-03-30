@@ -79,13 +79,8 @@ class FastingPlasmaGlucose(Risk):
         threshold_data = builder.data.load(project_globals.FPG.DIABETES_MELLITUS_THRESHOLD)
         self.fpg_threshold = builder.lookup.build_table(threshold_data, key_columns=['sex'],
                                                         parameter_columns=['age', 'year'])
-
-        self.population_view = builder.population.get_view([diabetes_state_col])
-
-    def on_initialize_simulants(self, pop_data):
-        propensity = pd.Series(self.randomness.get_draw(pop_data.index),
-                               name='high_fasting_plasma_glucose_continuous_propensity')
-        self.population_view.update(propensity)
+        propensity_col = f'{self.risk.name}_propensity'
+        self.population_view = builder.population.get_view([diabetes_state_col, propensity_col])
 
     def get_current_exposure(self, index):
         pop = self.population_view.get(index)

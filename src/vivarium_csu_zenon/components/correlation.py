@@ -31,12 +31,13 @@ class CorrelatedPropensityGenerator:
                                                  requires_columns=['age'],
                                                  requires_streams=[self.name])
 
-        for rate in project_globals.RATE_TARGET_MAP.values():
+        for target, rate in project_globals.RATE_TARGET_MAP.items():
             population_attributable_fraction_data = self.load_population_attributable_fraction_data(builder, rate)
-            population_attributable_fraction = builder.lookup.build_table(population_attributable_fraction_data, 
+            population_attributable_fraction = builder.lookup.build_table(population_attributable_fraction_data,
                                                                           key_columns=['sex'],
                                                                           parameter_columns=['age', 'year'])
-            builder.value.register_value_modifier(f'{rate.name}.{rate.measure}.paf',
+            target = TargetString(target)
+            builder.value.register_value_modifier(f'{target.name}.{target.measure}.paf',
                                                   modifier=population_attributable_fraction,
                                                   requires_columns=['age', 'sex'])
 

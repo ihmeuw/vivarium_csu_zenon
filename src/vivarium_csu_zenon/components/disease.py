@@ -105,8 +105,7 @@ class DiabetesDiseaseModel(DiseaseModel):
                                                  creates_columns=[self.state_column],
                                                  requires_columns=['age', 'sex',
                                                                    # Only real addition to normal setup.
-                                                                   project_globals.DIABETES_PROPENSITY_COLUMN],
-                                                 requires_streams=[f'{self.state_column}_initial_states'])
+                                                                   project_globals.DIABETES_PROPENSITY_COLUMN])
 
         builder.event.register_listener('time_step', self.on_time_step)
         builder.event.register_listener('time_step__cleanup', self.on_time_step_cleanup)

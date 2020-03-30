@@ -3,10 +3,9 @@ components:
         population:
             - BasePopulation()
             - Mortality()
-        risks:
-
 
     vivarium_csu_zenon.components:
+        - CorrelatedPropensityGenerator()
         - IschemicHeartDisease()
         - IschemicStroke()
         - DiabetesMellitus()
