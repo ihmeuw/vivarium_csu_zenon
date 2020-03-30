@@ -60,7 +60,7 @@ class CVDRiskAttribute:
         sbp = self.systolic_blood_pressure(index)
         age = pop.loc[:, 'age']
         sex = pop.loc[:, 'sex'] == 'Male'
-        score = -16.5 + 0.043 * sbp + 0.266 * age + 2.32 * sex
+        score = -19.5 + 0.043 * sbp + 0.266 * age + 2.32 * sex
         return score
 
     def get_cvd_risk_category(self, index: pd.Index) -> pd.Series:
