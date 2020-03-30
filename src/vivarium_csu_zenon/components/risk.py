@@ -2,7 +2,7 @@ import typing
 
 import pandas as pd
 
-from vivarium_public_health.risks import Risk, RiskEffect as RiskEffect_
+from vivarium_public_health.risks import Risk as Risk_, RiskEffect as RiskEffect_
 from vivarium_public_health.risks.data_transformations import (get_distribution_type, pivot_categorical,
                                                                get_exposure_post_processor)
 
@@ -46,6 +46,24 @@ class RiskEffect(RiskEffect_):
         return relative_risk_data
 
 
+class Risk(Risk_):
+
+    def setup(self, builder: 'Builder'):
+        propensity_col = f'{self.risk.name}_propensity'
+        self.population_view = builder.population.get_view([propensity_col])
+        self.propensity = builder.value.register_value_producer(
+            f'{self.risk.name}.propensity',
+            source=lambda index: self.population_view.get(index)[propensity_col],
+            requires_columns=[propensity_col])
+        self.exposure = builder.value.register_value_producer(
+            f'{self.risk.name}.exposure',
+            source=self.get_current_exposure,
+            requires_columns=['age', 'sex'],
+            requires_values=[f'{self.risk.name}.propensity'],
+            preferred_post_processor=get_exposure_post_processor(builder, self.risk)
+        )
+
+
 class FastingPlasmaGlucose(Risk):
     @property
     def name(self):
@@ -55,33 +73,14 @@ class FastingPlasmaGlucose(Risk):
         super().__init__(self.name)
 
     def setup(self, builder: 'Builder'):
-        propensity_col = f'{self.risk.name}_propensity'
+        super().setup(builder)
         diabetes_state_col = project_globals.DIABETES_MELLITUS.name
-
-        self.randomness = builder.randomness.get_stream(f'initial_{self.risk.name}_propensity')
-
-        self.propensity = builder.value.register_value_producer(
-            f'{self.risk.name}.propensity',
-            source=lambda index: self.population_view.get(index)[propensity_col],
-            requires_columns=[propensity_col]
-        )
-
-        self.exposure = builder.value.register_value_producer(
-            f'{self.risk.name}.exposure',
-            source=self.get_current_exposure,
-            requires_columns=['age', 'sex', diabetes_state_col],
-            requires_values=[f'{self.risk.name}.propensity'],
-            preferred_post_processor=get_exposure_post_processor(builder, self.risk)
-        )
 
         threshold_data = builder.data.load(project_globals.FPG.DIABETES_MELLITUS_THRESHOLD)
         self.fpg_threshold = builder.lookup.build_table(threshold_data, key_columns=['sex'],
                                                         parameter_columns=['age', 'year'])
 
-        builder.population.initializes_simulants(self.on_initialize_simulants, creates_columns=[propensity_col],
-                                                 requires_streams=[f'initial_{self.risk.name}_propensity'])
-
-        self.population_view = builder.population.get_view([propensity_col, diabetes_state_col])
+        self.population_view = builder.population.get_view([diabetes_state_col])
 
     def on_initialize_simulants(self, pop_data):
         propensity = pd.Series(self.randomness.get_draw(pop_data.index),
