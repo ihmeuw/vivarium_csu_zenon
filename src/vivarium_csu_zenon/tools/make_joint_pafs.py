@@ -77,7 +77,7 @@ def build_joint_pafs(location: str, draws: str, verbose: int, queue: str):
 
         joint_paf_data = pd.concat(joint_pafs, axis=1)
         joint_paf_data = joint_paf_data[vi_globals.DRAW_COLUMNS]  # sort the columns
-        joint_paf_data = utilities.sort_hierarchical_data(joint_paf_data)
+        joint_paf_data = utilities.sort_hierarchical_data(joint_paf_data).convert_objects()
         joint_paf_data.to_hdf(output_dir / f'{sanitized_location}.hdf', 'data')
         shutil.rmtree(location_dir)
 
@@ -230,14 +230,9 @@ def get_correlation(correlation_data, stratification):
 class IKFDist:
 
     def __init__(self, pmf):
+        # this is done because sometimes the values were 0 causing cut to fail
+        pmf = pmf[pmf > 1e-8]
         self.bins = [0] + pmf.cumsum().tolist()
-        # set value to next float value if value is equal to previous value (as long as it's less than 1)
-        for i in range(1, len(self.bins)):
-            self.bins[i] = self.bins[i] if self.bins[i-1] < self.bins[i] else np.nextafter(self.bins[i], 1)
-        # do the same in reverse in case there are multiple values equal to 1.0
-        for i in range(len(self.bins) - 1, 0, -1):
-            self.bins[i-1] = self.bins[i-1] if self.bins[i-1] < self.bins[i] else np.nextafter(self.bins[i-1], 0)
-
         self.labels = pmf.index
 
     def ppf(self, propensity):

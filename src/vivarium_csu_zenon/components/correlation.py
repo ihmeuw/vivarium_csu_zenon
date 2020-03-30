@@ -31,12 +31,13 @@ class CorrelatedPropensityGenerator:
                                                  requires_columns=['age'],
                                                  requires_streams=[self.name])
 
-        for rate in project_globals.RATE_TARGET_MAP.values():
+        for target, rate in project_globals.RATE_TARGET_MAP.items():
             population_attributable_fraction_data = self.load_population_attributable_fraction_data(builder, rate)
-            population_attributable_fraction = builder.lookup.build_table(population_attributable_fraction_data, 
+            population_attributable_fraction = builder.lookup.build_table(population_attributable_fraction_data,
                                                                           key_columns=['sex'],
                                                                           parameter_columns=['age', 'year'])
-            builder.value.register_value_modifier(f'{rate.name}.{rate.measure}.paf',
+            target = TargetString(target)
+            builder.value.register_value_modifier(f'{target.name}.{target.measure}.paf',
                                                   modifier=population_attributable_fraction,
                                                   requires_columns=['age', 'sex'])
 
@@ -59,7 +60,7 @@ class CorrelatedPropensityGenerator:
 
     @staticmethod
     def load_correlation_data(builder: 'Builder') -> Dict[Tuple[int, int], pd.DataFrame]:
-        raw_data = builder.data.load(project_globals.PROPENSITY_CORRELATION_DATA)
+        raw_data = builder.data.load(project_globals.POPULATION.PROPENSITY_CORRELATION_DATA)
         data = {}
         for label, group in raw_data.groupby(['age_group']):
             group_matrix = group.set_index(['risk_a', 'risk_b']).value.unstack()
@@ -79,7 +80,7 @@ class CorrelatedPropensityGenerator:
 
     @staticmethod
     def load_population_attributable_fraction_data(builder: 'Builder', rate: TargetString):
-        paf_data = builder.data.load(project_globals.JOINT_PAF_DATA)
+        paf_data = builder.data.load(project_globals.POPULATION.JOINT_PAF_DATA)
         correct_target = ((paf_data['affected_entity'] == rate.name) & (paf_data['affected_measure'] == rate.measure))
         paf_data = paf_data[correct_target].drop(['affected_entity', 'affected_measure'], 'columns')
         return paf_data

@@ -43,6 +43,8 @@ class __Population(NamedTuple):
     DEMOGRAPHY: str = 'population.demographic_dimensions'
     TMRLE: str = 'population.theoretical_minimum_risk_life_expectancy'
     ACMR: str = 'cause.all_causes.cause_specific_mortality_rate'
+    PROPENSITY_CORRELATION_DATA: str = 'risk_factor.joint_risk_factors.propensity_correlation_data'
+    JOINT_PAF_DATA: str = 'risk_factor.joint_risk_factors.population_attributable_fraction'
 
     @property
     def name(self):
@@ -202,7 +204,6 @@ class __ImpairedKidneyFunction(NamedTuple):
     DISTRIBUTION: str = 'risk_factor.impaired_kidney_function.distribution'
     EXPOSURE: str = 'risk_factor.impaired_kidney_function.exposure'
     RELATIVE_RISK: str = 'risk_factor.impaired_kidney_function.relative_risk'
-    CAT_5_DISABILITY_WEIGHT: str = 'risk_factor.cat_5_impaired_kidney_function.disability_weight'
     CAT_4_DISABILITY_WEIGHT: str = 'risk_factor.cat_4_impaired_kidney_function.disability_weight'
     CAT_3_DISABILITY_WEIGHT: str = 'risk_factor.cat_3_impaired_kidney_function.disability_weight'
     CAT_2_DISABILITY_WEIGHT: str = 'risk_factor.cat_2_impaired_kidney_function.disability_weight'
@@ -226,14 +227,11 @@ class __ImpairedKidneyFunction(NamedTuple):
             self.CAT_2_DISABILITY_WEIGHT,
             self.CAT_3_DISABILITY_WEIGHT,
             self.CAT_4_DISABILITY_WEIGHT,
-            self.CAT_5_DISABILITY_WEIGHT,
         ]
 
 
 IKF = __ImpairedKidneyFunction()
 
-PROPENSITY_CORRELATION_DATA = 'risk_factor.joint_risk_factors.propensity_correlation_data'
-JOINT_PAF_DATA = 'risk_factor.joint_risk_factors.population_attributable_fraction'
 
 RATE_TARGET_MAP = {
     'sequela.acute_myocardial_infarction.incidence_rate': TargetString(IHD.ACUTE_MI_INCIDENCE_RATE),
@@ -251,7 +249,6 @@ MAKE_ARTIFACT_KEY_GROUPS = [
     SBP,
     FPG,
     IKF,
-    [PROPENSITY_CORRELATION_DATA],
 ]
 
 ###########################

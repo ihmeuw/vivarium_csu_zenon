@@ -46,6 +46,8 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.POPULATION.DEMOGRAPHY: load_demographic_dimensions,
         project_globals.POPULATION.TMRLE: load_theoretical_minimum_risk_life_expectancy,
         project_globals.POPULATION.ACMR: load_standard_data,
+        project_globals.POPULATION.PROPENSITY_CORRELATION_DATA: load_propensity_correlation_data,
+        project_globals.POPULATION.JOINT_PAF_DATA: load_joint_paf_data,
 
         project_globals.IHD.ACUTE_MI_PREVALENCE: load_ihd_prevalence,
         project_globals.IHD.POST_MI_PREVALENCE: load_ihd_prevalence,
@@ -114,7 +116,6 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.IKF.DISTRIBUTION: load_metadata,
         project_globals.IKF.EXPOSURE: load_ikf_exposure,
         project_globals.IKF.RELATIVE_RISK: load_ikf_relative_risk,
-        project_globals.IKF.CAT_5_DISABILITY_WEIGHT: load_ikf_disability_weight,
         project_globals.IKF.CAT_4_DISABILITY_WEIGHT: load_ikf_disability_weight,
         project_globals.IKF.CAT_3_DISABILITY_WEIGHT: load_ikf_disability_weight,
         project_globals.IKF.CAT_2_DISABILITY_WEIGHT: load_ikf_disability_weight,
@@ -295,7 +296,6 @@ def load_diabetes_mellitus_disability_weight(key: str, location: str) -> pd.Data
 
 def load_ikf_disability_weight(key: str, location: str) -> pd.DataFrame:
     category_sequelae_map = {
-        project_globals.IKF.CAT_5_DISABILITY_WEIGHT: [],
         project_globals.IKF.CAT_4_DISABILITY_WEIGHT: [
             sequelae.albuminuria_with_preserved_gfr_due_to_glomerulonephritis,
             sequelae.albuminuria_with_preserved_gfr_due_to_hypertension,
@@ -384,13 +384,15 @@ def load_ikf_disability_weight(key: str, location: str) -> pd.DataFrame:
     sequelae_for_category = category_sequelae_map[key]
 
     prevalence_disability_weights = []
+    category_prevalences = []
     for sequela in sequelae_for_category:
         prevalence = interface.get_measure(sequela, 'prevalence', location)
+        category_prevalences.append(prevalence)
+
         disability_weight = interface.get_measure(sequela, 'disability_weight', location)
         prevalence_disability_weights.append(prevalence * disability_weight)
-
-    ckd_prevalence = interface.get_measure(causes.chronic_kidney_disease, 'prevalence', location)
-    ikf_category_disability_weight = (sum(prevalence_disability_weights) / ckd_prevalence).fillna(0)
+    
+    ikf_category_disability_weight = (sum(prevalence_disability_weights) / sum(category_prevalences)).fillna(0)
     return ikf_category_disability_weight
 
 
