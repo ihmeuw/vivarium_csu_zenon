@@ -123,6 +123,9 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.IKF.CSMR: load_ckd_standard_data,
         project_globals.IKF.EMR: load_ckd_standard_data,
         project_globals.IKF.PAF: load_ikf_paf,
+
+        project_globals.PROPENSITY_CORRELATION_DATA: load_propensity_correlation_data,
+        project_globals.JOINT_PAF_DATA: load_joint_paf_data,
     }
     return mapping[lookup_key](lookup_key, location)
 
