@@ -2,6 +2,7 @@ from typing import NamedTuple
 
 import itertools
 
+from vivarium_public_health.utilities import TargetString
 
 ####################
 # Project metadata #
@@ -10,7 +11,10 @@ import itertools
 PROJECT_NAME = 'vivarium_csu_zenon'
 CLUSTER_PROJECT = 'proj_csu'
 
-CLUSTER_QUEUE = 'all.q'
+ALL_QUEUE = 'all.q'
+LONG_QUEUE = 'long.q'
+CLUSTER_QUEUES = [ALL_QUEUE, LONG_QUEUE]
+
 MAKE_ARTIFACT_MEM = '3G'
 MAKE_ARTIFACT_CPU = '1'
 MAKE_ARTIFACT_RUNTIME = '3:00:00'
@@ -39,6 +43,8 @@ class __Population(NamedTuple):
     DEMOGRAPHY: str = 'population.demographic_dimensions'
     TMRLE: str = 'population.theoretical_minimum_risk_life_expectancy'
     ACMR: str = 'cause.all_causes.cause_specific_mortality_rate'
+    PROPENSITY_CORRELATION_DATA: str = 'risk_factor.joint_risk_factors.propensity_correlation_data'
+    JOINT_PAF_DATA: str = 'risk_factor.joint_risk_factors.population_attributable_fraction'
 
     @property
     def name(self):
@@ -226,6 +232,14 @@ class __ImpairedKidneyFunction(NamedTuple):
 
 IKF = __ImpairedKidneyFunction()
 
+
+RATE_TARGET_MAP = {
+    'sequela.acute_myocardial_infarction.incidence_rate': TargetString(IHD.ACUTE_MI_INCIDENCE_RATE),
+    'sequela.post_myocardial_infarction_to_acute_myocardial_infarction.transition_rate': TargetString(IHD.ACUTE_MI_INCIDENCE_RATE),
+    'sequela.acute_ischemic_stroke.incidence_rate': TargetString(ISCHEMIC_STROKE.ACUTE_STROKE_INCIDENCE_RATE),
+    'sequela.post_ischemic_stroke_to_acute_ischemic_stroke.transition_rate': TargetString(ISCHEMIC_STROKE.ACUTE_STROKE_INCIDENCE_RATE),
+}
+
 MAKE_ARTIFACT_KEY_GROUPS = [
     POPULATION,
     IHD,
@@ -349,6 +363,22 @@ CVD_VERY_HIGH_RISK = 'very_high_risk'
 CVD_HIGH_RISK = 'high_risk'
 CVD_MODERATE_RISK = 'moderate_risk'
 CVD_LOW_RISK = 'low_risk'
+
+# Correlated propensity columns
+SBP_PROPENSITY_COLUMN = f'{SBP.name}_propensity'
+FPG_PROPENSITY_COLUMN = f'{FPG.name}_propensity'
+IKF_PROPENSITY_COLUMN = f'{IKF.name}_propensity'
+LDL_C_PROPENSITY_COLUMN = f'{LDL_C.name}_propensity'
+DIABETES_PROPENSITY_COLUMN = f'{DIABETES_MELLITUS.name}_propensity'
+CORRELATED_PROPENSITY_COLUMNS = [
+    SBP_PROPENSITY_COLUMN,
+    FPG_PROPENSITY_COLUMN,
+    IKF_PROPENSITY_COLUMN,
+    LDL_C_PROPENSITY_COLUMN,
+    DIABETES_PROPENSITY_COLUMN,
+]
+
+
 
 ########################
 # Stratification Constants #

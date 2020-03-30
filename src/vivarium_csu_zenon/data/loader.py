@@ -10,8 +10,6 @@ for an example.
 
 .. admonition::
 """
-from pathlib import Path
-
 import pandas as pd
 import numpy as np
 
@@ -23,7 +21,7 @@ from vivarium_inputs.mapping_extension import alternative_risk_factors
 import vivarium_inputs.validation.sim as sim_validation
 import vivarium_inputs.validation.raw as raw_validation
 
-from vivarium_csu_zenon import globals as project_globals
+from vivarium_csu_zenon import globals as project_globals, paths
 from vivarium_csu_zenon.utilities import sanitize_location
 
 def get_data(lookup_key: str, location: str) -> pd.DataFrame:
@@ -48,6 +46,8 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.POPULATION.DEMOGRAPHY: load_demographic_dimensions,
         project_globals.POPULATION.TMRLE: load_theoretical_minimum_risk_life_expectancy,
         project_globals.POPULATION.ACMR: load_standard_data,
+        project_globals.POPULATION.PROPENSITY_CORRELATION_DATA: load_propensity_correlation_data,
+        project_globals.POPULATION.JOINT_PAF_DATA: load_joint_paf_data,
 
         project_globals.IHD.ACUTE_MI_PREVALENCE: load_ihd_prevalence,
         project_globals.IHD.POST_MI_PREVALENCE: load_ihd_prevalence,
@@ -123,6 +123,9 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.IKF.CSMR: load_ckd_standard_data,
         project_globals.IKF.EMR: load_ckd_standard_data,
         project_globals.IKF.PAF: load_ikf_paf,
+
+        project_globals.PROPENSITY_CORRELATION_DATA: load_propensity_correlation_data,
+        project_globals.JOINT_PAF_DATA: load_joint_paf_data,
     }
     return mapping[lookup_key](lookup_key, location)
 
@@ -592,10 +595,30 @@ def load_ikf_paf(key: str, location: str) -> pd.DataFrame:
 
 
 def load_diabetes_fpg_threshold(key: str, location: str) -> pd.DataFrame:
-    directory = Path('/share/costeffectiveness/auxiliary_data/GBD_2017/03_untracked_data/fpg_diabetes_threshold')
-    data_path = directory / f'{sanitize_location(location)}.hdf'
+    data_path = paths.FPG_THRESHOLD_DIR / f'{sanitize_location(location)}.hdf'
     fpg_exposure = pd.read_hdf(data_path)
     return fpg_exposure
+
+
+def load_propensity_correlation_data(key: str, location: str) -> pd.DataFrame:
+    data = pd.read_csv(paths.CORRELATION_DATA_PATH)
+    risk_factor_column_map = {'SBP': project_globals.SBP_PROPENSITY_COLUMN,
+                              'LDLC': project_globals.LDL_C_PROPENSITY_COLUMN,
+                              'FPG': project_globals.FPG_PROPENSITY_COLUMN,
+                              'GFR': project_globals.IKF_PROPENSITY_COLUMN}
+    data['risk_a'] = data['risk_factor'].map(risk_factor_column_map)
+    column_name_map = {f'{k}_correlation': v for k, v in risk_factor_column_map.items()}
+    data = data.rename(columns=column_name_map).drop(columns=['risk_factor'])
+    data = data.set_index(['age_group', 'risk_a'])
+    data.columns.name = 'risk_b'
+    data = data.stack().to_frame().rename(columns={0: 'value'})
+    return data
+
+
+def load_joint_paf_data(key: str, location: str) -> pd.DataFrame:
+    data_path = paths.JOINT_PAF_DIR / f'{sanitize_location(location)}.hdf'
+    joint_paf = pd.read_hdf(data_path)
+    return joint_paf
 
 
 def _load_em_from_meid(meid, location):
@@ -621,3 +644,5 @@ def get_entity(key: str):
     }
     key = EntityKey(key)
     return type_map[key.type][key.name]
+
+
