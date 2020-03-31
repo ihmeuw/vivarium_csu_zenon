@@ -1,0 +1,19 @@
+therapy_type,location,mean_value,sd_value
+monotherapy,Brazil,0.7040000000000001,0.002058843
+monotherapy,China,0.98,0.001
+monotherapy,France,0.846333333,0.0025
+monotherapy,Italy,0.783854167,0.0215
+monotherapy,Russian Federation,0.9575,0.075
+monotherapy,Spain,0.677651905,0.001981788
+multi-drugs,Brazil,0.29600000000000004,0.195896723
+multi-drugs,China,0.019,0.012574452
+multi-drugs,France,0.15366666699999998,0.101698637
+multi-drugs,Italy,0.215625,0.14270348300000002
+multi-drugs,Russian Federation,0.0425,0.028127062999999997
+multi-drugs,Spain,0.322348095,0.21333424199999998
+FDC,Brazil,0.551724138,0.035878986
+FDC,China,0.604,0.03927852
+FDC,France,0.68,0.04422085
+FDC,Italy,0.608695652,0.039583881
+FDC,Russian Federation,0.604,0.03927852
+FDC,Spain,0.576923077,0.037517689
