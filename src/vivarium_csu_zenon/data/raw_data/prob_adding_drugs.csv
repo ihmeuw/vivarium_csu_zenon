@@ -1,0 +1,4 @@
+probability_type,mean_value,sd_value
+increasing_dose,0.4175,0.02384848
+adding_2nd_drug,0.38,0.018708287
+switching_drugs,0.1925,0.024874686

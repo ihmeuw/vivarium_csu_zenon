@@ -1,0 +1,25 @@
+current_prescription,location,mean_value,sd_value
+ezetimibe,brazil,0.10,0.10
+ezetimibe,china,0.00,0.01
+ezetimibe,france,0.04,0.04
+ezetimibe,italy,0.10,0.10
+ezetimibe,russia,0.00,0.00
+ezetimibe,spain,0.10,0.09
+fibrates,brazil,0.14,0.12
+fibrates,china,0.09,0.05
+fibrates,france,0.13,0.07
+fibrates,italy,0.01,0.00
+fibrates,russia,0.01,0.00
+fibrates,spain,0.00,0.00
+high potency statin,brazil,0.38,0.07
+high potency statin,china,0.53,0.16
+high potency statin,france,0.50,0.07
+high potency statin,italy,0.61,0.23
+high potency statin,russia,0.56,0.20
+high potency statin,spain,0.50,0.24
+low potency statin,brazil,0.37,0.16
+low potency statin,china,0.37,0.16
+low potency statin,france,0.33,0.03
+low potency statin,italy,0.28,0.10
+low potency statin,russia,0.44,0.12
+low potency statin,spain,0.40,0.12
