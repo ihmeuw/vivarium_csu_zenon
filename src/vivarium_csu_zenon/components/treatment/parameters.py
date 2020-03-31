@@ -28,6 +28,10 @@ STATIN_HIGH = 'high_potency_statin'
 STATIN_LOW = 'low_potency_statin'
 LIFESTYLE = 'lifestyle_intervention'
 
+HIGH_STATIN_HIGH = f'{STATIN_HIGH}_high_dose'
+HIGH_STATIN_LOW = f'{STATIN_HIGH}_low_dose'
+LOW_STATIN_HIGH = f'{STATIN_LOW}_high_dose'
+LOW_STATIN_LOW = f'{STATIN_LOW}_low_dose'
 
 SINGLE_NO_CVE = (0, 0)
 MULTI_NO_CVE = (1, 0)

@@ -26,7 +26,7 @@ class LDLCTreatmentCoverage:
         """Perform this component's setup."""
         self.randomness = builder.randomness.get_stream(self.name)
 
-        self.ldlc = builder.value.get_value('high_ldl_cholesterol.exposure')
+        self.ldlc = builder.value.get_value('high_ldl_cholesterol.base_exposure')
 
         self.p_tx_given_bad_ldlc, self.p_target_given_treated = self.load_treatment_and_target_p(builder)
         self.p_therapy_type = self.load_therapy_type_p(builder)
@@ -37,7 +37,7 @@ class LDLCTreatmentCoverage:
         self.population_view = builder.population.get_view(columns_created)
         builder.population.initializes_simulants(self.on_initialize_simulants,
                                                  creates_columns=columns_created,
-                                                 requires_values=['high_ldl_cholesterol.exposure'],
+                                                 requires_values=['high_ldl_cholesterol.base_exposure'],
                                                  requires_streams=[self.name])
 
     def on_initialize_simulants(self, pop_data: 'SimulantData'):
@@ -74,7 +74,6 @@ class LDLCTreatmentCoverage:
         low_dose_if_statin = (self.randomness.get_draw(pop_data.index, additional_key='statin_dose')
                               < parameters.PROB_LOW_DOSE)
 
-        # potency_statin_dose
         high_statin = ((treated & mono_if_treated & high_statin_if_mono)
                        | (treated & ~mono_if_treated & ~fdc_if_multi & ~low_potency_statin_if_not_fdc))
         low_statin = ((treated & mono_if_treated & low_statin_if_mono)
@@ -209,3 +208,71 @@ class LDLCTreatmentAdherence:
         return p_adherent
 
 
+class LDLCTreatmentEffect:
+
+    @property
+    def name(self):
+        return 'ldlc_treatment_effect'
+
+    def setup(self, builder: 'Builder'):
+        self.treatment_effect = self.load_treatment_effect(builder)
+
+        self.is_adherent = builder.value.get_value('ldlc_treatment_adherence')
+        self.columns_required = [parameters.STATIN_LOW, parameters.STATIN_HIGH,
+                                 parameters.FIBRATES, parameters.EZETIMIBE, parameters.LIFESTYLE]
+
+        # This pipeline is not required.  It's a convenience for reporting later.
+        self.effect_size = builder.value.register_value_producer(self.name, self.compute_effect_size,
+                                                                 requires_columns=self.columns_required,
+                                                                 requires_values=['ldlc_treatment_adherence'])
+
+        builder.value.register_value_modifier('high_ldl_cholesterol.exposure',
+                                              self.adjust_exposure,
+                                              requires_values=[self.name])
+        self.population_view = builder.population.get_view(self.columns_required + ['initial_treatment_effect_size'])
+        builder.population.initializes_simulants(self.on_initialize_simulants,
+                                                 creates_columns=['initial_treatment_effect_size'],
+                                                 requires_values=[self.name])
+
+    def on_initialize_simulants(self, pop_data: 'SimulantData'):
+        self.population_view.update(pd.Series(self.effect_size(pop_data.index),
+                                              index=pop_data.index,
+                                              name='initial_treatment_effect_size'))
+
+    def adjust_exposure(self, index, exposure):
+        initial_effect = self.population_view.subview(['initial_treatment_effect_size']).get(index)
+        initial_effect = initial_effect['initial_treatment_effect_size']  # coerce df to series
+        return exposure + initial_effect - self.effect_size(index)
+
+    def compute_effect_size(self, index: pd.Index):
+        pop_status = self.population_view.subview(self.columns_required).get(index)
+        effect_size = pd.Series(0, index=index)
+
+        # potency_statin_dose
+        treatment_profiles = {
+            parameters.HIGH_STATIN_HIGH: pop_status[parameters.STATIN_HIGH] == 'high',
+            parameters.HIGH_STATIN_LOW: pop_status[parameters.STATIN_HIGH] == 'low',
+            parameters.LOW_STATIN_HIGH: pop_status[parameters.STATIN_LOW] == 'high',
+            parameters.LOW_STATIN_LOW: pop_status[parameters.STATIN_LOW] == 'low',
+            parameters.EZETIMIBE: pop_status[parameters.EZETIMIBE],
+            parameters.FIBRATES: pop_status[parameters.FIBRATES],
+            parameters.LIFESTYLE: pop_status[parameters.LIFESTYLE],
+        }
+
+        for treatment, mask in treatment_profiles.items():
+            effect_size.loc[mask] += self.treatment_effect[treatment]
+
+        return effect_size
+
+    @staticmethod
+    def load_treatment_effect(builder):
+        # FIXME: No data.
+        return {
+            parameters.HIGH_STATIN_HIGH: 0.9,
+            parameters.HIGH_STATIN_LOW: 0.8,
+            parameters.LOW_STATIN_HIGH: 0.7,
+            parameters.LOW_STATIN_LOW: 0.6,
+            parameters.EZETIMIBE: 0.5,
+            parameters.FIBRATES: 0.4,
+            parameters.LIFESTYLE: 0.01,
+        }
