@@ -28,7 +28,7 @@ class LDLCTreatmentCoverage:
 
         self.ldlc = builder.value.get_value('high_ldl_cholesterol.exposure')
 
-        self.p_tx_given_bad_ldlc, self.p_target_given_treated = self.load_treatment_and_target_p(builder)
+        self.p_rx_given_bad_ldlc, self.p_at_target_given_treated = self.load_treatment_and_target_p(builder)
         self.p_therapy_type = self.load_therapy_type_p(builder)
         self.p_treatment_type = self.load_treatment_type_p(builder)
 
@@ -73,31 +73,25 @@ class LDLCTreatmentCoverage:
         # noinspection PyTypeChecker
         low_potency_statin_if_not_fdc = (self.randomness.get_draw(pop_data.index, additional_key='low_potency_statin')
                                          < p_low)
-        low_dose_if_statin = (self.randomness.get_draw(pop_data.index, additional_key='statin_dose')
-                              < parameters.PROB_LOW_DOSE)
 
         # potency_statin_dose
-        high_statin = ((treated & mono_if_treated & high_statin_if_mono)
-                       | (treated & ~mono_if_treated & ~fdc_if_multi & ~low_potency_statin_if_not_fdc))
-        low_statin = ((treated & mono_if_treated & low_statin_if_mono)
-                      | (treated & ~mono_if_treated & ~fdc_if_multi & low_potency_statin_if_not_fdc))
-        # potency_statin_dose
-        high_statin_high = high_statin & ~low_dose_if_statin
-        high_statin_low = high_statin & low_dose_if_statin
-        low_statin_high = low_statin & ~low_dose_if_statin
-        low_statin_low = low_statin & low_dose_if_statin
-
-        ezetimibe = ((treated & mono_if_treated & ezetimibe_if_mono)
-                     | (treated & ~mono_if_treated))
-
-        fibrates = treated & mono_if_treated & fibrates_if_mono
-
+        high_statin_not_fdc = (treated & ((mono_if_treated & high_statin_if_mono)
+                                          | (~mono_if_treated & ~fdc_if_multi & ~low_potency_statin_if_not_fdc)))
+        low_statin_not_fdc = (treated & ((mono_if_treated & low_statin_if_mono)
+                                         | (~mono_if_treated & ~fdc_if_multi & low_potency_statin_if_not_fdc)))
         fdc = treated & ~mono_if_treated & fdc_if_multi
 
-        pop_update.loc[high_statin_high, parameters.STATIN_HIGH] = 'high'
-        pop_update.loc[high_statin_low, parameters.STATIN_HIGH] = 'low'
-        pop_update.loc[low_statin_high, parameters.STATIN_LOW] = 'high'
-        pop_update.loc[low_statin_low, parameters.STATIN_LOW] = 'low'
+        # potency_statin_dose
+        # TODO: figure out the appropriate dosing
+        # TODO: figure out the statin potency for fdc
+        high_statin_low_dose = high_statin_not_fdc | fdc
+        low_statin_high_dose = low_statin_not_fdc
+
+        ezetimibe = treated & ~(mono_if_treated & ~ezetimibe_if_mono)
+        fibrates = treated & mono_if_treated & fibrates_if_mono
+
+        pop_update.loc[high_statin_low_dose, parameters.STATIN_HIGH] = 'low'
+        pop_update.loc[low_statin_high_dose, parameters.STATIN_LOW] = 'high'
         pop_update.loc[ezetimibe, parameters.EZETIMIBE] = True
         pop_update.loc[fibrates, parameters.FIBRATES] = True
         pop_update.loc[fdc, parameters.FDC] = True
@@ -107,11 +101,11 @@ class LDLCTreatmentCoverage:
         high_ldlc = ldlc > parameters.HIGH_LDL_BASELINE
         # FIXME: Generate data, this is an awful hack for small sample sizes and not age/sex specific.
         p_high_ldlc = len(ldlc[ldlc > parameters.HIGH_LDL_BASELINE])/len(ldlc)
-        p_bad_ldlc = p_high_ldlc / (1 - self.p_target_given_treated * self.p_tx_given_bad_ldlc)
+        p_bad_ldlc = p_high_ldlc / (1 - self.p_at_target_given_treated * self.p_rx_given_bad_ldlc)
 
-        p_treated_low = (self.p_target_given_treated * self.p_tx_given_bad_ldlc * p_bad_ldlc
+        p_treated_low = (self.p_at_target_given_treated * self.p_rx_given_bad_ldlc * p_bad_ldlc
                          / (1 - p_high_ldlc))
-        p_treated_high = ((1 - self.p_target_given_treated) * self.p_tx_given_bad_ldlc * p_bad_ldlc
+        p_treated_high = ((1 - self.p_at_target_given_treated) * self.p_rx_given_bad_ldlc * p_bad_ldlc
                           / p_high_ldlc)
         treatment_probability = pd.Series(p_treated_low, index=ldlc.index)
         treatment_probability.loc[high_ldlc] = p_treated_high
@@ -121,9 +115,9 @@ class LDLCTreatmentCoverage:
     def load_treatment_and_target_p(builder):
         location = builder.configuration.input_data.location
         draw = builder.configuration.input_data.input_draw_number
-        p_tx_given_bad_ldlc = parameters.sample_probability_rx_given_high_ldl_c(location, draw)
-        p_target_among_treated = parameters.sample_probability_target_given_rx(location, draw)
-        return p_tx_given_bad_ldlc, p_target_among_treated
+        p_rx_given_bad_ldlc = parameters.sample_probability_rx_given_high_ldl_c(location, draw)
+        p_at_target_given_treated = parameters.sample_probability_target_given_rx(location, draw)
+        return p_rx_given_bad_ldlc, p_at_target_given_treated
 
     @staticmethod
     def load_therapy_type_p(builder):
