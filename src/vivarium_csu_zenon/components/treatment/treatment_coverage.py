@@ -37,8 +37,6 @@ class LDLCTreatmentCoverage:
         self.population_view = builder.population.get_view(columns_created)
         builder.population.initializes_simulants(self.on_initialize_simulants,
                                                  creates_columns=columns_created,
-                                                 requires_columns=[project_globals.ISCHEMIC_STROKE_MODEL_NAME,
-                                                                   project_globals.IHD_MODEL_NAME],
                                                  requires_values=['high_ldl_cholesterol.exposure'],
                                                  requires_streams=[self.name])
 
@@ -144,5 +142,70 @@ class LDLCTreatmentCoverage:
                                     parameters.get_adjusted_probabilities(*p_treatment_type.values())))
         return p_treatment_type
 
+
+class LDLCTreatmentAdherence:
+
+    @property
+    def name(self):
+        return 'ldlc_treatment_adherence'
+
+    def setup(self, builder: 'Builder'):
+        self.p_adherent = self.load_adherence_p(builder)
+
+        self.columns_required = [project_globals.IHD_MODEL_NAME,
+                                 project_globals.ISCHEMIC_STROKE_MODEL_NAME,
+                                 parameters.STATIN_LOW, parameters.STATIN_HIGH,
+                                 parameters.FIBRATES, parameters.EZETIMIBE, parameters.FDC]
+
+        self.population_view = builder.population.get_view(self.columns_required
+                                                           + [f'{self.name}_propensity'])
+        self.randomness = builder.randomness.get_stream(self.name)
+        builder.population.initializes_simulants(self.on_initialize_simulants,
+                                                 creates_columns=[f'{self.name}_propensity'],
+                                                 requires_streams=[self.name])
+
+        builder.value.register_value_producer(self.name, self.is_adherent,
+                                              requires_columns=self.columns_required + [f'{self.name}_propensity'])
+
+    def on_initialize_simulants(self, pop_data: 'SimulantData'):
+        self.population_view.update(pd.Series(self.randomness.get_draw(pop_data.index),
+                                              index=pop_data.index,
+                                              name=f'{self.name}_propensity'))
+
+    def is_adherent(self, index: pd.Index):
+        propensity = self.population_view.subview([f'{self.name}_propensity']).get(index)
+        return self.determine_adherent(propensity)
+
+    def determine_adherent(self, propensity):
+        # Wrote as separate function cause I thought I needed for
+        # initialization too. Leave for now in case I'm dumb.  - J.C.
+        p_adherent = pd.Series(0, index=propensity.index)
+
+        pop_status = self.population_view.subview(self.columns_required).get(propensity.index)
+        ihd = pop_status[project_globals.IHD_MODEL_NAME] != project_globals.IHD_SUSCEPTIBLE_STATE_NAME
+        stroke = (pop_status[project_globals.ISCHEMIC_STROKE_MODEL_NAME]
+                  != project_globals.ISCHEMIC_STROKE_SUSCEPTIBLE_STATE_NAME)
+        on_statin = (pop_status[parameters.STATIN_HIGH] != 'none') | (pop_status[parameters.STATIN_LOW] != 'none')
+        num_drugs = sum([on_statin, pop_status[parameters.FIBRATES], pop_status[parameters.EZETIMIBE]])
+        on_fdc = pop_status[parameters.FDC]
+
+        had_cve = ihd | stroke
+        single_med = (num_drugs == 1) | on_fdc
+        multi_med = num_drugs > 1
+
+        p_adherent.loc[~had_cve & single_med] = self.p_adherent[parameters.SINGLE_NO_CVE]
+        p_adherent.loc[~had_cve & multi_med] = self.p_adherent[parameters.MULTI_NO_CVE]
+        p_adherent.loc[had_cve & single_med] = self.p_adherent[parameters.SINGLE_CVE]
+        p_adherent.loc[had_cve & multi_med] = self.p_adherent[parameters.MULTI_CVE]
+        return propensity < p_adherent
+
+    @staticmethod
+    def load_adherence_p(builder):
+        location = builder.configuration.input_data.location
+        draw = builder.configuration.input_data.input_draw_number
+        p_adherent = {group: parameters.sample_adherence(location, draw, *group)
+                      for group in [parameters.SINGLE_NO_CVE, parameters.MULTI_NO_CVE,
+                                    parameters.SINGLE_CVE, parameters.MULTI_CVE]}
+        return p_adherent
 
 

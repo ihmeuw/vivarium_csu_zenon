@@ -29,6 +29,13 @@ STATIN_LOW = 'low_potency_statin'
 LIFESTYLE = 'lifestyle_intervention'
 
 
+SINGLE_NO_CVE = (0, 0)
+MULTI_NO_CVE = (1, 0)
+SINGLE_CVE = (0, 1)
+MULTI_CVE = (1, 1)
+
+
+
 def sample_probability_testing_ldl_c(location: str, draw: int) -> float:
     seed = get_hash(f'testing_ldl_c_probability_draw_{draw}_location_{location}')
     data = pd.read_csv(paths.PROB_TESTING_LDL_C_PATH).set_index(LOCATION_COLUMN)
