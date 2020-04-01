@@ -1,0 +1,8 @@
+treatment,mean_value,sd_value
+high_potency_statin_low,0.407222222,0.095644503
+low_potency_statin_low,0.23,0.037917954
+high_potency_statin_high,0.528333333,0.022484563
+low_potency_statin_high,0.332083333,0.075051929
+fibrates,0.12,0.021027288999999998
+ezetimibe,0.129,0.044000000000000004
+lifestyle_intervention,0.039053803,0.020686456000000002
