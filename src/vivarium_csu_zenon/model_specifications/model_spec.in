@@ -44,6 +44,9 @@ components:
         - DiseaseObserver('diabetes_mellitus')
         - DiseaseObserver('chronic_kidney_disease')
 
+    vivarium_csu_zenon.components.treatment:
+        - LDLCTreatmentCoverage()
+
 configuration:
     input_data:
         location: {{ location_proper }}

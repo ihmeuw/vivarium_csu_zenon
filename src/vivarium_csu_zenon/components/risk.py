@@ -64,6 +64,26 @@ class Risk(Risk_):
         )
 
 
+class LDLCholesterolRisk(Risk_):
+
+    def setup(self, builder: 'Builder'):
+        propensity_col = f'{self.risk.name}_propensity'
+        self.population_view = builder.population.get_view([propensity_col])
+        self.propensity = builder.value.register_value_producer(
+            f'{self.risk.name}.propensity',
+            source=lambda index: self.population_view.get(index)[propensity_col],
+            requires_columns=[propensity_col])
+        # Need a separate hook to avoid a cyclic dependency at initialization.
+        self.base_exposure = builder.value.register_value_producer(
+            f'{self.risk.name}.base_exposure',
+            source=self.get_current_exposure,
+            requires_columns=['age', 'sex'],
+            requires_values=[f'{self.risk.name}.propensity'],
+            preferred_post_processor=get_exposure_post_processor(builder, self.risk)
+        )
+        self.exposure = builder.value.register_value_producer(f'{self.risk.name}.exposure', source=self.base_exposure)
+
+
 class FastingPlasmaGlucose(Risk):
     @property
     def name(self):
