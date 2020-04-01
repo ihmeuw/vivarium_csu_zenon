@@ -51,7 +51,7 @@ class LDLCTreatmentCoverage:
             parameters.FIBRATES: False,
             parameters.LIFESTYLE: False,
             parameters.FDC: False,
-        })
+        }, index=pop_data.index)
 
         ldlc = self.ldlc(pop_data.index)
         treatment_probability = self.get_treatment_probability(ldlc)
