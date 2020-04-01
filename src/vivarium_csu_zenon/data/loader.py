@@ -48,6 +48,7 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.POPULATION.ACMR: load_standard_data,
         project_globals.POPULATION.PROPENSITY_CORRELATION_DATA: load_propensity_correlation_data,
         project_globals.POPULATION.JOINT_PAF_DATA: load_joint_paf_data,
+        project_globals.POPULATION.HEALTHCARE_UTILIZATION: load_healthcare_utilization,
 
         project_globals.IHD.ACUTE_MI_PREVALENCE: load_ihd_prevalence,
         project_globals.IHD.POST_MI_PREVALENCE: load_ihd_prevalence,
@@ -388,7 +389,7 @@ def load_ikf_disability_weight(key: str, location: str) -> pd.DataFrame:
 
         disability_weight = interface.get_measure(sequela, 'disability_weight', location)
         prevalence_disability_weights.append(prevalence * disability_weight)
-    
+
     ikf_category_disability_weight = (sum(prevalence_disability_weights) / sum(category_prevalences)).fillna(0)
     return ikf_category_disability_weight
 
@@ -616,6 +617,25 @@ def load_joint_paf_data(key: str, location: str) -> pd.DataFrame:
     data_path = paths.JOINT_PAF_DIR / f'{sanitize_location(location)}.hdf'
     joint_paf = pd.read_hdf(data_path)
     return joint_paf
+
+
+def load_healthcare_utilization(key: str, location: str) -> pd.DataFrame:
+    data = pd.read_csv(paths.HEALTHCARE_UTILIZATION)
+    loc_id = utility_data.get_location_id(location)
+    data = data[data.location_id == loc_id].reset_index(drop=True)
+    data['log_mean'] = np.log(data['outpatient_visits_per_cap_mean'])
+    data['log_sd'] = (np.log(data['outpatient_visits_per_cap_95_upper'])
+                      - np.log(data['outpatient_visits_per_cap_95_lower'])) / 1.96
+    draws = np.exp(np.random.normal(loc=data['log_mean'], scale=data['log_sd'], size=(1000, len(data)))).T
+    draws = pd.DataFrame(data=draws, columns=vi_globals.DRAW_COLUMNS)
+    data = pd.concat([data[['location_id', 'sex_id', 'age_group_id', 'year_id']], draws], axis=1)
+    data = utilities.normalize(data, fill_value=0)
+    data = data.filter(vi_globals.DEMOGRAPHIC_COLUMNS + vi_globals.DRAW_COLUMNS)
+    data = utilities.reshape(data)
+    data = utilities.scrub_gbd_conventions(data, location)
+    data = utilities.split_interval(data, interval_column='age', split_column_prefix='age')
+    data = utilities.split_interval(data, interval_column='year', split_column_prefix='year')
+    return utilities.sort_hierarchical_data(data)
 
 
 def _load_em_from_meid(meid, location):

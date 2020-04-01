@@ -20,3 +20,5 @@ ADHERENCE_PARAMETERS = INTERNAL_DATA_ROOT / 'adherence_parameters.csv'
 PROB_ADDING_DRUGS = INTERNAL_DATA_ROOT / 'prob_adding_drugs.csv'
 PROB_THERAPY_TYPE = INTERNAL_DATA_ROOT / 'dist_therapy_type.csv'
 LDLC_REDUCTION = INTERNAL_DATA_ROOT / 'reduction_in_ldlc.csv'
+
+HEALTHCARE_UTILIZATION = INTERNAL_DATA_ROOT / 'outpatient_utilization.csv'
