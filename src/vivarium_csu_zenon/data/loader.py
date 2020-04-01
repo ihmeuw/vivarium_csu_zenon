@@ -620,7 +620,11 @@ def load_joint_paf_data(key: str, location: str) -> pd.DataFrame:
 
 
 def load_healthcare_utilization(key: str, location: str) -> pd.DataFrame:
-    data = pd.read_csv(paths.HEALTHCARE_UTILIZATION)
+    data = pd.read_csv(paths.HEALTHCARE_UTILIZATION,
+                       dtype={'location_id': np.int64, 'sex_id': np.int64, 'age_group_id': np.int64,
+                              'year_id': np.int64, 'outpatient_visits_per_cap_mean': np.float64,
+                              'outpatient_visits_per_cap_95_upper': np.float64,
+                              'outpatient_visits_per_cap_95_lower': np.float64})
     loc_id = utility_data.get_location_id(location)
     data = data[data.location_id == loc_id].reset_index(drop=True)
     data['log_mean'] = np.log(data['outpatient_visits_per_cap_mean'])
