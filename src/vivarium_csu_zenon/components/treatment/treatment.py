@@ -54,6 +54,7 @@ class LDLCTreatmentCoverage:
         ldlc = self.ldlc(pop_data.index)
         treatment_probability = self.get_treatment_probability(ldlc)
         treated = self.randomness.get_draw(pop_data.index) < treatment_probability
+
         mono_if_treated = (self.randomness.get_draw(pop_data.index, additional_key='therapy_type')
                            < self.p_therapy_type[parameters.MONOTHERAPY])
         treatment_type_if_mono = self.randomness.choice(pop_data.index,
@@ -64,13 +65,17 @@ class LDLCTreatmentCoverage:
         fibrates_if_mono = treatment_type_if_mono == parameters.FIBRATES
         low_statin_if_mono = treatment_type_if_mono == parameters.STATIN_LOW
         high_statin_if_mono = treatment_type_if_mono == parameters.STATIN_HIGH
+
         fdc_if_multi = (self.randomness.get_draw(pop_data.index, additional_key='fdc')
                         < self.p_therapy_type[parameters.FDC])
+
         p_low = (self.p_treatment_type[parameters.STATIN_LOW]
                  / (self.p_treatment_type[parameters.STATIN_LOW] + self.p_treatment_type[parameters.STATIN_HIGH]))
         # noinspection PyTypeChecker
         low_potency_statin_if_not_fdc = (self.randomness.get_draw(pop_data.index, additional_key='low_potency_statin')
                                          < p_low)
+        low_dose_if_low_statin = (self.randomness.get_draw(pop_data.index, additional_key='low_dose')
+                                  < parameters.LOW_DOSE_THRESHOLD)
 
         # potency_statin_dose
         high_statin_not_fdc = (treated & ((mono_if_treated & high_statin_if_mono)
@@ -83,13 +88,15 @@ class LDLCTreatmentCoverage:
         # TODO: figure out the appropriate dosing
         # TODO: figure out the statin potency for fdc
         high_statin_low_dose = high_statin_not_fdc | fdc
-        low_statin_high_dose = low_statin_not_fdc
+        low_statin_high_dose = low_statin_not_fdc & ~low_dose_if_low_statin
+        low_statin_low_dose = low_statin_not_fdc & low_dose_if_low_statin
 
         ezetimibe = treated & ~(mono_if_treated & ~ezetimibe_if_mono)
         fibrates = treated & mono_if_treated & fibrates_if_mono
 
         pop_update.loc[high_statin_low_dose, parameters.STATIN_HIGH] = 'low'
         pop_update.loc[low_statin_high_dose, parameters.STATIN_LOW] = 'high'
+        pop_update.loc[low_statin_low_dose, parameters.STATIN_LOW] = 'low'
         pop_update.loc[ezetimibe, parameters.EZETIMIBE] = True
         pop_update.loc[fibrates, parameters.FIBRATES] = True
         pop_update.loc[fdc, parameters.FDC] = True
@@ -261,13 +268,9 @@ class LDLCTreatmentEffect:
 
     @staticmethod
     def load_treatment_effect(builder):
-        # FIXME: No data.
-        return {
-            parameters.HIGH_STATIN_HIGH: 0.9,
-            parameters.HIGH_STATIN_LOW: 0.8,
-            parameters.LOW_STATIN_HIGH: 0.7,
-            parameters.LOW_STATIN_LOW: 0.6,
-            parameters.EZETIMIBE: 0.5,
-            parameters.FIBRATES: 0.4,
-            parameters.LIFESTYLE: 0.01,
-        }
+        location = builder.configuration.input_data.location
+        draw = builder.configuration.input_data.input_draw_number
+        return {param: parameters.sample_ldlc_reduction(location, draw, param)
+                for param in [parameters.HIGH_STATIN_HIGH, parameters.HIGH_STATIN_LOW,
+                              parameters.LOW_STATIN_HIGH, parameters.LOW_STATIN_LOW,
+                              parameters.EZETIMIBE, parameters.FIBRATES, parameters.LIFESTYLE]}

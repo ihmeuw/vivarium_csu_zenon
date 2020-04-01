@@ -1,5 +1,6 @@
 from typing import List
 
+import numpy as np
 import pandas as pd
 
 from vivarium.framework.randomness import get_hash
@@ -9,6 +10,7 @@ from vivarium_csu_zenon.utilities import sample_truncnorm_distribution, sanitize
 
 
 HIGH_LDL_BASELINE = 4.9
+LOW_DOSE_THRESHOLD = 0.744
 
 LOCATION_COLUMN = 'location'
 MEAN_COLUMN = 'mean_value'
@@ -36,7 +38,6 @@ SINGLE_NO_CVE = (0, 0)
 MULTI_NO_CVE = (1, 0)
 SINGLE_CVE = (0, 1)
 MULTI_CVE = (1, 1)
-
 
 
 def sample_probability_testing_ldl_c(location: str, draw: int) -> float:
@@ -103,6 +104,14 @@ def sample_therapy_type(location: str, draw: int, therapy_type: str) -> float:
     seed = get_hash(f'{therapy_type}_probability_draw_{draw}_location_{location}')
     data = pd.read_csv(paths.PROB_THERAPY_TYPE).set_index([LOCATION_COLUMN, 'therapy_type'])
     params = data.loc[(location, therapy_type), :]
+    return sample_truncnorm_distribution(seed, params[MEAN_COLUMN], params[SD_COLUMN])
+
+
+def sample_ldlc_reduction(location: str, draw: int, treatment: str) -> float:
+    treatment_key = 'statin' if 'statin' in treatment else treatment
+    seed = get_hash(f'{treatment_key}_ldlc_reduction_draw_{draw}_location_{location}')
+    data = pd.read_csv(paths.LDLC_REDUCTION).set_index('treatment')
+    params = data.loc[treatment, :]
     return sample_truncnorm_distribution(seed, params[MEAN_COLUMN], params[SD_COLUMN])
 
 
