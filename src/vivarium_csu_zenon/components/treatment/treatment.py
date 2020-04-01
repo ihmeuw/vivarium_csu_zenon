@@ -26,7 +26,7 @@ class LDLCTreatmentCoverage:
         """Perform this component's setup."""
         self.randomness = builder.randomness.get_stream(self.name)
 
-        self.ldlc = builder.value.get_value('high_ldl_cholesterol.exposure')
+        self.ldlc = builder.value.get_value('high_ldl_cholesterol.base_exposure')
 
         self.p_rx_given_bad_ldlc, self.p_at_target_given_treated = self.load_treatment_and_target_p(builder)
         self.p_therapy_type = self.load_therapy_type_p(builder)
@@ -37,9 +37,7 @@ class LDLCTreatmentCoverage:
         self.population_view = builder.population.get_view(columns_created)
         builder.population.initializes_simulants(self.on_initialize_simulants,
                                                  creates_columns=columns_created,
-                                                 requires_columns=[project_globals.ISCHEMIC_STROKE_MODEL_NAME,
-                                                                   project_globals.IHD_MODEL_NAME],
-                                                 requires_values=['high_ldl_cholesterol.exposure'],
+                                                 requires_values=['high_ldl_cholesterol.base_exposure'],
                                                  requires_streams=[self.name])
 
     def on_initialize_simulants(self, pop_data: 'SimulantData'):
@@ -139,4 +137,137 @@ class LDLCTreatmentCoverage:
         return p_treatment_type
 
 
+class LDLCTreatmentAdherence:
 
+    @property
+    def name(self):
+        return 'ldlc_treatment_adherence'
+
+    def setup(self, builder: 'Builder'):
+        self.p_adherent = self.load_adherence_p(builder)
+
+        self.columns_required = [project_globals.IHD_MODEL_NAME,
+                                 project_globals.ISCHEMIC_STROKE_MODEL_NAME,
+                                 parameters.STATIN_LOW, parameters.STATIN_HIGH,
+                                 parameters.FIBRATES, parameters.EZETIMIBE, parameters.FDC]
+
+        self.population_view = builder.population.get_view(self.columns_required
+                                                           + [f'{self.name}_propensity'])
+        self.randomness = builder.randomness.get_stream(self.name)
+        builder.population.initializes_simulants(self.on_initialize_simulants,
+                                                 creates_columns=[f'{self.name}_propensity'],
+                                                 requires_streams=[self.name])
+
+        builder.value.register_value_producer(self.name, self.is_adherent,
+                                              requires_columns=self.columns_required + [f'{self.name}_propensity'])
+
+    def on_initialize_simulants(self, pop_data: 'SimulantData'):
+        self.population_view.update(pd.Series(self.randomness.get_draw(pop_data.index),
+                                              index=pop_data.index,
+                                              name=f'{self.name}_propensity'))
+
+    def is_adherent(self, index: pd.Index):
+        propensity = self.population_view.subview([f'{self.name}_propensity']).get(index)
+        return self.determine_adherent(propensity)
+
+    def determine_adherent(self, propensity):
+        # Wrote as separate function cause I thought I needed for
+        # initialization too. Leave for now in case I'm dumb.  - J.C.
+        p_adherent = pd.Series(0, index=propensity.index)
+
+        pop_status = self.population_view.subview(self.columns_required).get(propensity.index)
+        ihd = pop_status[project_globals.IHD_MODEL_NAME] != project_globals.IHD_SUSCEPTIBLE_STATE_NAME
+        stroke = (pop_status[project_globals.ISCHEMIC_STROKE_MODEL_NAME]
+                  != project_globals.ISCHEMIC_STROKE_SUSCEPTIBLE_STATE_NAME)
+        on_statin = (pop_status[parameters.STATIN_HIGH] != 'none') | (pop_status[parameters.STATIN_LOW] != 'none')
+        num_drugs = sum([on_statin, pop_status[parameters.FIBRATES], pop_status[parameters.EZETIMIBE]])
+        on_fdc = pop_status[parameters.FDC]
+
+        had_cve = ihd | stroke
+        single_med = (num_drugs == 1) | on_fdc
+        multi_med = (num_drugs > 1) & ~on_fdc
+
+        p_adherent.loc[~had_cve & single_med] = self.p_adherent[parameters.SINGLE_NO_CVE]
+        p_adherent.loc[~had_cve & multi_med] = self.p_adherent[parameters.MULTI_NO_CVE]
+        p_adherent.loc[had_cve & single_med] = self.p_adherent[parameters.SINGLE_CVE]
+        p_adherent.loc[had_cve & multi_med] = self.p_adherent[parameters.MULTI_CVE]
+        return propensity < p_adherent
+
+    @staticmethod
+    def load_adherence_p(builder):
+        location = builder.configuration.input_data.location
+        draw = builder.configuration.input_data.input_draw_number
+        p_adherent = {group: parameters.sample_adherence(location, draw, *group)
+                      for group in [parameters.SINGLE_NO_CVE, parameters.MULTI_NO_CVE,
+                                    parameters.SINGLE_CVE, parameters.MULTI_CVE]}
+        return p_adherent
+
+
+class LDLCTreatmentEffect:
+
+    @property
+    def name(self):
+        return 'ldlc_treatment_effect'
+
+    def setup(self, builder: 'Builder'):
+        self.treatment_effect = self.load_treatment_effect(builder)
+
+        self.is_adherent = builder.value.get_value('ldlc_treatment_adherence')
+        self.columns_required = [parameters.STATIN_LOW, parameters.STATIN_HIGH,
+                                 parameters.FIBRATES, parameters.EZETIMIBE, parameters.LIFESTYLE]
+
+        # This pipeline is not required.  It's a convenience for reporting later.
+        self.effect_size = builder.value.register_value_producer(self.name, self.compute_effect_size,
+                                                                 requires_columns=self.columns_required,
+                                                                 requires_values=['ldlc_treatment_adherence'])
+
+        builder.value.register_value_modifier('high_ldl_cholesterol.exposure',
+                                              self.adjust_exposure,
+                                              requires_values=[self.name])
+        self.population_view = builder.population.get_view(self.columns_required + ['initial_treatment_effect_size'])
+        builder.population.initializes_simulants(self.on_initialize_simulants,
+                                                 creates_columns=['initial_treatment_effect_size'],
+                                                 requires_values=[self.name])
+
+    def on_initialize_simulants(self, pop_data: 'SimulantData'):
+        self.population_view.update(pd.Series(self.effect_size(pop_data.index),
+                                              index=pop_data.index,
+                                              name='initial_treatment_effect_size'))
+
+    def adjust_exposure(self, index, exposure):
+        initial_effect = self.population_view.subview(['initial_treatment_effect_size']).get(index)
+        initial_effect = initial_effect['initial_treatment_effect_size']  # coerce df to series
+        return exposure + initial_effect - self.effect_size(index)
+
+    def compute_effect_size(self, index: pd.Index):
+        pop_status = self.population_view.subview(self.columns_required).get(index)
+        effect_size = pd.Series(0, index=index)
+
+        # potency_statin_dose
+        treatment_profiles = {
+            parameters.HIGH_STATIN_HIGH: pop_status[parameters.STATIN_HIGH] == 'high',
+            parameters.HIGH_STATIN_LOW: pop_status[parameters.STATIN_HIGH] == 'low',
+            parameters.LOW_STATIN_HIGH: pop_status[parameters.STATIN_LOW] == 'high',
+            parameters.LOW_STATIN_LOW: pop_status[parameters.STATIN_LOW] == 'low',
+            parameters.EZETIMIBE: pop_status[parameters.EZETIMIBE],
+            parameters.FIBRATES: pop_status[parameters.FIBRATES],
+            parameters.LIFESTYLE: pop_status[parameters.LIFESTYLE],
+        }
+
+        for treatment, mask in treatment_profiles.items():
+            effect_size.loc[mask] += self.treatment_effect[treatment]
+
+        return effect_size
+
+    @staticmethod
+    def load_treatment_effect(builder):
+        # FIXME: No data.
+        return {
+            parameters.HIGH_STATIN_HIGH: 0.9,
+            parameters.HIGH_STATIN_LOW: 0.8,
+            parameters.LOW_STATIN_HIGH: 0.7,
+            parameters.LOW_STATIN_LOW: 0.6,
+            parameters.EZETIMIBE: 0.5,
+            parameters.FIBRATES: 0.4,
+            parameters.LIFESTYLE: 0.01,
+        }
