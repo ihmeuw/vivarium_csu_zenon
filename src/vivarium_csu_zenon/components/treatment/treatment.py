@@ -185,7 +185,7 @@ class LDLCTreatmentAdherence:
 
         had_cve = ihd | stroke
         single_med = (num_drugs == 1) | on_fdc
-        multi_med = num_drugs > 1
+        multi_med = (num_drugs > 1) & ~on_fdc
 
         p_adherent.loc[~had_cve & single_med] = self.p_adherent[parameters.SINGLE_NO_CVE]
         p_adherent.loc[~had_cve & multi_med] = self.p_adherent[parameters.MULTI_NO_CVE]
