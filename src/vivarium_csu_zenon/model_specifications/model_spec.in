@@ -45,7 +45,9 @@ components:
         - DiseaseObserver('chronic_kidney_disease')
 
     vivarium_csu_zenon.components.treatment:
+        - LDLCTreatmentAdherence()
         - LDLCTreatmentCoverage()
+        - LDLCTreatmentEffect()
 
 configuration:
     input_data:
