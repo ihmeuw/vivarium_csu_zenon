@@ -10,6 +10,7 @@ from vivarium_csu_zenon.tools import build_model_specifications
 from vivarium_csu_zenon.tools import build_artifacts
 from vivarium_csu_zenon.tools import build_results
 from vivarium_csu_zenon.tools import build_fpg_thresholds
+from vivarium_csu_zenon.tools import build_ldl_thresholds
 from vivarium_csu_zenon.tools import build_results_from_logs
 from vivarium_csu_zenon.tools import build_joint_pafs
 
@@ -123,6 +124,32 @@ def make_fpg_exposure_thresholds(location: str, draws: str, concat_only: bool, v
                                  with_debugger: bool) -> None:
     configure_logging_to_terminal(verbose)
     main = handle_exceptions(build_fpg_thresholds, logger, with_debugger=with_debugger)
+    main(location, draws, concat_only, verbose)
+
+
+@click.command()
+@click.option('-l', '--location',
+              default='all',
+              show_default=True,
+              type=click.Choice(project_globals.LOCATIONS + ['all']),
+              help='Location to make fpg thresholds for.')
+@click.option('-d', '--draws',
+              default='all',
+              show_default=True,
+              help='Comma separated list of draws to make fpg thresholds for')
+@click.option('-c', 'concat_only',
+              is_flag=True,
+              help='Only concatenate existing draws')
+@click.option('-v', 'verbose',
+              count=True,
+              help='Configure logging verbosity.')
+@click.option('--pdb', 'with_debugger',
+              is_flag=True,
+              help='Drop into python debugger if an error occurs.')
+def make_ldl_exposure_thresholds(location: str, draws: str, concat_only: bool, verbose: int,
+                                 with_debugger: bool) -> None:
+    configure_logging_to_terminal(verbose)
+    main = handle_exceptions(build_ldl_thresholds, logger, with_debugger=with_debugger)
     main(location, draws, concat_only, verbose)
 
 
