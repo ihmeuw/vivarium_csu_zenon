@@ -224,31 +224,32 @@ class LDLCTreatmentEffect:
                                  parameters.FIBRATES, parameters.EZETIMIBE, parameters.LIFESTYLE]
 
         # This pipeline is not required.  It's a convenience for reporting later.
-        self.effect_size = builder.value.register_value_producer(self.name, self.compute_effect_size,
-                                                                 requires_columns=self.columns_required,
-                                                                 requires_values=['ldlc_treatment_adherence'])
+        self.proportion_reduction = builder.value.register_value_producer(self.name, self.compute_proportion_reduction,
+                                                                          requires_columns=self.columns_required,
+                                                                          requires_values=['ldlc_treatment_adherence'])
 
         builder.value.register_value_modifier('high_ldl_cholesterol.exposure',
                                               self.adjust_exposure,
                                               requires_values=[self.name])
-        self.population_view = builder.population.get_view(self.columns_required + ['initial_treatment_effect_size'])
+        self.population_view = builder.population.get_view(self.columns_required
+                                                           + ['initial_treatment_proportion_reduction'])
         builder.population.initializes_simulants(self.on_initialize_simulants,
-                                                 creates_columns=['initial_treatment_effect_size'],
+                                                 creates_columns=['initial_treatment_proportion_reduction'],
                                                  requires_values=[self.name])
 
     def on_initialize_simulants(self, pop_data: 'SimulantData'):
-        self.population_view.update(pd.Series(self.effect_size(pop_data.index),
+        self.population_view.update(pd.Series(self.proportion_reduction(pop_data.index),
                                               index=pop_data.index,
-                                              name='initial_treatment_effect_size'))
+                                              name='initial_treatment_proportion_reduction'))
 
     def adjust_exposure(self, index, exposure):
-        initial_effect = self.population_view.subview(['initial_treatment_effect_size']).get(index)
-        initial_effect = initial_effect['initial_treatment_effect_size']  # coerce df to series
-        return exposure + initial_effect - self.effect_size(index)
+        initial_effect = self.population_view.subview(['initial_treatment_proportion_reduction']).get(index)
+        initial_effect = initial_effect['initial_treatment_proportion_reduction']  # coerce df to series
+        return (exposure / (1 - initial_effect)) * (1 - self.proportion_reduction(index))
 
-    def compute_effect_size(self, index: pd.Index):
+    def compute_proportion_reduction(self, index: pd.Index):
         pop_status = self.population_view.subview(self.columns_required).get(index)
-        effect_size = pd.Series(0, index=index)
+        effect_size = pd.Series(1, index=index)
 
         # potency_statin_dose
         treatment_profiles = {
@@ -262,9 +263,9 @@ class LDLCTreatmentEffect:
         }
 
         for treatment, mask in treatment_profiles.items():
-            effect_size.loc[mask] += self.treatment_effect[treatment]
+            effect_size.loc[mask] *= (1 - self.treatment_effect[treatment])
 
-        return effect_size
+        return 1 - effect_size
 
     @staticmethod
     def load_treatment_effect(builder):
