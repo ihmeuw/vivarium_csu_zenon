@@ -274,6 +274,7 @@ class PatientProfile:
 
 
 class CurrentPractice:
+    """Business as usual treatment scenario."""
 
     # Days til follow up
     follow_up_low = 3 * 30
@@ -284,11 +285,13 @@ class CurrentPractice:
         self.patient_profile = patient_profile
 
     def for_acute_cardiovascular_event(self, index: pd.Index):
+        """Treat for an stroke or myocardial infarction."""
         not_treated = index[~self.patient_profile.currently_treated(index)]
         self.patient_profile.start_new_monotherapy(not_treated, self.p_low_statin)
         return pd.Series(self.follow_up_low, index=not_treated), pd.Series(self.follow_up_high, index=not_treated)
 
     def for_follow_up(self, index: pd.Index):
+        """Treat for a follow up visit."""
         # TODO: Adverse event
         not_at_target = ~self.patient_profile.at_target(index)
         is_adherent = self.patient_profile.is_adherent(index)
@@ -297,5 +300,6 @@ class CurrentPractice:
         return pd.Series(self.follow_up_low, index=index), pd.Series(self.follow_up_high, index=index)
 
     def for_background_visit(self, index: pd.Index):
+        """Treat for a background visit"""
         # TODO:
         return pd.Series(self.follow_up_low, index=index), pd.Series(self.follow_up_high, index=index)
