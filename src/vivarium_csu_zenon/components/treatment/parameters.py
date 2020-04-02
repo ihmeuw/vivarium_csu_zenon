@@ -11,6 +11,7 @@ from vivarium_csu_zenon.utilities import sample_truncnorm_distribution, sanitize
 
 HIGH_LDL_BASELINE = 4.9
 LOW_DOSE_THRESHOLD = 0.744
+PROBABILITY_FDC_LOW_DOSE = 0.5
 
 LOCATION_COLUMN = 'location'
 MEAN_COLUMN = 'mean_value'

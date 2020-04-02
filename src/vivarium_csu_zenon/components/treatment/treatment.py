@@ -77,6 +77,9 @@ class LDLCTreatmentCoverage:
         low_dose_if_low_statin = (self.randomness.get_draw(pop_data.index, additional_key='low_dose')
                                   < parameters.LOW_DOSE_THRESHOLD)
 
+        low_dose_if_fdc = (self.randomness.get_draw(pop_data.index, additional_key='low_dose_fdc')
+                           < parameters.PROBABILITY_FDC_LOW_DOSE)
+
         # potency_statin_dose
         high_statin_not_fdc = (treated & ((mono_if_treated & high_statin_if_mono)
                                           | (~mono_if_treated & ~fdc_if_multi & ~low_potency_statin_if_not_fdc)))
@@ -85,11 +88,9 @@ class LDLCTreatmentCoverage:
         fdc = treated & ~mono_if_treated & fdc_if_multi
 
         # potency_statin_dose
-        # TODO: figure out the appropriate dosing
-        # TODO: figure out the statin potency for fdc
-        high_statin_low_dose = high_statin_not_fdc | fdc
-        low_statin_high_dose = low_statin_not_fdc & ~low_dose_if_low_statin
-        low_statin_low_dose = low_statin_not_fdc & low_dose_if_low_statin
+        high_statin_low_dose = high_statin_not_fdc
+        low_statin_high_dose = (low_statin_not_fdc & ~low_dose_if_low_statin) | (fdc & ~low_dose_if_fdc)
+        low_statin_low_dose = (low_statin_not_fdc & low_dose_if_low_statin) | (fdc & low_dose_if_fdc)
 
         ezetimibe = treated & ~(mono_if_treated & ~ezetimibe_if_mono)
         fibrates = treated & mono_if_treated & fibrates_if_mono
@@ -165,7 +166,7 @@ class LDLCTreatmentAdherence:
                                                  creates_columns=[f'{self.name}_propensity'],
                                                  requires_streams=[self.name])
 
-        builder.value.register_value_producer(self.name, self.is_adherent,
+        builder.value.register_value_producer(self.name, source=self.is_adherent,
                                               requires_columns=self.columns_required + [f'{self.name}_propensity'])
 
     def on_initialize_simulants(self, pop_data: 'SimulantData'):
@@ -175,9 +176,9 @@ class LDLCTreatmentAdherence:
 
     def is_adherent(self, index: pd.Index):
         propensity = self.population_view.subview([f'{self.name}_propensity']).get(index)
-        return self.determine_adherent(propensity)
+        return self.determine_adherent(propensity[f'{self.name}_propensity'])
 
-    def determine_adherent(self, propensity):
+    def determine_adherent(self, propensity: pd.Series):
         # Wrote as separate function cause I thought I needed for
         # initialization too. Leave for now in case I'm dumb.  - J.C.
         p_adherent = pd.Series(0, index=propensity.index)
