@@ -1,8 +1,6 @@
-from typing import List
+from typing import List, NamedTuple
 
-import numpy as np
 import pandas as pd
-
 from vivarium.framework.randomness import get_hash
 
 from vivarium_csu_zenon import paths
@@ -29,6 +27,15 @@ FIBRATES = 'fibrates'
 STATIN_HIGH = 'high_potency_statin'
 STATIN_LOW = 'low_potency_statin'
 LIFESTYLE = 'lifestyle_intervention'
+
+
+class __StatinDoses(NamedTuple):
+    none: str = 'none'
+    low: str = 'low'
+    high: str = 'high'
+
+
+STATIN_DOSES = __StatinDoses()
 
 HIGH_STATIN_HIGH = f'{STATIN_HIGH}_high_dose'
 HIGH_STATIN_LOW = f'{STATIN_HIGH}_low_dose'
@@ -82,11 +89,12 @@ def sample_raw_rx_change(location: str, draw: int, rx_change: str) -> float:
     return sample_truncnorm_distribution(seed, params[MEAN_COLUMN], params[SD_COLUMN])
 
 
-def sample_probability_increasing_dose(location: str, draw: int) -> float:
+def sample_probability_increasing_dose(scenario: str, location: str, draw: int) -> float:
     location = sanitize_location(location)
-    seed = get_hash(f'target_given_rx_probability_draw_{draw}_location_{location}')
-    data = pd.read_csv(paths.PROB_TARGET_GIVEN_RX).set_index(LOCATION_COLUMN)
-    params = data.loc[location, :]
+    scenario = scenario if scenario == 'baseline' else 'intervention'
+    seed = get_hash(f'target_given_rx_probability_scenario_{scenario}_draw_{draw}_location_{location}')
+    data = pd.read_csv(paths.PROB_TARGET_GIVEN_RX).set_index([LOCATION_COLUMN, 'scenario'])
+    params = data.loc[(location, scenario), :]
     return sample_truncnorm_distribution(seed, params[MEAN_COLUMN], params[SD_COLUMN])
 
 
