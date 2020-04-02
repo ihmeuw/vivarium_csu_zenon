@@ -1,11 +1,12 @@
+"""Healthcare utilization and treatment model."""
 import typing
-from typing import List
+from typing import Dict, List, NamedTuple
 
-import numpy as np
 import pandas as pd
 
 from vivarium_csu_zenon import globals as project_globals
 from vivarium_csu_zenon.components.treatment import parameters
+
 
 if typing.TYPE_CHECKING:
     from vivarium.framework.engine import Builder
@@ -20,14 +21,34 @@ TREATMENT_COLUMNS = [parameters.STATIN_LOW, parameters.STATIN_HIGH,
 # Days to follow up.
 FOLLOW_UP_MIN = 3 * 30
 FOLLOW_UP_MAX = 6 * 30
+LDLC_AT_TREATMENT_START = 'ldlc_at_treatment_start'
+PROPORTION_REDUCTION = 'initial_treatment_proportion_reduction'
+LDLC_TREATMENT_ADHERENCE = 'ldlc_treatment_adherence'
+LDL_CHOLESTEROL_EXPOSURE = 'high_ldl_cholesterol.exposure'
+PATIENT_PROFILE = 'patient_profile'
+BACKGROUND_VISIT = 'background_visit'
+FOLLOW_UP_DATE = 'follow_up_date'
+FOLLOW_UP_SCHEDULING = 'follow_up_scheduling'
+LDLC_TREATMENT_ALGORITHM = 'ldlc_treatment_algorithm'
+LOW_DOSE_IF_STATIN = 'low_dose_if_statin'
+TREATMENT_TYPE = 'treatment_type'
+
+
+class __Scenarios(NamedTuple):
+    baseline: str = 'baseline'
+    guideline: str = 'guideline'
+    guideline_and_new_treatment: str = 'guideline_and_new_treatment'
+
+
+SCENARIOS = __Scenarios()
 
 
 class TreatmentAlgorithm:
     """Manages healthcare utilization and treatment."""
 
     configuration_defaults = {
-        'ldlc_treatment_algorithm': {
-            'scenario': 'baseline'  # ['guideline', 'guideline_and_new_treatment']
+        LDLC_TREATMENT_ALGORITHM: {
+            'scenario': SCENARIOS.baseline
         }
     }
 
@@ -37,7 +58,7 @@ class TreatmentAlgorithm:
     @property
     def name(self) -> str:
         """The name of this component."""
-        return 'ldlc_treatment_algorithm'
+        return LDLC_TREATMENT_ALGORITHM
 
     @property
     def sub_components(self) -> List:
@@ -56,20 +77,20 @@ class TreatmentAlgorithm:
 
         """
         scenario = builder.configuration.ldlc_treatment_algorithm.scenario
-        if scenario != 'baseline':
+        if scenario != SCENARIOS.baseline:
             raise NotImplementedError
         self.visit_doctor = CurrentPractice(self.patient_profile)
 
         self.clock = builder.time.clock()
-        self.randomness = builder.randomness.get_stream('follow_up_scheduling')
+        self.randomness = builder.randomness.get_stream(self.name)
         utilization_data = builder.data.load(project_globals.POPULATION.HEALTHCARE_UTILIZATION)
         self.background_utilization_rate = builder.lookup.build_table(utilization_data)
 
         self.population_view = builder.population.get_view([project_globals.IHD_MODEL_NAME,
                                                             project_globals.ISCHEMIC_STROKE_MODEL_NAME,
-                                                            'follow_up_date'])
+                                                            FOLLOW_UP_DATE])
         builder.population.initializes_simulants(self.on_initialize_simulants,
-                                                 creates_columns=['follow_up_date'],
+                                                 creates_columns=[FOLLOW_UP_DATE],
                                                  requires_columns=TREATMENT_COLUMNS)
 
         builder.event.register_listener('time_step__cleanup', self.on_time_step_cleanup)
@@ -79,10 +100,11 @@ class TreatmentAlgorithm:
         """For patients currently treated assign them a follow up date."""
         follow_up_date = pd.Series(pd.NaT, index=pop_data.index)
         currently_treated = self.patient_profile.currently_treated(pop_data.index)
+        # noinspection PyTypeChecker
         follow_up_date.loc[currently_treated] = pd.Series(
             self.clock() + self.random_time_delta(pd.Series(0, index=pop_data.index),
                                                   pd.Series(FOLLOW_UP_MAX, index=pop_data.index)),
-            index=pop_data.index, name='follow_up_date')
+            index=pop_data.index, name=FOLLOW_UP_DATE)
         self.population_view.update(follow_up_date)
 
     def on_time_step_cleanup(self, event: 'Event'):
@@ -102,7 +124,7 @@ class TreatmentAlgorithm:
 
     def on_time_step(self, event: 'Event'):
         """Determine if someone will go for a background or follow up visit."""
-        follow_up_date = self.population_view.subview(['follow_up_date']).get(event.index).follow_up_date
+        follow_up_date = self.population_view.subview([FOLLOW_UP_DATE]).get(event.index).follow_up_date
         to_follow_up = follow_up_date[(self.clock() < follow_up_date) & (follow_up_date <= event.time)].index
         follow_up_start, follow_up_end = self.visit_doctor.for_follow_up(to_follow_up)
         new_follow_up = self.schedule_follow_up(follow_up_start, follow_up_end)
@@ -110,7 +132,7 @@ class TreatmentAlgorithm:
         utilization_rate = self.background_utilization_rate(maybe_follow_up).value
         to_background_visit = self.randomness.filter_for_rate(maybe_follow_up,
                                                               utilization_rate,
-                                                              additional_key='background_visit')
+                                                              additional_key=BACKGROUND_VISIT)
         follow_up_start, follow_up_end = self.visit_doctor.for_background_visit(to_background_visit)
         new_follow_up_background = self.schedule_follow_up(follow_up_start, follow_up_end)
         new_follow_up = new_follow_up.append(new_follow_up_background)
@@ -121,7 +143,7 @@ class TreatmentAlgorithm:
         current_time = self.clock()
         # noinspection PyTypeChecker
         return pd.Series(current_time + self.random_time_delta(start, end),
-                         index=start.index, name='follow_up_date')
+                         index=start.index, name=FOLLOW_UP_DATE)
 
     def random_time_delta(self, start: pd.Series, end: pd.Series) -> pd.Series:
         """Generate a random time delta for each individual in the start
@@ -130,14 +152,18 @@ class TreatmentAlgorithm:
 
 
 class PatientProfile:
+    """Manager for patient information and doctor actions."""
 
     @property
-    def name(self):
-        return 'patient_profile'
+    def name(self) -> str:
+        """The name of this component."""
+        return PATIENT_PROFILE
 
+    # noinspection PyAttributeOutsideInit
     def setup(self, builder: 'Builder'):
-        self.ldlc = builder.value.get_value('high_ldl_cholesterol.exposure')
-        self.is_adherent = builder.value.get_value('ldlc_treatment_adherence')
+        """Gather all patient and doctor behavior information."""
+        self.ldlc = builder.value.get_value(LDL_CHOLESTEROL_EXPOSURE)
+        self.is_adherent = builder.value.get_value(LDLC_TREATMENT_ADHERENCE)
         self.p_measurement = self.load_measurement_p(builder)
         self.p_treatment_given_high = self.load_treatment_p(builder)
         self.p_treatment_type = self.load_treatment_type_p(builder)
@@ -145,76 +171,98 @@ class PatientProfile:
         self.population_view = builder.population.get_view([parameters.STATIN_LOW, parameters.STATIN_HIGH,
                                                             parameters.FIBRATES, parameters.EZETIMIBE,
                                                             parameters.LIFESTYLE, parameters.FDC,
-                                                            'ldlc_at_treatment_start'])
+                                                            LDLC_AT_TREATMENT_START])
         builder.population.initializes_simulants(self.on_initialize_simulants,
-                                                 creates_columns=['ldlc_at_treatment_start'],
-                                                 requires_columns=['initial_treatment_proportion_reduction'],
-                                                 requires_values=['high_ldl_cholesterol.exposure'])
+                                                 creates_columns=[LDLC_AT_TREATMENT_START],
+                                                 requires_columns=[PROPORTION_REDUCTION],
+                                                 requires_values=[LDL_CHOLESTEROL_EXPOSURE])
 
     def on_initialize_simulants(self, pop_data: 'SimulantData'):
-        pop = self.population_view.subview(['initial_treatment_proportion_reduction']).get(pop_data.index)
-        proportion_reduction = pop['initial_treatment_proportion_reduction']  # coerce to series
+        """Record the ldlc at treatment start for new simulants.
+
+        Assumes we can just back this value out by scaling up their ldlc
+        value, which is questionable.
+
+        """
+        pop = self.population_view.subview([PROPORTION_REDUCTION]).get(pop_data.index)
+        proportion_reduction = pop[PROPORTION_REDUCTION]  # coerce to series
         ldlc = self.ldlc(pop.index)
         ldlc_at_start = pd.Series(ldlc / (1 - proportion_reduction),
-                                  index=pop_data.index, name='ldlc_at_treatment_start')
+                                  index=pop_data.index, name=LDLC_AT_TREATMENT_START)
         self.population_view.update(ldlc_at_start)
 
-    def at_target(self, index: pd.Index):
-        pop = self.population_view.subview(['ldlc_at_treatment_start']).get(index)
-        ldlc_at_start = pop['ldlc_at_treatment_start']  # coerce to series
+    def at_target(self, index: pd.Index) -> pd.Series:
+        """Returns whether each individual is at their ldlc target."""
+        pop = self.population_view.subview([LDLC_AT_TREATMENT_START]).get(index)
+        ldlc_at_start = pop[LDLC_AT_TREATMENT_START]  # coerce to series
         ldlc = self.ldlc(index)
         return ldlc / ldlc_at_start < 0.5
 
     def currently_treated(self, index: pd.Index) -> pd.Series:
+        """Returns whether each individual is currently treated."""
         current_treatments = self.population_view.get(index)
-        high_statin = current_treatments[parameters.STATIN_HIGH] != 'none'
-        low_statin = current_treatments[parameters.STATIN_LOW] != 'none'
+        high_statin = current_treatments[parameters.STATIN_HIGH] != parameters.STATIN_DOSES.none
+        low_statin = current_treatments[parameters.STATIN_LOW] != parameters.STATIN_DOSES.none
         other = current_treatments[parameters.FIBRATES] | current_treatments[parameters.EZETIMIBE]
         return high_statin | low_statin | other
 
     def start_new_monotherapy(self, index: pd.Index, p_low_statin: float):
-        new_treatment = pd.DataFrame({parameters.STATIN_LOW: 'none',
-                                      parameters.STATIN_HIGH: 'none',
+        """Starts a group of people on a new monotherapy.
+
+        Parameters
+        ----------
+        index
+            The people to start on therapy.
+        p_low_statin
+            Probability that an individual will be assigned low potency
+            statin if they're assigned statins as a monotherapy.
+
+        """
+        new_treatment = pd.DataFrame({parameters.STATIN_LOW: parameters.STATIN_DOSES.none,
+                                      parameters.STATIN_HIGH: parameters.STATIN_DOSES.none,
                                       parameters.EZETIMIBE: False,
                                       parameters.FIBRATES: False}, index=index)
         treatment_type = self.randomness.choice(index,
                                                 list(self.p_treatment_type.keys()),
                                                 list(self.p_treatment_type.values()),
-                                                additional_key='treatment_type')
+                                                additional_key=TREATMENT_TYPE)
         low_statin = treatment_type == parameters.STATIN_LOW
         high_statin = treatment_type == parameters.STATIN_HIGH
         ezetimibe = treatment_type == parameters.EZETIMIBE
         fibrates = treatment_type == parameters.FIBRATES
 
         # noinspection PyTypeChecker
-        low_dose_if_statin = self.randomness.get_draw(index, additional_key='low_dose_if_statin') < p_low_statin
-        new_treatment.loc[low_statin & low_dose_if_statin, parameters.STATIN_LOW] = 'low'
-        new_treatment.loc[low_statin & ~low_dose_if_statin, parameters.STATIN_LOW] = 'high'
-        new_treatment.loc[high_statin & low_dose_if_statin, parameters.STATIN_HIGH] = 'low'
-        new_treatment.loc[high_statin & ~low_dose_if_statin, parameters.STATIN_HIGH] = 'high'
+        low_dose_if_statin = self.randomness.get_draw(index, additional_key=LOW_DOSE_IF_STATIN) < p_low_statin
+        new_treatment.loc[low_statin & low_dose_if_statin, parameters.STATIN_LOW] = parameters.STATIN_DOSES.low
+        new_treatment.loc[low_statin & ~low_dose_if_statin, parameters.STATIN_LOW] = parameters.STATIN_DOSES.high
+        new_treatment.loc[high_statin & low_dose_if_statin, parameters.STATIN_HIGH] = parameters.STATIN_DOSES.low
+        new_treatment.loc[high_statin & ~low_dose_if_statin, parameters.STATIN_HIGH] = parameters.STATIN_DOSES.high
         new_treatment.loc[ezetimibe, parameters.EZETIMIBE] = True
         new_treatment.loc[fibrates, parameters.FIBRATES] = True
         self.population_view.update(new_treatment)
 
     def simple_ramp(self, index: pd.Index):
+        """Change treatment by adding or switching drugs or increasing dose."""
         # TODO
         pass
 
-
     @staticmethod
     def load_measurement_p(builder: 'Builder') -> float:
+        """Load probability that ldlc will be measured."""
         location = builder.configuration.location.input_data.location
         draw = builder.configuration.location.input_data.input_draw_number
         return parameters.sample_probability_testing_ldl_c(location, draw)
 
     @staticmethod
     def load_treatment_p(builder: 'Builder') -> float:
+        """Load probability of treatment after high ldl measurements."""
         location = builder.configuration.location.input_data.location
         draw = builder.configuration.location.input_data.input_draw_number
         return parameters.sample_probability_rx_given_high_ldl_c(location, draw)
 
     @staticmethod
-    def load_treatment_type_p(builder):
+    def load_treatment_type_p(builder: 'Builder') -> Dict[str, float]:
+        """Load probability of a treatment type if treated."""
         location = builder.configuration.input_data.location
         draw = builder.configuration.input_data.input_draw_number
         p_treatment_type = {treatment_type: parameters.sample_raw_drug_prescription(location, draw, treatment_type)
