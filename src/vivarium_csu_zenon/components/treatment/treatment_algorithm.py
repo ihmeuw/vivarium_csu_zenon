@@ -1,4 +1,5 @@
 import typing
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -16,8 +17,13 @@ TREATMENT_COLUMNS = [parameters.STATIN_LOW, parameters.STATIN_HIGH,
                      parameters.FIBRATES, parameters.EZETIMIBE,
                      parameters.LIFESTYLE, parameters.FDC]
 
+# Days to follow up.
+FOLLOW_UP_MIN = 3 * 30
+FOLLOW_UP_MAX = 6 * 30
+
 
 class TreatmentAlgorithm:
+    """Manages healthcare utilization and treatment."""
 
     configuration_defaults = {
         'ldlc_treatment_algorithm': {
@@ -29,14 +35,26 @@ class TreatmentAlgorithm:
         self.patient_profile = PatientProfile()
 
     @property
-    def name(self):
+    def name(self) -> str:
+        """The name of this component."""
         return 'ldlc_treatment_algorithm'
 
     @property
-    def sub_components(self):
+    def sub_components(self) -> List:
+        """The patient profile."""
         return [self.patient_profile]
 
+    # noinspection PyAttributeOutsideInit
     def setup(self, builder: 'Builder'):
+        """Select an algorithm based on the current scenario and get
+        healthcare utilization organized and set up.
+
+        Parameters
+        ----------
+        builder
+            The simulation builder object.
+
+        """
         scenario = builder.configuration.ldlc_treatment_algorithm.scenario
         if scenario != 'baseline':
             raise NotImplementedError
@@ -54,19 +72,28 @@ class TreatmentAlgorithm:
                                                  creates_columns=['follow_up_date'],
                                                  requires_columns=TREATMENT_COLUMNS)
 
-        builder.event.register_listener('time_step__prepare', self.on_time_step_prepare)
+        builder.event.register_listener('time_step__cleanup', self.on_time_step_cleanup)
         builder.event.register_listener('time_step', self.on_time_step)
 
     def on_initialize_simulants(self, pop_data: 'SimulantData'):
+        """For patients currently treated assign them a follow up date."""
         follow_up_date = pd.Series(pd.NaT, index=pop_data.index)
         currently_treated = self.patient_profile.currently_treated(pop_data.index)
-        follow_up_date.loc[currently_treated] = pd.Series(self.clock() + self.random_time_delta(pop_data.index, 0, 180),
-                                                          index=pop_data.index,
-                                                          name='follow_up_date')
+        follow_up_date.loc[currently_treated] = pd.Series(
+            self.clock() + self.random_time_delta(pd.Series(0, index=pop_data.index),
+                                                  pd.Series(FOLLOW_UP_MAX, index=pop_data.index)),
+            index=pop_data.index, name='follow_up_date')
         self.population_view.update(follow_up_date)
 
-    def on_time_step_prepare(self, event: 'Event'):
+    def on_time_step_cleanup(self, event: 'Event'):
+        """Send patients who will have a cardiact event at the end of the step
+        to the doctor as well.
+
+        """
         pop = self.population_view.get(event.index)
+        # State table adjusts at the end of each event handler, so we already
+        # this info even though it doesn't occur until the start of the
+        # next time step.
         acute_mi = pop[project_globals.IHD_MODEL_NAME] == project_globals.ACUTE_MI_STATE_NAME
         acute_is = pop[project_globals.ISCHEMIC_STROKE_MODEL_NAME] == project_globals.ACUTE_ISCHEMIC_STROKE_STATE_NAME
         acute_cve = pop[acute_mi | acute_is].index
@@ -74,6 +101,7 @@ class TreatmentAlgorithm:
         self.population_view.update(self.schedule_follow_up(follow_up_start, follow_up_end))
 
     def on_time_step(self, event: 'Event'):
+        """Determine if someone will go for a background or follow up visit."""
         follow_up_date = self.population_view.subview(['follow_up_date']).get(event.index).follow_up_date
         to_follow_up = follow_up_date[(self.clock() < follow_up_date) & (follow_up_date <= event.time)].index
         follow_up_start, follow_up_end = self.visit_doctor.for_follow_up(to_follow_up)
@@ -89,16 +117,16 @@ class TreatmentAlgorithm:
         self.population_view.update(new_follow_up)
 
     def schedule_follow_up(self, start: pd.Series, end: pd.Series) -> pd.Series:
+        """Schedules follow up visits."""
         current_time = self.clock()
-        return pd.Series(current_time + self.random_time_delta(start.index, start, end),
+        # noinspection PyTypeChecker
+        return pd.Series(current_time + self.random_time_delta(start, end),
                          index=start.index, name='follow_up_date')
 
-    def random_time_delta(self, index: pd.Index, start, end):
+    def random_time_delta(self, start: pd.Series, end: pd.Series) -> pd.Series:
+        """Generate a random time delta for each individual in the start
+        and end series."""
         return pd.to_timedelta(start + (end - start) * self.randomness.get_draw(start.index))
-
-
-
-
 
 
 class PatientProfile:
