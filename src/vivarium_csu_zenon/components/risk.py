@@ -65,6 +65,12 @@ class Risk(Risk_):
 
 
 class LDLCholesterolRisk(Risk_):
+    @property
+    def name(self):
+        return f'risk_factor.{project_globals.LDL_C.name}'
+
+    def __init__(self):
+        super().__init__(self.name)
 
     def setup(self, builder: 'Builder'):
         propensity_col = f'{self.risk.name}_propensity'
