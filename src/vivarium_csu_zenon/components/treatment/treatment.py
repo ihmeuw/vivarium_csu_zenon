@@ -166,7 +166,7 @@ class LDLCTreatmentAdherence:
                                                  creates_columns=[f'{self.name}_propensity'],
                                                  requires_streams=[self.name])
 
-        builder.value.register_value_producer(self.name, self.is_adherent,
+        builder.value.register_value_producer(self.name, source=self.is_adherent,
                                               requires_columns=self.columns_required + [f'{self.name}_propensity'])
 
     def on_initialize_simulants(self, pop_data: 'SimulantData'):
@@ -176,9 +176,9 @@ class LDLCTreatmentAdherence:
 
     def is_adherent(self, index: pd.Index):
         propensity = self.population_view.subview([f'{self.name}_propensity']).get(index)
-        return self.determine_adherent(propensity)
+        return self.determine_adherent(propensity[f'{self.name}_propensity'])
 
-    def determine_adherent(self, propensity):
+    def determine_adherent(self, propensity: pd.Series):
         # Wrote as separate function cause I thought I needed for
         # initialization too. Leave for now in case I'm dumb.  - J.C.
         p_adherent = pd.Series(0, index=propensity.index)
