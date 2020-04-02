@@ -45,6 +45,7 @@ class __Population(NamedTuple):
     ACMR: str = 'cause.all_causes.cause_specific_mortality_rate'
     PROPENSITY_CORRELATION_DATA: str = 'risk_factor.joint_risk_factors.propensity_correlation_data'
     JOINT_PAF_DATA: str = 'risk_factor.joint_risk_factors.population_attributable_fraction'
+    HEALTHCARE_UTILIZATION: str = 'covariate.outpatient_utilization'
 
     @property
     def name(self):
