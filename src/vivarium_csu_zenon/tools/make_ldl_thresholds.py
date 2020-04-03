@@ -19,7 +19,7 @@ from vivarium_csu_zenon.utilities import sanitize_location
 
 
 def build_ldl_thresholds(location: str, draws: str, concat_only: bool, verbose: int):
-    output_dir = paths.FPG_THRESHOLD_DIR
+    output_dir = paths.LDL_C_THRESHOLD_DIR
     locations = project_globals.LOCATIONS if location == 'all' else [location]
 
     if not concat_only:
