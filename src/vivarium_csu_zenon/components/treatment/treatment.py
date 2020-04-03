@@ -1,13 +1,16 @@
 import typing
 
 import pandas as pd
+from vivarium.framework.randomness import get_hash
 
 from vivarium_csu_zenon import globals as project_globals
 from vivarium_csu_zenon.components.treatment import parameters
+from vivarium_csu_zenon.utilities import sample_truncnorm_distribution
 
 if typing.TYPE_CHECKING:
     from vivarium.framework.engine import Builder
     from vivarium.framework.population import SimulantData
+    from vivarium.framework.event import Event
 
 
 # NOTE:
@@ -276,3 +279,49 @@ class LDLCTreatmentEffect:
                 for param in [parameters.HIGH_STATIN_HIGH, parameters.HIGH_STATIN_LOW,
                               parameters.LOW_STATIN_HIGH, parameters.LOW_STATIN_LOW,
                               parameters.EZETIMIBE, parameters.FIBRATES, parameters.LIFESTYLE]}
+
+
+class AdverseEffects:
+
+    rate_mean = 0.032833
+    rate_sd = 0.020103206
+
+    @property
+    def name(self):
+        return 'ldlc_adverse_effects'
+
+    def setup(self, builder: 'Builder'):
+        self.event_rate = builder.lookup.build_table(self.load_adverse_event_rate(builder))
+        self.randomness = builder.randomness.get_stream(self.name)
+        columns_created = [f'had_adverse_event']
+        medication_columns = [parameters.STATIN_LOW, parameters.STATIN_HIGH,
+                              parameters.FIBRATES, parameters.EZETIMIBE]
+        self.population_view = builder.population.get_view(columns_created
+                                                           + ['ldlc_treatment_adherence']
+                                                           + medication_columns)
+        builder.population.initializes_simulants(self.on_initialize_simulants,
+                                                 creates_columns=columns_created)
+
+    def on_initialize_simulants(self, pop_data: 'SimulantData'):
+        self.population_view.update(pd.Series(False, index=pop_data.index, name='had_adverse_event'))
+
+    def on_time_step(self, event: 'Event'):
+        pop = self.population_view.get(event.index)
+        high_statin = pop[parameters.STATIN_HIGH] != parameters.STATIN_DOSES.none
+        low_statin = pop[parameters.STATIN_LOW] != parameters.STATIN_DOSES.none
+        other_treatments = pop[parameters.FIBRATES] | pop[parameters.EZETIMIBE]
+        on_treatment = pop.loc[high_statin | low_statin | other_treatments].index
+        # Lookup returns a series for scalar tables.  Yuck inconsistent.
+        # noinspection PyTypeChecker
+        had_adverse_event = self.randomness.filter_for_rate(on_treatment, self.event_rate(on_treatment))
+        pop.loc[had_adverse_event, 'ldlc_treatment_adherence'] = 0
+        pop.loc[had_adverse_event, 'had_adverse_event'] = True
+        self.population_view.update(pop)
+
+    @staticmethod
+    def load_adverse_event_rate(builder: 'Builder'):
+        location = builder.configuration.input_data.location
+        draw = builder.configuration.input_data.input_draw_number
+        seed = get_hash(f'ldlc_adverse_event_rate_location_{location}_draw_{draw}')
+        return sample_truncnorm_distribution(seed, AdverseEffects.rate_mean, AdverseEffects.rate_sd)
+
