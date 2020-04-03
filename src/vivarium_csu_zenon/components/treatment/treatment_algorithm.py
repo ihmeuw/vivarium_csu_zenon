@@ -275,9 +275,6 @@ class PatientProfile:
 
 class CurrentPractice:
 
-    # Days til follow up
-    follow_up_low = 3 * 30
-    follow_up_high = 6 * 30
     p_low_statin = parameters.LOW_DOSE_THRESHOLD
 
     def __init__(self, patient_profile: PatientProfile):
@@ -286,7 +283,7 @@ class CurrentPractice:
     def for_acute_cardiovascular_event(self, index: pd.Index):
         not_treated = index[~self.patient_profile.currently_treated(index)]
         self.patient_profile.start_new_monotherapy(not_treated, self.p_low_statin)
-        return pd.Series(self.follow_up_low, index=not_treated), pd.Series(self.follow_up_high, index=not_treated)
+        return pd.Series(FOLLOW_UP_MIN, index=not_treated), pd.Series(FOLLOW_UP_MAX, index=not_treated)
 
     def for_follow_up(self, index: pd.Index):
         # TODO: Adverse event
@@ -294,8 +291,8 @@ class CurrentPractice:
         is_adherent = self.patient_profile.is_adherent(index)
         to_ramp = index[not_at_target & is_adherent]
         self.patient_profile.simple_ramp(to_ramp)
-        return pd.Series(self.follow_up_low, index=index), pd.Series(self.follow_up_high, index=index)
+        return pd.Series(FOLLOW_UP_MIN, index=index), pd.Series(FOLLOW_UP_MAX, index=index)
 
     def for_background_visit(self, index: pd.Index):
         # TODO:
-        return pd.Series(self.follow_up_low, index=index), pd.Series(self.follow_up_high, index=index)
+        return pd.Series(FOLLOW_UP_MIN, index=index), pd.Series(FOLLOW_UP_MAX, index=index)

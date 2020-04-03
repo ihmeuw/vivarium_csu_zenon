@@ -93,7 +93,7 @@ def sample_probability_increasing_dose(scenario: str, location: str, draw: int) 
     location = sanitize_location(location)
     scenario = scenario if scenario == 'baseline' else 'intervention'
     seed = get_hash(f'target_given_rx_probability_scenario_{scenario}_draw_{draw}_location_{location}')
-    data = pd.read_csv(paths.PROB_TARGET_GIVEN_RX).set_index([LOCATION_COLUMN, 'scenario'])
+    data = pd.read_csv(paths.PROB_ADDING_DRUGS).set_index([LOCATION_COLUMN, 'scenario'])
     params = data.loc[(location, scenario), :]
     return sample_truncnorm_distribution(seed, params[MEAN_COLUMN], params[SD_COLUMN])
 
