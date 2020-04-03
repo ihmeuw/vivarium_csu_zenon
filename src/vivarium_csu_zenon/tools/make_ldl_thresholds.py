@@ -9,7 +9,7 @@ import pandas as pd
 from scipy.optimize import minimize, Bounds
 
 from risk_distributions import EnsembleDistribution
-from vivarium_inputs import interface
+from vivarium_inputs import interface, utilities
 from gbd_mapping import risk_factors
 
 from vivarium_csu_zenon import paths, globals as project_globals
@@ -57,6 +57,8 @@ def build_ldl_thresholds(location: str, draws: str, concat_only: bool, verbose: 
             existing_data.append(pd.read_hdf(output_dir / f'{sanitized_location}.hdf'))
             existing_data[0].to_hdf(output_dir / f'{sanitized_location}-old.hdf', 'data')
         threshold_data = pd.concat(existing_data + [pd.read_hdf(file) for file in path.iterdir()], axis=1)
+        threshold_data = threshold_data[[f'draw_{d}' for d in range(1000)]]  # sort the columns
+        threshold_data = utilities.sort_hierarchical_data(threshold_data).convert_objects()
         threshold_data.to_hdf(output_dir / f'{sanitized_location}.hdf', 'data')
         shutil.rmtree(path)
 
