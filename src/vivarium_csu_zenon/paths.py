@@ -7,6 +7,7 @@ ARTIFACT_ROOT = Path(f"/share/costeffectiveness/artifacts/{project_globals.PROJE
 MODEL_SPEC_DIR = (Path(__file__).parent / 'model_specifications').resolve()
 RESULTS_ROOT = Path(f'/share/costeffectiveness/results/{project_globals.PROJECT_NAME}/')
 FPG_THRESHOLD_DIR = Path('/share/costeffectiveness/auxiliary_data/GBD_2017/03_untracked_data/fpg_diabetes_threshold')
+LDL_C_THRESHOLD_DIR = Path('/share/costeffectiveness/auxiliary_data/GBD_2017/03_untracked_data/ldl_c_threshold')
 JOINT_PAF_DIR = Path('/share/costeffectiveness/auxiliary_data/GBD_2017/03_untracked_data/joint_pafs')
 
 INTERNAL_DATA_ROOT = Path(vivarium_csu_zenon.__file__).resolve().parent / 'data' / 'raw_data'
