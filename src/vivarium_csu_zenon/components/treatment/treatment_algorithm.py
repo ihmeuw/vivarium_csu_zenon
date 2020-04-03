@@ -171,7 +171,8 @@ class PatientProfile:
         self.population_view = builder.population.get_view([parameters.STATIN_LOW, parameters.STATIN_HIGH,
                                                             parameters.FIBRATES, parameters.EZETIMIBE,
                                                             parameters.LIFESTYLE, parameters.FDC,
-                                                            LDLC_AT_TREATMENT_START])
+                                                            LDLC_AT_TREATMENT_START, 'had_adverse_event',
+                                                            'ldlc_treatment_adherence'])
         builder.population.initializes_simulants(self.on_initialize_simulants,
                                                  creates_columns=[LDLC_AT_TREATMENT_START],
                                                  requires_columns=[PROPORTION_REDUCTION],
@@ -190,6 +191,10 @@ class PatientProfile:
         ldlc_at_start = pd.Series(ldlc / (1 - proportion_reduction),
                                   index=pop_data.index, name=LDLC_AT_TREATMENT_START)
         self.population_view.update(ldlc_at_start)
+
+    def had_adverse_event(self, index: pd.Index) -> pd.Series:
+        pop = self.population_view.subview(['had_adverse_event']).get(index)
+        return pop.loc[:, 'had_adverse_event']
 
     def at_target(self, index: pd.Index) -> pd.Series:
         """Returns whether each individual is at their ldlc target."""
@@ -241,9 +246,90 @@ class PatientProfile:
         new_treatment.loc[fibrates, parameters.FIBRATES] = True
         self.population_view.update(new_treatment)
 
+    def change_meds(self, index: pd.Index):
+        """Swap medications if someone, e.g. has an adverse event.
+        Or if the doctor feels like it.
+
+        """
+        cols = [parameters.STATIN_LOW, parameters.STATIN_HIGH, parameters.FIBRATES,
+                parameters.EZETIMIBE, parameters.FDC, 'had_adverse_event', 'ldlc_treatment_adherence_propensity']
+        current_meds = self.population_view.subview(cols).get(index)
+
+        low_statin = current_meds[parameters.STATIN_LOW] != parameters.STATIN_LOW
+        high_statin = current_meds[parameters.STATIN_HIGH] != parameters.STATIN_HIGH
+        ezetimibe = current_meds[parameters.EZETIMIBE]
+        fibrates = current_meds[parameters.FIBRATES]
+
+        only_low = low_statin & ~(ezetimibe | fibrates)
+        only_high = high_statin & ~(ezetimibe | fibrates)
+        only_ezetimibe = ezetimibe & ~(low_statin | high_statin | fibrates)
+        only_fibrates = fibrates & ~(low_statin | high_statin | ezetimibe)
+
+        low_and_eze = low_statin & ezetimibe
+        low_and_fib = low_statin & fibrates
+        high_and_eze = high_statin & ezetimibe
+        high_and_fib = high_statin & fibrates
+        eze_and_fib = ezetimibe & fibrates
+
+        exclude_map = {(parameters.STATIN_LOW,): only_low, (parameters.STATIN_HIGH,): only_high,
+                       (parameters.EZETIMIBE,): only_ezetimibe, (parameters.FIBRATES,): only_fibrates,
+                       (parameters.STATIN_LOW, parameters.EZETIMIBE): low_and_eze,
+                       (parameters.STATIN_LOW, parameters.FIBRATES): low_and_fib,
+                       (parameters.STATIN_HIGH, parameters.EZETIMIBE): high_and_eze,
+                       (parameters.STATIN_HIGH, parameters.FIBRATES): high_and_fib,
+                       (parameters.EZETIMIBE, parameters.FIBRATES): eze_and_fib}
+        new_treatment = []
+        for exclude_list, mask in exclude_map.items():
+            new_treatment.append(self.choose_new_tx(current_meds.loc[mask], list(exclude_list)))
+
+        new_treatment = pd.concat(new_treatment).sort_index()
+        now_high_statin = new_treatment[parameters.STATIN_HIGH] != parameters.STATIN_DOSES.none
+        now_low_statin = new_treatment[parameters.STATIN_LOW] != parameters.STATIN_DOSES.none
+        now_ezetimibe = new_treatment[parameters.EZETIMIBE]
+        could_be_fdc = (now_high_statin | now_low_statin) & now_ezetimibe
+        was_fdc = current_meds[parameters.FDC]
+        new_treatment.loc[:, parameters.FDC] = was_fdc & could_be_fdc
+        new_treatment.loc[:, 'had_adverse_event'] = False
+        new_treatment.loc[:, 'ldlc_treatment_adherence_propensity'] = self.randomness.get_draw(
+            new_treatment.index, additional_key='change_tx_adherence'
+        )
+        self.population_view.update(new_treatment)
+
+    def choose_new_tx(self, pop: pd.DataFrame, maybe_drop: List[str]):
+        choices = {treatment: prob for treatment, prob in self.p_treatment_type}
+        choices = {treatment: prob/sum(choices.values()) for treatment, prob in choices}
+
+        if len(maybe_drop) > 1:
+            drop = self.randomness.choice(pop.index, choices=maybe_drop, additional_key='drop_treatment')
+        else:
+            drop = pd.Series(maybe_drop[0], index=pop.index)
+        statin = drop.isin([parameters.STATIN_LOW, parameters.STATIN_HIGH])
+        ezetimibe = drop == parameters.EZETIMIBE
+        fibrates = drop == parameters.FIBRATES
+        pop.loc[statin, parameters.STATIN_LOW] = parameters.STATIN_DOSES.none
+        pop.loc[statin, parameters.STATIN_HIGH] = parameters.STATIN_DOSES.none
+        pop.loc[ezetimibe, parameters.EZETIMIBE] = False
+        pop.loc[fibrates, parameters.FIBRATES] = False
+
+        replace = self.randomness.choice(pop.index, choices=list(choices.keys()),
+                                         p=list(choices.values()), additional_key='replace_treatment')
+        low_statin = replace == parameters.STATIN_LOW
+        high_statin = replace == parameters.STATIN_HIGH
+        ezetimibe = replace == parameters.EZETIMIBE
+        fibrates = replace == parameters.FIBRATES
+        statin_dose = (self.randomness.get_draw(pop.index, additional_key='replace_statin_dose')
+                       < parameters.LOW_DOSE_THRESHOLD).replace({True: parameters.STATIN_DOSES.low,
+                                                                 False: parameters.STATIN_DOSES.high})
+        pop.loc[low_statin, parameters.STATIN_LOW] = statin_dose.loc[low_statin]
+        pop.loc[high_statin, parameters.STATIN_HIGH] = statin.loc[high_statin]
+        pop.loc[ezetimibe, parameters.EZETIMIBE] = True
+        pop.loc[fibrates, parameters.FIBRATES] = True
+        return pop
+
     def simple_ramp(self, index: pd.Index):
         """Change treatment by adding or switching drugs or increasing dose."""
-        # TODO
+        cols = [parameters.STATIN_LOW, parameters.STATIN_HIGH, parameters.FIBRATES,
+                parameters.EZETIMIBE, parameters.FDC]
         pass
 
     @staticmethod
@@ -289,7 +375,9 @@ class CurrentPractice:
 
     def for_follow_up(self, index: pd.Index):
         """Treat for a follow up visit."""
-        # TODO: Adverse event
+        had_adverse_event = self.patient_profile.had_adverse_event(index)
+        to_switch = index[had_adverse_event]
+        self.patient_profile.change_meds(to_switch)
         not_at_target = ~self.patient_profile.at_target(index)
         is_adherent = self.patient_profile.is_adherent(index)
         to_ramp = index[not_at_target & is_adherent]

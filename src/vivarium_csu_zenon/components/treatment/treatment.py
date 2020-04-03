@@ -297,7 +297,7 @@ class AdverseEffects:
         medication_columns = [parameters.STATIN_LOW, parameters.STATIN_HIGH,
                               parameters.FIBRATES, parameters.EZETIMIBE]
         self.population_view = builder.population.get_view(columns_created
-                                                           + ['ldlc_treatment_adherence']
+                                                           + ['ldlc_treatment_adherence_propensity']
                                                            + medication_columns)
         builder.population.initializes_simulants(self.on_initialize_simulants,
                                                  creates_columns=columns_created)
@@ -314,7 +314,7 @@ class AdverseEffects:
         # Lookup returns a series for scalar tables.  Yuck inconsistent.
         # noinspection PyTypeChecker
         had_adverse_event = self.randomness.filter_for_rate(on_treatment, self.event_rate(on_treatment))
-        pop.loc[had_adverse_event, 'ldlc_treatment_adherence'] = 0
+        pop.loc[had_adverse_event, 'ldlc_treatment_adherence_propensity'] = 0
         pop.loc[had_adverse_event, 'had_adverse_event'] = True
         self.population_view.update(pop)
 
