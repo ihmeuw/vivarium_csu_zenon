@@ -14,10 +14,6 @@ if typing.TYPE_CHECKING:
     from vivarium.framework.population import SimulantData
 
 
-TREATMENT_COLUMNS = [parameters.STATIN_LOW, parameters.STATIN_HIGH,
-                     parameters.FIBRATES, parameters.EZETIMIBE,
-                     parameters.LIFESTYLE, parameters.FDC]
-
 # Days to follow up.
 FOLLOW_UP_MIN = 3 * 30
 FOLLOW_UP_MAX = 6 * 30
@@ -91,7 +87,7 @@ class TreatmentAlgorithm:
                                                             FOLLOW_UP_DATE])
         builder.population.initializes_simulants(self.on_initialize_simulants,
                                                  creates_columns=[FOLLOW_UP_DATE],
-                                                 requires_columns=TREATMENT_COLUMNS)
+                                                 requires_columns=[parameters.TREATMENT.name])
 
         builder.event.register_listener('time_step__cleanup', self.on_time_step_cleanup)
         builder.event.register_listener('time_step', self.on_time_step)
@@ -168,9 +164,7 @@ class PatientProfile:
         self.p_treatment_given_high = self.load_treatment_p(builder)
         self.p_treatment_type = self.load_treatment_type_p(builder)
         self.randomness = builder.randomness.get_stream(self.name)
-        self.population_view = builder.population.get_view([parameters.STATIN_LOW, parameters.STATIN_HIGH,
-                                                            parameters.FIBRATES, parameters.EZETIMIBE,
-                                                            parameters.LIFESTYLE, parameters.FDC,
+        self.population_view = builder.population.get_view([parameters.TREATMENT.name,
                                                             LDLC_AT_TREATMENT_START, 'had_adverse_event',
                                                             'ldlc_treatment_adherence'])
         builder.population.initializes_simulants(self.on_initialize_simulants,
@@ -193,6 +187,8 @@ class PatientProfile:
         self.population_view.update(ldlc_at_start)
 
     def had_adverse_event(self, index: pd.Index) -> pd.Series:
+        """Determine whether a patient has had an adverse event since they
+        were last put on treatment."""
         pop = self.population_view.subview(['had_adverse_event']).get(index)
         return pop.loc[:, 'had_adverse_event']
 
@@ -206,10 +202,21 @@ class PatientProfile:
     def currently_treated(self, index: pd.Index) -> pd.Series:
         """Returns whether each individual is currently treated."""
         current_treatments = self.population_view.get(index)
-        high_statin = current_treatments[parameters.STATIN_HIGH] != parameters.STATIN_DOSES.none
-        low_statin = current_treatments[parameters.STATIN_LOW] != parameters.STATIN_DOSES.none
-        other = current_treatments[parameters.FIBRATES] | current_treatments[parameters.EZETIMIBE]
-        return high_statin | low_statin | other
+        # noinspection PyTypeChecker
+        return current_treatments[parameters.TREATMENT.name] != parameters.TREATMENT.none
+
+    def sbp_is_measured_and_above_threshold(self, index: pd.Index, threshold) -> pd.Series:
+        """Determine if the doctor measures sbp and finds it above threshold."""
+        # noinspection PyTypeChecker
+        measured = self.randomness.get_draw(index, additional_key='sbp_is_measured') < self.p_measurement
+        above_threshold = self.ldlc(index) > threshold
+        # noinspection PyTypeChecker
+        return measured & above_threshold
+
+    def will_treat_if_bad(self, index: pd.Index) -> pd.Series:
+        """Determine whether the doctor treats if ldlc is measured too high."""
+        # noinspection PyTypeChecker
+        return self.randomness.get_draw(index, additional_key='will_treat_if_bad') < self.p_treatment_given_high
 
     def start_new_monotherapy(self, index: pd.Index, p_low_statin: float):
         """Starts a group of people on a new monotherapy.
@@ -223,27 +230,29 @@ class PatientProfile:
             statin if they're assigned statins as a monotherapy.
 
         """
-        new_treatment = pd.DataFrame({parameters.STATIN_LOW: parameters.STATIN_DOSES.none,
-                                      parameters.STATIN_HIGH: parameters.STATIN_DOSES.none,
-                                      parameters.EZETIMIBE: False,
-                                      parameters.FIBRATES: False}, index=index)
+        new_treatment = pd.DataFrame({
+            parameters.TREATMENT.name: parameters.TREATMENT.none,
+            LDLC_AT_TREATMENT_START: self.ldlc(index)
+        }, index=index)
         treatment_type = self.randomness.choice(index,
                                                 list(self.p_treatment_type.keys()),
                                                 list(self.p_treatment_type.values()),
                                                 additional_key=TREATMENT_TYPE)
         low_statin = treatment_type == parameters.STATIN_LOW
         high_statin = treatment_type == parameters.STATIN_HIGH
-        ezetimibe = treatment_type == parameters.EZETIMIBE
-        fibrates = treatment_type == parameters.FIBRATES
+        ezetimibe = treatment_type == parameters.TREATMENT.ezetimibe
+        fibrates = treatment_type == parameters.TREATMENT.fibrates
 
         # noinspection PyTypeChecker
         low_dose_if_statin = self.randomness.get_draw(index, additional_key=LOW_DOSE_IF_STATIN) < p_low_statin
-        new_treatment.loc[low_statin & low_dose_if_statin, parameters.STATIN_LOW] = parameters.STATIN_DOSES.low
-        new_treatment.loc[low_statin & ~low_dose_if_statin, parameters.STATIN_LOW] = parameters.STATIN_DOSES.high
-        new_treatment.loc[high_statin & low_dose_if_statin, parameters.STATIN_HIGH] = parameters.STATIN_DOSES.low
-        new_treatment.loc[high_statin & ~low_dose_if_statin, parameters.STATIN_HIGH] = parameters.STATIN_DOSES.high
-        new_treatment.loc[ezetimibe, parameters.EZETIMIBE] = True
-        new_treatment.loc[fibrates, parameters.FIBRATES] = True
+
+        new_treatment.loc[ezetimibe] = parameters.TREATMENT.ezetimibe
+        new_treatment.loc[fibrates] = parameters.TREATMENT.fibrates
+        new_treatment.loc[low_statin & low_dose_if_statin] = parameters.TREATMENT.low_statin_low_dose
+        new_treatment.loc[low_statin & ~low_dose_if_statin] = parameters.TREATMENT.low_statin_high_dose
+        new_treatment.loc[high_statin & low_dose_if_statin] = parameters.TREATMENT.high_statin_low_dose
+        new_treatment.loc[high_statin & ~low_dose_if_statin] = parameters.TREATMENT.high_statin_high_dose
+
         self.population_view.update(new_treatment)
 
     def change_meds(self, index: pd.Index):
@@ -251,86 +260,23 @@ class PatientProfile:
         Or if the doctor feels like it.
 
         """
-        cols = [parameters.STATIN_LOW, parameters.STATIN_HIGH, parameters.FIBRATES,
-                parameters.EZETIMIBE, parameters.FDC, 'had_adverse_event', 'ldlc_treatment_adherence_propensity']
+        cols = [parameters.TREATMENT.name, 'had_adverse_event', 'ldlc_treatment_adherence_propensity']
         current_meds = self.population_view.subview(cols).get(index)
+        # TODO: Map treatment based on transition matrix
+        new_treatment = current_meds.copy()
 
-        low_statin = current_meds[parameters.STATIN_LOW] != parameters.STATIN_LOW
-        high_statin = current_meds[parameters.STATIN_HIGH] != parameters.STATIN_HIGH
-        ezetimibe = current_meds[parameters.EZETIMIBE]
-        fibrates = current_meds[parameters.FIBRATES]
-
-        only_low = low_statin & ~(ezetimibe | fibrates)
-        only_high = high_statin & ~(ezetimibe | fibrates)
-        only_ezetimibe = ezetimibe & ~(low_statin | high_statin | fibrates)
-        only_fibrates = fibrates & ~(low_statin | high_statin | ezetimibe)
-
-        low_and_eze = low_statin & ezetimibe
-        low_and_fib = low_statin & fibrates
-        high_and_eze = high_statin & ezetimibe
-        high_and_fib = high_statin & fibrates
-        eze_and_fib = ezetimibe & fibrates
-
-        exclude_map = {(parameters.STATIN_LOW,): only_low, (parameters.STATIN_HIGH,): only_high,
-                       (parameters.EZETIMIBE,): only_ezetimibe, (parameters.FIBRATES,): only_fibrates,
-                       (parameters.STATIN_LOW, parameters.EZETIMIBE): low_and_eze,
-                       (parameters.STATIN_LOW, parameters.FIBRATES): low_and_fib,
-                       (parameters.STATIN_HIGH, parameters.EZETIMIBE): high_and_eze,
-                       (parameters.STATIN_HIGH, parameters.FIBRATES): high_and_fib,
-                       (parameters.EZETIMIBE, parameters.FIBRATES): eze_and_fib}
-        new_treatment = []
-        for exclude_list, mask in exclude_map.items():
-            new_treatment.append(self.choose_new_tx(current_meds.loc[mask], list(exclude_list)))
-
-        new_treatment = pd.concat(new_treatment).sort_index()
-        now_high_statin = new_treatment[parameters.STATIN_HIGH] != parameters.STATIN_DOSES.none
-        now_low_statin = new_treatment[parameters.STATIN_LOW] != parameters.STATIN_DOSES.none
-        now_ezetimibe = new_treatment[parameters.EZETIMIBE]
-        could_be_fdc = (now_high_statin | now_low_statin) & now_ezetimibe
-        was_fdc = current_meds[parameters.FDC]
-        new_treatment.loc[:, parameters.FDC] = was_fdc & could_be_fdc
         new_treatment.loc[:, 'had_adverse_event'] = False
         new_treatment.loc[:, 'ldlc_treatment_adherence_propensity'] = self.randomness.get_draw(
             new_treatment.index, additional_key='change_tx_adherence'
         )
         self.population_view.update(new_treatment)
 
-    def choose_new_tx(self, pop: pd.DataFrame, maybe_drop: List[str]):
-        choices = {treatment: prob for treatment, prob in self.p_treatment_type}
-        choices = {treatment: prob/sum(choices.values()) for treatment, prob in choices}
-
-        if len(maybe_drop) > 1:
-            drop = self.randomness.choice(pop.index, choices=maybe_drop, additional_key='drop_treatment')
-        else:
-            drop = pd.Series(maybe_drop[0], index=pop.index)
-        statin = drop.isin([parameters.STATIN_LOW, parameters.STATIN_HIGH])
-        ezetimibe = drop == parameters.EZETIMIBE
-        fibrates = drop == parameters.FIBRATES
-        pop.loc[statin, parameters.STATIN_LOW] = parameters.STATIN_DOSES.none
-        pop.loc[statin, parameters.STATIN_HIGH] = parameters.STATIN_DOSES.none
-        pop.loc[ezetimibe, parameters.EZETIMIBE] = False
-        pop.loc[fibrates, parameters.FIBRATES] = False
-
-        replace = self.randomness.choice(pop.index, choices=list(choices.keys()),
-                                         p=list(choices.values()), additional_key='replace_treatment')
-        low_statin = replace == parameters.STATIN_LOW
-        high_statin = replace == parameters.STATIN_HIGH
-        ezetimibe = replace == parameters.EZETIMIBE
-        fibrates = replace == parameters.FIBRATES
-        statin_dose = (self.randomness.get_draw(pop.index, additional_key='replace_statin_dose')
-                       < parameters.LOW_DOSE_THRESHOLD).replace({True: parameters.STATIN_DOSES.low,
-                                                                 False: parameters.STATIN_DOSES.high})
-        pop.loc[low_statin, parameters.STATIN_LOW] = statin_dose.loc[low_statin]
-        pop.loc[high_statin, parameters.STATIN_HIGH] = statin.loc[high_statin]
-        pop.loc[ezetimibe, parameters.EZETIMIBE] = True
-        pop.loc[fibrates, parameters.FIBRATES] = True
-        return pop
-
     def simple_ramp(self, index: pd.Index):
         """Change treatment by adding or switching drugs or increasing dose."""
-        cols = [parameters.STATIN_LOW, parameters.STATIN_HIGH, parameters.FIBRATES,
-                parameters.EZETIMIBE, parameters.FDC]
-        pass
+        pop = self.population_view.subview([parameters.TREATMENT.name]).get(index)
+        # TODO: Map treatment based on transition matrix.
+        pop_update = pop.copy()
+        self.population_view.update(pop_update)
 
     @staticmethod
     def load_measurement_p(builder: 'Builder') -> float:
@@ -348,11 +294,11 @@ class PatientProfile:
 
     @staticmethod
     def load_treatment_type_p(builder: 'Builder') -> Dict[str, float]:
-        """Load probability of a treatment type if treated."""
+        """Load probabilities of particular treatments given treated."""
         location = builder.configuration.input_data.location
         draw = builder.configuration.input_data.input_draw_number
         p_treatment_type = {treatment_type: parameters.sample_raw_drug_prescription(location, draw, treatment_type)
-                            for treatment_type in [parameters.EZETIMIBE, parameters.FIBRATES,
+                            for treatment_type in [parameters.TREATMENT.ezetimibe, parameters.TREATMENT.fibrates,
                                                    parameters.STATIN_HIGH, parameters.STATIN_LOW]}
         p_treatment_type = dict(zip([k for k in p_treatment_type.keys()],
                                     parameters.get_adjusted_probabilities(*p_treatment_type.values())))
@@ -363,6 +309,7 @@ class CurrentPractice:
     """Business as usual treatment scenario."""
 
     p_low_statin = parameters.LOW_DOSE_THRESHOLD
+    ldlc_threshold = parameters.HIGH_LDL_BASELINE
 
     def __init__(self, patient_profile: PatientProfile):
         self.patient_profile = patient_profile
@@ -386,5 +333,8 @@ class CurrentPractice:
 
     def for_background_visit(self, index: pd.Index):
         """Treat for a background visit"""
-        # TODO:
+        measured_and_bad = self.patient_profile.sbp_is_measured_and_above_threshold(index, self.ldlc_threshold)
+        will_treat_if_bad = self.patient_profile.will_treat_if_bad(index)
+        to_treat = index[measured_and_bad & will_treat_if_bad]
+        self.patient_profile.start_new_monotherapy(to_treat, self.p_low_statin)
         return pd.Series(FOLLOW_UP_MIN, index=index), pd.Series(FOLLOW_UP_MAX, index=index)
