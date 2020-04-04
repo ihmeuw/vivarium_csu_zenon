@@ -1,4 +1,7 @@
-probability_type,mean_value,sd_value
-increasing_dose,0.4175,0.02384848
-adding_2nd_drug,0.38,0.018708287
-switching_drugs,0.1925,0.024874686
+scenario,probability_type,mean_value,sd_value
+intervention,increasing_dose,0.4175,0.02384848
+intervention,adding_2nd_drug,0.38,0.018708287
+intervention,switching_drugs,0.1925,0.024874686
+baseline,increasing_dose,0.07,0.02
+baseline,adding_2nd_drug,0.06,0.02
+baseline,switching_drugs,0.03,0.02

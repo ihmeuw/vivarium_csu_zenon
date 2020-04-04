@@ -1,8 +1,6 @@
-from typing import List
+from typing import List, NamedTuple
 
-import numpy as np
 import pandas as pd
-
 from vivarium.framework.randomness import get_hash
 
 from vivarium_csu_zenon import paths
@@ -24,16 +22,40 @@ SWITCH_DRUG = 'switching_drugs'
 MONOTHERAPY = 'monotherapy'
 FDC = 'fdc'
 
-EZETIMIBE = 'ezetimibe'
-FIBRATES = 'fibrates'
 STATIN_HIGH = 'high_potency_statin'
 STATIN_LOW = 'low_potency_statin'
-LIFESTYLE = 'lifestyle_intervention'
 
-HIGH_STATIN_HIGH = f'{STATIN_HIGH}_high_dose'
-HIGH_STATIN_LOW = f'{STATIN_HIGH}_low_dose'
-LOW_STATIN_HIGH = f'{STATIN_LOW}_high_dose'
-LOW_STATIN_LOW = f'{STATIN_LOW}_low_dose'
+
+class _Treatments(NamedTuple):
+    none: str = 'none'
+    lifestyle: str = 'lifestyle_intervention'
+    fibrates: str = 'fibrates'
+    ezetimibe: str = 'ezetimibe'
+
+    low_statin_low_dose = 'low_potency_statin_low_dose'
+    low_statin_high_dose = 'low_potency_statin_high_dose'
+    high_statin_low_dose = 'high_potency_statin_low_dose'
+    high_statin_high_dose = 'high_potency_statin_high_dose'
+
+    # Statin + ezetimibe multi pill
+    low_statin_low_dose_multi = 'low_potency_statin_low_dose_multi'
+    low_statin_high_dose_multi = 'low_potency_statin_high_dose_multi'
+    high_statin_low_dose_multi = 'high_potency_statin_low_dose_multi'
+    high_statin_high_dose_multi = 'high_potency_statin_high_dose_multi'
+
+    # Statin + ezetimibe fdc
+    low_statin_low_dose_fdc = 'low_potency_statin_low_dose_fdc'
+    low_statin_high_dose_fdc = 'low_potency_statin_high_dose_fdc'
+    high_statin_low_dose_fdc = 'high_potency_statin_low_dose_fdc'
+    high_statin_high_dose_fdc = 'high_potency_statin_high_dose_fdc'
+
+    @property
+    def name(self) -> str:
+        return 'ldlc_treatment_category'
+
+
+TREATMENT = _Treatments()
+
 
 SINGLE_NO_CVE = (0, 0)
 MULTI_NO_CVE = (1, 0)
@@ -82,11 +104,12 @@ def sample_raw_rx_change(location: str, draw: int, rx_change: str) -> float:
     return sample_truncnorm_distribution(seed, params[MEAN_COLUMN], params[SD_COLUMN])
 
 
-def sample_probability_increasing_dose(location: str, draw: int) -> float:
+def sample_probability_increasing_dose(scenario: str, location: str, draw: int) -> float:
     location = sanitize_location(location)
-    seed = get_hash(f'target_given_rx_probability_draw_{draw}_location_{location}')
-    data = pd.read_csv(paths.PROB_TARGET_GIVEN_RX).set_index(LOCATION_COLUMN)
-    params = data.loc[location, :]
+    scenario = scenario if scenario == 'baseline' else 'intervention'
+    seed = get_hash(f'target_given_rx_probability_scenario_{scenario}_draw_{draw}_location_{location}')
+    data = pd.read_csv(paths.PROB_ADDING_DRUGS).set_index([LOCATION_COLUMN, 'scenario'])
+    params = data.loc[(location, scenario), :]
     return sample_truncnorm_distribution(seed, params[MEAN_COLUMN], params[SD_COLUMN])
 
 
