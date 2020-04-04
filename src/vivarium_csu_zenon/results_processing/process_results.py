@@ -50,7 +50,7 @@ class MeasureData(NamedTuple):
 
     def dump(self, output_dir: Path):
         for key, df in self._asdict().items():
-            df.sanitize_location(output_dir / f'{key}.hdf', key=key)
+            df.to_hdf(output_dir / f'{key}.hdf', key=key)
             df.to_csv(output_dir / f'{key}.csv')
 
 
