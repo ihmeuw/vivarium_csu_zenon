@@ -86,15 +86,19 @@ class LDLCTreatmentCoverage:
         pop_update.loc[on_mono & fibrates_if_mono] = parameters.TREATMENT.fibrates
         pop_update.loc[on_mono & ezetimibe_if_mono] = parameters.TREATMENT.ezetimibe
 
-        pop_update.loc[on_mono & low_statin_if_mono & low_dose_if_low_statin] = parameters.TREATMENT.low_statin_low_dose
-        pop_update.loc[on_mono & low_statin_if_mono & ~low_dose_if_low_statin] = parameters.TREATMENT.low_statin_high_dose
+        pop_update.loc[(on_mono & low_statin_if_mono
+                        & low_dose_if_low_statin)] = parameters.TREATMENT.low_statin_low_dose
+        pop_update.loc[(on_mono & low_statin_if_mono
+                        & ~low_dose_if_low_statin)] = parameters.TREATMENT.low_statin_high_dose
         pop_update.loc[on_mono & high_statin_if_mono] = parameters.TREATMENT.high_statin_low_dose
 
         # Multi pill doses
         on_multi = treated & ~mono_if_treated & ~fdc_if_multi
 
-        pop_update.loc[on_multi & low_potency_statin_if_not_fdc & low_dose_if_low_statin] = parameters.TREATMENT.low_statin_low_dose_multi
-        pop_update.loc[on_multi & low_potency_statin_if_not_fdc & ~low_dose_if_low_statin] = parameters.TREATMENT.low_statin_high_dose_multi
+        pop_update.loc[(on_multi & low_potency_statin_if_not_fdc
+                        & low_dose_if_low_statin)] = parameters.TREATMENT.low_statin_low_dose_multi
+        pop_update.loc[(on_multi & low_potency_statin_if_not_fdc
+                        & ~low_dose_if_low_statin)] = parameters.TREATMENT.low_statin_high_dose_multi
         pop_update.loc[on_multi & ~low_potency_statin_if_not_fdc] = parameters.TREATMENT.high_statin_low_dose
 
         # FDC
@@ -201,16 +205,16 @@ class LDLCTreatmentAdherence:
                   != project_globals.ISCHEMIC_STROKE_SUSCEPTIBLE_STATE_NAME)
         had_cve = ihd | stroke
 
-        treated = pop_status[parameters.TREATMENT] != 'none'
-        multi_pill = pop_status[parameters.TREATMENT].isin([parameters.TREATMENT.low_statin_low_dose_multi,
-                                                            parameters.TREATMENT.low_statin_high_dose_multi,
-                                                            parameters.TREATMENT.high_statin_low_dose_multi,
-                                                            parameters.TREATMENT.high_statin_high_dose_multi])
+        treated = pop_status[parameters.TREATMENT.name] != 'none'
+        multi_pill = pop_status[parameters.TREATMENT.name].isin([parameters.TREATMENT.low_statin_low_dose_multi,
+                                                                 parameters.TREATMENT.low_statin_high_dose_multi,
+                                                                 parameters.TREATMENT.high_statin_low_dose_multi,
+                                                                 parameters.TREATMENT.high_statin_high_dose_multi])
 
-        p_adherent.loc[~had_cve & ~multi_pill] = self.p_adherent[parameters.SINGLE_NO_CVE]
-        p_adherent.loc[~had_cve & multi_pill] = self.p_adherent[parameters.MULTI_NO_CVE]
-        p_adherent.loc[had_cve & ~multi_pill] = self.p_adherent[parameters.SINGLE_CVE]
-        p_adherent.loc[had_cve & multi_pill] = self.p_adherent[parameters.MULTI_CVE]
+        p_adherent.loc[treated & ~had_cve & ~multi_pill] = self.p_adherent[parameters.SINGLE_NO_CVE]
+        p_adherent.loc[treated & ~had_cve & multi_pill] = self.p_adherent[parameters.MULTI_NO_CVE]
+        p_adherent.loc[treated & had_cve & ~multi_pill] = self.p_adherent[parameters.SINGLE_CVE]
+        p_adherent.loc[treated & had_cve & multi_pill] = self.p_adherent[parameters.MULTI_CVE]
         return propensity < p_adherent
 
     @staticmethod
