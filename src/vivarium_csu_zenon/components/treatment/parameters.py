@@ -32,22 +32,22 @@ class _Treatments(NamedTuple):
     fibrates: str = 'fibrates'
     ezetimibe: str = 'ezetimibe'
 
-    low_statin_low_dose = 'low_potency_statin_low_dose'
-    low_statin_high_dose = 'low_potency_statin_high_dose'
-    high_statin_low_dose = 'high_potency_statin_low_dose'
-    high_statin_high_dose = 'high_potency_statin_high_dose'
+    low_statin_low_dose: str = 'low_potency_statin_low_dose'
+    low_statin_high_dose: str = 'low_potency_statin_high_dose'
+    high_statin_low_dose: str = 'high_potency_statin_low_dose'
+    high_statin_high_dose: str = 'high_potency_statin_high_dose'
 
     # Statin + ezetimibe multi pill
-    low_statin_low_dose_multi = 'low_potency_statin_low_dose_multi'
-    low_statin_high_dose_multi = 'low_potency_statin_high_dose_multi'
-    high_statin_low_dose_multi = 'high_potency_statin_low_dose_multi'
-    high_statin_high_dose_multi = 'high_potency_statin_high_dose_multi'
+    low_statin_low_dose_multi: str = 'low_potency_statin_low_dose_multi'
+    low_statin_high_dose_multi: str = 'low_potency_statin_high_dose_multi'
+    high_statin_low_dose_multi: str = 'high_potency_statin_low_dose_multi'
+    high_statin_high_dose_multi: str = 'high_potency_statin_high_dose_multi'
 
     # Statin + ezetimibe fdc
-    low_statin_low_dose_fdc = 'low_potency_statin_low_dose_fdc'
-    low_statin_high_dose_fdc = 'low_potency_statin_high_dose_fdc'
-    high_statin_low_dose_fdc = 'high_potency_statin_low_dose_fdc'
-    high_statin_high_dose_fdc = 'high_potency_statin_high_dose_fdc'
+    low_statin_low_dose_fdc: str = 'low_potency_statin_low_dose_fdc'
+    low_statin_high_dose_fdc: str = 'low_potency_statin_high_dose_fdc'
+    high_statin_low_dose_fdc: str = 'high_potency_statin_low_dose_fdc'
+    high_statin_high_dose_fdc: str = 'high_potency_statin_high_dose_fdc'
 
     @property
     def name(self) -> str:
