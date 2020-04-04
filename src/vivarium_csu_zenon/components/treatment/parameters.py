@@ -22,25 +22,40 @@ SWITCH_DRUG = 'switching_drugs'
 MONOTHERAPY = 'monotherapy'
 FDC = 'fdc'
 
-EZETIMIBE = 'ezetimibe'
-FIBRATES = 'fibrates'
 STATIN_HIGH = 'high_potency_statin'
 STATIN_LOW = 'low_potency_statin'
-LIFESTYLE = 'lifestyle_intervention'
 
 
-class __StatinDoses(NamedTuple):
+class _Treatments(NamedTuple):
     none: str = 'none'
-    low: str = 'low'
-    high: str = 'high'
+    lifestyle: str = 'lifestyle_intervention'
+    fibrates: str = 'fibrates'
+    ezetimibe: str = 'ezetimibe'
+
+    low_statin_low_dose = 'low_potency_statin_low_dose'
+    low_statin_high_dose = 'low_potency_statin_high_dose'
+    high_statin_low_dose = 'high_potency_statin_low_dose'
+    high_statin_high_dose = 'high_potency_statin_high_dose'
+
+    # Statin + ezetimibe multi pill
+    low_statin_low_dose_multi = 'low_potency_statin_low_dose_multi'
+    low_statin_high_dose_multi = 'low_potency_statin_high_dose_multi'
+    high_statin_low_dose_multi = 'high_potency_statin_low_dose_multi'
+    high_statin_high_dose_multi = 'high_potency_statin_high_dose_multi'
+
+    # Statin + ezetimibe fdc
+    low_statin_low_dose_fdc = 'low_potency_statin_low_dose_fdc'
+    low_statin_high_dose_fdc = 'low_potency_statin_high_dose_fdc'
+    high_statin_low_dose_fdc = 'high_potency_statin_low_dose_fdc'
+    high_statin_high_dose_fdc = 'high_potency_statin_high_dose_fdc'
+
+    @property
+    def name(self) -> str:
+        return 'ldlc_treatment_category'
 
 
-STATIN_DOSES = __StatinDoses()
+TREATMENT = _Treatments()
 
-HIGH_STATIN_HIGH = f'{STATIN_HIGH}_high_dose'
-HIGH_STATIN_LOW = f'{STATIN_HIGH}_low_dose'
-LOW_STATIN_HIGH = f'{STATIN_LOW}_high_dose'
-LOW_STATIN_LOW = f'{STATIN_LOW}_low_dose'
 
 SINGLE_NO_CVE = (0, 0)
 MULTI_NO_CVE = (1, 0)
