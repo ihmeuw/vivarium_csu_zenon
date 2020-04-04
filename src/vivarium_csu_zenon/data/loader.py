@@ -24,6 +24,7 @@ import vivarium_inputs.validation.raw as raw_validation
 from vivarium_csu_zenon import globals as project_globals, paths
 from vivarium_csu_zenon.utilities import sanitize_location
 
+
 def get_data(lookup_key: str, location: str) -> pd.DataFrame:
     """Retrieves data from an appropriate source.
 
@@ -506,6 +507,7 @@ def normalize_ikf_exposure_distribution(data: pd.DataFrame) -> pd.DataFrame:
     for column, fill_val in unused_data.items():
         data[column] = fill_val
     return data
+
 
 def load_ikf_relative_risk(key: str, location: str) -> pd.DataFrame:
     key = EntityKey(key)

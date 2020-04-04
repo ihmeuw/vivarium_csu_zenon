@@ -4,7 +4,7 @@ from typing import Dict, List, NamedTuple
 
 import pandas as pd
 
-from vivarium_csu_zenon import globals as project_globals
+from vivarium_csu_zenon import globals as project_globals, paths
 from vivarium_csu_zenon.components.treatment import parameters
 
 
@@ -20,6 +20,7 @@ FOLLOW_UP_MAX = 6 * 30
 LDLC_AT_TREATMENT_START = 'ldlc_at_treatment_start'
 PROPORTION_REDUCTION = 'initial_treatment_proportion_reduction'
 LDLC_TREATMENT_ADHERENCE = 'ldlc_treatment_adherence'
+LDLC_TREATMENT_ADHERENCE_PROPENSITY = 'ldlc_treatment_adherence_propensity'
 LDL_CHOLESTEROL_EXPOSURE = 'high_ldl_cholesterol.exposure'
 PATIENT_PROFILE = 'patient_profile'
 BACKGROUND_VISIT = 'background_visit'
@@ -72,15 +73,21 @@ class TreatmentAlgorithm:
             The simulation builder object.
 
         """
+        treatment_params = self.load_treatment_parameters(builder)
         scenario = builder.configuration.ldlc_treatment_algorithm.scenario
         if scenario != SCENARIOS.baseline:
             raise NotImplementedError
-        self.visit_doctor = CurrentPractice(self.patient_profile)
+        self.visit_doctor = CurrentPractice(self.patient_profile, treatment_params)
 
         self.clock = builder.time.clock()
         self.randomness = builder.randomness.get_stream(self.name)
         utilization_data = builder.data.load(project_globals.POPULATION.HEALTHCARE_UTILIZATION)
-        self.background_utilization_rate = builder.lookup.build_table(utilization_data)
+        background_utilization_rate = builder.lookup.build_table(utilization_data,
+                                                                 parameter_columns=['age', 'year'],
+                                                                 key_columns=['sex'])
+        self.background_utilization_rate = builder.value.register_rate_producer('utilization_rate',
+                                                                                background_utilization_rate,
+                                                                                requires_columns=['age', 'sex'])
 
         self.population_view = builder.population.get_view([project_globals.IHD_MODEL_NAME,
                                                             project_globals.ISCHEMIC_STROKE_MODEL_NAME,
@@ -94,13 +101,12 @@ class TreatmentAlgorithm:
 
     def on_initialize_simulants(self, pop_data: 'SimulantData'):
         """For patients currently treated assign them a follow up date."""
-        follow_up_date = pd.Series(pd.NaT, index=pop_data.index)
+        follow_up_date = pd.Series(pd.NaT, index=pop_data.index, name=FOLLOW_UP_DATE)
         currently_treated = self.patient_profile.currently_treated(pop_data.index)
         # noinspection PyTypeChecker
         follow_up_date.loc[currently_treated] = pd.Series(
             self.clock() + self.random_time_delta(pd.Series(0, index=pop_data.index),
-                                                  pd.Series(FOLLOW_UP_MAX, index=pop_data.index)),
-            index=pop_data.index, name=FOLLOW_UP_DATE)
+                                                  pd.Series(FOLLOW_UP_MAX, index=pop_data.index)), index=pop_data.index)
         self.population_view.update(follow_up_date)
 
     def on_time_step_cleanup(self, event: 'Event'):
@@ -125,7 +131,8 @@ class TreatmentAlgorithm:
         follow_up_start, follow_up_end = self.visit_doctor.for_follow_up(to_follow_up)
         new_follow_up = self.schedule_follow_up(follow_up_start, follow_up_end)
         maybe_follow_up = event.index.difference(to_follow_up)
-        utilization_rate = self.background_utilization_rate(maybe_follow_up).value
+        # noinspection PyTypeChecker
+        utilization_rate = self.background_utilization_rate(maybe_follow_up)  # type: pd.Series
         to_background_visit = self.randomness.filter_for_rate(maybe_follow_up,
                                                               utilization_rate,
                                                               additional_key=BACKGROUND_VISIT)
@@ -145,6 +152,25 @@ class TreatmentAlgorithm:
         """Generate a random time delta for each individual in the start
         and end series."""
         return pd.to_timedelta(start + (end - start) * self.randomness.get_draw(start.index))
+
+    @staticmethod
+    def load_treatment_parameters(builder: 'Builder'):
+        """Load treatment transition matrices for the scenario."""
+        scenario = builder.configuration.ldlc_treatment_algorithm.scenario
+        location = builder.configuration.input_data.location
+        treatment_parameters = {}
+        for transition_name, path in paths.BASELINE_TRANSITION_PARAMETERS.items():
+            treatment_param = (pd.read_csv(path)
+                               .set_index(['location', 'scenario'])
+                               .loc[(location, scenario)]
+                               .reset_index(drop=True)
+                               .set_index(['current_treatment', 'next_treatment'])
+                               .unstack())
+            treatment_param.columns = treatment_param.columns.droplevel()
+            treatment_param.columns.name = None
+            treatment_param.index.name = None
+            treatment_parameters[transition_name] = treatment_param
+        return treatment_parameters
 
 
 class PatientProfile:
@@ -166,7 +192,7 @@ class PatientProfile:
         self.randomness = builder.randomness.get_stream(self.name)
         self.population_view = builder.population.get_view([parameters.TREATMENT.name,
                                                             LDLC_AT_TREATMENT_START, 'had_adverse_event',
-                                                            'ldlc_treatment_adherence'])
+                                                            LDLC_TREATMENT_ADHERENCE_PROPENSITY])
         builder.population.initializes_simulants(self.on_initialize_simulants,
                                                  creates_columns=[LDLC_AT_TREATMENT_START],
                                                  requires_columns=[PROPORTION_REDUCTION],
@@ -190,7 +216,7 @@ class PatientProfile:
         """Determine whether a patient has had an adverse event since they
         were last put on treatment."""
         pop = self.population_view.subview(['had_adverse_event']).get(index)
-        return pop.loc[:, 'had_adverse_event']
+        return pop['had_adverse_event']
 
     def at_target(self, index: pd.Index) -> pd.Series:
         """Returns whether each individual is at their ldlc target."""
@@ -218,78 +244,31 @@ class PatientProfile:
         # noinspection PyTypeChecker
         return self.randomness.get_draw(index, additional_key='will_treat_if_bad') < self.p_treatment_given_high
 
-    def start_new_monotherapy(self, index: pd.Index, p_low_statin: float):
-        """Starts a group of people on a new monotherapy.
-
-        Parameters
-        ----------
-        index
-            The people to start on therapy.
-        p_low_statin
-            Probability that an individual will be assigned low potency
-            statin if they're assigned statins as a monotherapy.
-
-        """
-        new_treatment = pd.DataFrame({
-            parameters.TREATMENT.name: parameters.TREATMENT.none,
-            LDLC_AT_TREATMENT_START: self.ldlc(index)
-        }, index=index)
-        treatment_type = self.randomness.choice(index,
-                                                list(self.p_treatment_type.keys()),
-                                                list(self.p_treatment_type.values()),
-                                                additional_key=TREATMENT_TYPE)
-        low_statin = treatment_type == parameters.STATIN_LOW
-        high_statin = treatment_type == parameters.STATIN_HIGH
-        ezetimibe = treatment_type == parameters.TREATMENT.ezetimibe
-        fibrates = treatment_type == parameters.TREATMENT.fibrates
-
-        # noinspection PyTypeChecker
-        low_dose_if_statin = self.randomness.get_draw(index, additional_key=LOW_DOSE_IF_STATIN) < p_low_statin
-
-        new_treatment.loc[ezetimibe] = parameters.TREATMENT.ezetimibe
-        new_treatment.loc[fibrates] = parameters.TREATMENT.fibrates
-        new_treatment.loc[low_statin & low_dose_if_statin] = parameters.TREATMENT.low_statin_low_dose
-        new_treatment.loc[low_statin & ~low_dose_if_statin] = parameters.TREATMENT.low_statin_high_dose
-        new_treatment.loc[high_statin & low_dose_if_statin] = parameters.TREATMENT.high_statin_low_dose
-        new_treatment.loc[high_statin & ~low_dose_if_statin] = parameters.TREATMENT.high_statin_high_dose
-
+    def update_treatment(self, index: pd.Index, transition_params):
+        current_treatment = self.population_view.subview([parameters.TREATMENT.name]).get(index)
+        current_treatment = current_treatment[parameters.TREATMENT.name]
+        new_treatment = self.randomness.choice(index, transition_params.columns,
+                                               transition_params.loc[current_treatment],
+                                               additional_key='update_treatment')
+        new_treatment.name = parameters.TREATMENT.name
+        pop_update = pd.DataFrame({
+            parameters.TREATMENT.name: new_treatment,
+            LDLC_TREATMENT_ADHERENCE_PROPENSITY: self.randomness.get_draw(index, additional_key='adherence_update')
+        })
         self.population_view.update(new_treatment)
-
-    def change_meds(self, index: pd.Index):
-        """Swap medications if someone, e.g. has an adverse event.
-        Or if the doctor feels like it.
-
-        """
-        cols = [parameters.TREATMENT.name, 'had_adverse_event', 'ldlc_treatment_adherence_propensity']
-        current_meds = self.population_view.subview(cols).get(index)
-        # TODO: Map treatment based on transition matrix
-        new_treatment = current_meds.copy()
-
-        new_treatment.loc[:, 'had_adverse_event'] = False
-        new_treatment.loc[:, 'ldlc_treatment_adherence_propensity'] = self.randomness.get_draw(
-            new_treatment.index, additional_key='change_tx_adherence'
-        )
-        self.population_view.update(new_treatment)
-
-    def simple_ramp(self, index: pd.Index):
-        """Change treatment by adding or switching drugs or increasing dose."""
-        pop = self.population_view.subview([parameters.TREATMENT.name]).get(index)
-        # TODO: Map treatment based on transition matrix.
-        pop_update = pop.copy()
-        self.population_view.update(pop_update)
 
     @staticmethod
     def load_measurement_p(builder: 'Builder') -> float:
         """Load probability that ldlc will be measured."""
-        location = builder.configuration.location.input_data.location
-        draw = builder.configuration.location.input_data.input_draw_number
+        location = builder.configuration.input_data.location
+        draw = builder.configuration.input_data.input_draw_number
         return parameters.sample_probability_testing_ldl_c(location, draw)
 
     @staticmethod
     def load_treatment_p(builder: 'Builder') -> float:
         """Load probability of treatment after high ldl measurements."""
-        location = builder.configuration.location.input_data.location
-        draw = builder.configuration.location.input_data.input_draw_number
+        location = builder.configuration.input_data.location
+        draw = builder.configuration.input_data.input_draw_number
         return parameters.sample_probability_rx_given_high_ldl_c(location, draw)
 
     @staticmethod
@@ -308,33 +287,34 @@ class PatientProfile:
 class CurrentPractice:
     """Business as usual treatment scenario."""
 
-    p_low_statin = parameters.LOW_DOSE_THRESHOLD
     ldlc_threshold = parameters.HIGH_LDL_BASELINE
 
-    def __init__(self, patient_profile: PatientProfile):
+    def __init__(self, patient_profile: PatientProfile, transition_parameters: Dict[str, pd.DataFrame]):
         self.patient_profile = patient_profile
+        self.transition_parameters = transition_parameters
 
     def for_acute_cardiovascular_event(self, index: pd.Index):
         """Treat for an stroke or myocardial infarction."""
-        not_treated = index[~self.patient_profile.currently_treated(index)]
-        self.patient_profile.start_new_monotherapy(not_treated, self.p_low_statin)
-        return pd.Series(FOLLOW_UP_MIN, index=not_treated), pd.Series(FOLLOW_UP_MAX, index=not_treated)
+
+        self.patient_profile.update_treatment(index, self.transition_parameters['post_cve'])
+        return pd.Series(FOLLOW_UP_MIN, index=index), pd.Series(FOLLOW_UP_MAX, index=index)
 
     def for_follow_up(self, index: pd.Index):
         """Treat for a follow up visit."""
         had_adverse_event = self.patient_profile.had_adverse_event(index)
         to_switch = index[had_adverse_event]
-        self.patient_profile.change_meds(to_switch)
+        self.patient_profile.update_treatment(to_switch, self.transition_parameters['adverse_event'])
         not_at_target = ~self.patient_profile.at_target(index)
         is_adherent = self.patient_profile.is_adherent(index)
         to_ramp = index[not_at_target & is_adherent]
-        self.patient_profile.simple_ramp(to_ramp)
+        self.patient_profile.update_treatment(to_ramp, self.transition_parameters['ramp_up'])
         return pd.Series(FOLLOW_UP_MIN, index=index), pd.Series(FOLLOW_UP_MAX, index=index)
 
     def for_background_visit(self, index: pd.Index):
         """Treat for a background visit"""
+        currently_treated = self.patient_profile.currently_treated(index)
         measured_and_bad = self.patient_profile.sbp_is_measured_and_above_threshold(index, self.ldlc_threshold)
         will_treat_if_bad = self.patient_profile.will_treat_if_bad(index)
-        to_treat = index[measured_and_bad & will_treat_if_bad]
-        self.patient_profile.start_new_monotherapy(to_treat, self.p_low_statin)
+        to_treat = index[~currently_treated & measured_and_bad & will_treat_if_bad]
+        self.patient_profile.update_treatment(to_treat, self.transition_parameters['initial_treatment'])
         return pd.Series(FOLLOW_UP_MIN, index=index), pd.Series(FOLLOW_UP_MAX, index=index)
