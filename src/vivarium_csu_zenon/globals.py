@@ -522,6 +522,6 @@ def RESULT_COLUMNS(kind='all'):
                               for field, values in TEMPLATE_FIELD_MAP.items() if f'{{{field}}}' in template}
         fields, value_groups = filtered_field_map.keys(), itertools.product(*filtered_field_map.values())
         for value_group in value_groups:
-            columns.append(template.format(**{field: value for field, value in zip(fields, value_group)}).lower())
+            columns.append(template.format(**{field: value for field, value in zip(fields, value_group)}))
     return columns
 
