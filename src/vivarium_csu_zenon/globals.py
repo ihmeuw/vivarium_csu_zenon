@@ -359,7 +359,7 @@ DISEASE_MODEL_MAP = {
 STATES = tuple(state for model in DISEASE_MODELS for state in DISEASE_MODEL_MAP[model]['states'])
 TRANSITIONS = tuple(transition for model in DISEASE_MODELS for transition in DISEASE_MODEL_MAP[model]['transitions'])
 
-# CVD Risk Categories
+# Risk Categories
 CVD_VERY_HIGH_RISK = 'very_high_risk'
 CVD_HIGH_RISK = 'high_risk'
 CVD_MODERATE_RISK = 'moderate_risk'
@@ -383,7 +383,17 @@ CORRELATED_PROPENSITY_COLUMNS = [
 # Stratification Constants #
 ############################
 
-CVD_RISK_CATEGORIES = [CVD_VERY_HIGH_RISK, CVD_HIGH_RISK, CVD_MODERATE_RISK, CVD_LOW_RISK]
+# Risk Categories
+HIGH_RISK = 'high'
+LOW_RISK = 'low'
+
+RISK_CATEGORIES = [HIGH_RISK, LOW_RISK]
+
+# ACS Categories
+POST_CVE = 'post'
+NO_CVE = 'none'
+
+ACS_CATEGORIES = [POST_CVE, NO_CVE]
 
 
 class __RiskGroups(NamedTuple):
@@ -418,7 +428,7 @@ TOTAL_YLLS_COLUMN = 'years_of_life_lost'
 # Columns from parallel runs
 INPUT_DRAW_COLUMN = 'input_draw'
 RANDOM_SEED_COLUMN = 'random_seed'
-OUTPUT_SCENARIO_COLUMN = 'scenario'
+OUTPUT_SCENARIO_COLUMN = 'ldlc_treatment_algorithm.scenarios'
 
 STANDARD_COLUMNS = {
     'total_population': TOTAL_POPULATION_COLUMN,
@@ -431,12 +441,12 @@ THROWAWAY_COLUMNS = ([f'{state}_event_count' for state in STATES]
                      + [f'{state}_prevalent_cases_at_sim_end' for state in STATES])
 
 TOTAL_POPULATION_COLUMN_TEMPLATE = 'total_population_{POP_STATE}'
-PERSON_TIME_COLUMN_TEMPLATE = 'person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_cvd_{CVD_RISK}'
-DEATH_COLUMN_TEMPLATE = 'death_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_cvd_{CVD_RISK}'
-YLLS_COLUMN_TEMPLATE = 'ylls_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_cvd_{CVD_RISK}'
-YLDS_COLUMN_TEMPLATE = 'ylds_due_to_{CAUSE_OF_DISABILITY}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_cvd_{CVD_RISK}'
-STATE_PERSON_TIME_COLUMN_TEMPLATE = '{STATE}_person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_cvd_{CVD_RISK}'
-TRANSITION_COUNT_COLUMN_TEMPLATE = '{TRANSITION}_event_count_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_cvd_{CVD_RISK}'
+PERSON_TIME_COLUMN_TEMPLATE = 'person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_LDL_{ldl}_SBP_{sbp}_FPG_{fpg}_ACS_{acs}'
+DEATH_COLUMN_TEMPLATE = 'death_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_LDL_{ldl}_SBP_{sbp}_FPG_{fpg}_ACS_{acs}'
+YLLS_COLUMN_TEMPLATE = 'ylls_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_LDL_{ldl}_SBP_{sbp}_FPG_{fpg}_ACS_{acs}'
+YLDS_COLUMN_TEMPLATE = 'ylds_due_to_{CAUSE_OF_DISABILITY}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_LDL_{ldl}_SBP_{sbp}_FPG_{fpg}_ACS_{acs}'
+STATE_PERSON_TIME_COLUMN_TEMPLATE = '{STATE}_person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_LDL_{ldl}_SBP_{sbp}_FPG_{fpg}_ACS_{acs}'
+TRANSITION_COUNT_COLUMN_TEMPLATE = '{TRANSITION}_event_count_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_LDL_{ldl}_SBP_{sbp}_FPG_{fpg}_ACS_{acs}'
 
 COLUMN_TEMPLATES = {
     'population': TOTAL_POPULATION_COLUMN_TEMPLATE,
@@ -491,7 +501,10 @@ TEMPLATE_FIELD_MAP = {
     'CAUSE_OF_DISABILITY': CAUSES_OF_DISABILITY,
     'STATE': STATES,
     'TRANSITION': TRANSITIONS,
-    'CVD_RISK': CVD_RISK_CATEGORIES,
+    'LDL': RISK_CATEGORIES,
+    'SBP': RISK_CATEGORIES,
+    'FPG': RISK_CATEGORIES,
+    'ACS': ACS_CATEGORIES,
 }
 
 
