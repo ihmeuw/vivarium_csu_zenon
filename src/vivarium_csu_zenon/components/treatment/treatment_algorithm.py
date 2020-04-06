@@ -75,9 +75,12 @@ class TreatmentAlgorithm:
         """
         treatment_params = self.load_treatment_parameters(builder)
         scenario = builder.configuration.ldlc_treatment_algorithm.scenario
-        if scenario != SCENARIOS.baseline:
-            raise NotImplementedError
-        self.visit_doctor = CurrentPractice(self.patient_profile, treatment_params)
+        if scenario == SCENARIOS.baseline:
+            self.visit_doctor = CurrentPractice(self.patient_profile, treatment_params)
+        elif scenario in SCENARIOS:
+            self.visit_doctor = GuidelineTreatment(self.patient_profile, treatment_params)
+        else:
+            raise ValueError(f'Invalid scenario {scenario}')
 
         self.clock = builder.time.clock()
         self.randomness = builder.randomness.get_stream(self.name)
@@ -159,7 +162,7 @@ class TreatmentAlgorithm:
         scenario = builder.configuration.ldlc_treatment_algorithm.scenario
         location = builder.configuration.input_data.location
         treatment_parameters = {}
-        for transition_name, path in paths.BASELINE_TRANSITION_PARAMETERS.items():
+        for transition_name, path in paths.TRANSITION_PARAMETERS.items():
             treatment_param = (pd.read_csv(path)
                                .set_index(['location', 'scenario'])
                                .loc[(location, scenario)]
@@ -189,6 +192,7 @@ class PatientProfile:
         self.p_measurement = self.load_measurement_p(builder)
         self.p_treatment_given_high = self.load_treatment_p(builder)
         self.p_treatment_type = self.load_treatment_type_p(builder)
+        self.cvd_risk = builder.value.get_value('cvd_risk_category')
         self.randomness = builder.randomness.get_stream(self.name)
         self.population_view = builder.population.get_view([parameters.TREATMENT.name,
                                                             LDLC_AT_TREATMENT_START, 'had_adverse_event',
@@ -255,7 +259,44 @@ class PatientProfile:
             parameters.TREATMENT.name: new_treatment,
             LDLC_TREATMENT_ADHERENCE_PROPENSITY: self.randomness.get_draw(index, additional_key='adherence_update')
         })
-        self.population_view.update(new_treatment)
+        self.population_view.update(pop_update)
+
+    def start_guideline_treatment(self, index: pd.Index):
+        new_treatment = pd.Series(parameters.TREATMENT.none, index=index, name=parameters.TREATMENT.name)
+        adherence = pd.Series(0, index=index, name=LDLC_TREATMENT_ADHERENCE_PROPENSITY)
+        cvd_risk_category = self.cvd_risk(index)
+        ldlc = self.ldlc(index)
+
+        lifestyle = (
+                ((cvd_risk_category == project_globals.CVD_VERY_HIGH_RISK) & (ldlc < 1.8))
+
+                | ((cvd_risk_category == project_globals.CVD_HIGH_RISK) & (ldlc < 2.6))
+
+                | (((cvd_risk_category == project_globals.CVD_MODERATE_RISK)
+                    | (cvd_risk_category == project_globals.CVD_LOW_RISK))
+                   & ((3 < ldlc) & (ldlc < 4.9)))
+        )
+
+        high_potency_high_dose_statin = (
+            ((cvd_risk_category == project_globals.CVD_VERY_HIGH_RISK) & (ldlc >= 1.8))
+
+            | ((cvd_risk_category == project_globals.CVD_HIGH_RISK) & (ldlc >= 2.6))
+
+            | (((cvd_risk_category == project_globals.CVD_MODERATE_RISK)
+                | (cvd_risk_category == project_globals.CVD_LOW_RISK))
+               & (ldlc >= 4.9))
+        )
+
+        new_treatment.loc[lifestyle] = parameters.TREATMENT.lifestyle
+        new_treatment.loc[high_potency_high_dose_statin] = parameters.TREATMENT.high_statin_high_dose
+        adherence.loc[high_potency_high_dose_statin] = self.randomness.get_draw(index[high_potency_high_dose_statin],
+                                                                                additional_key='new_guideline_tx')
+        pop_update = pd.DataFrame({
+            parameters.TREATMENT.name: new_treatment,
+            LDLC_TREATMENT_ADHERENCE_PROPENSITY: adherence
+        })
+        self.population_view.update(pop_update)
+        return index[high_potency_high_dose_statin], index[lifestyle]
 
     @staticmethod
     def load_measurement_p(builder: 'Builder') -> float:
@@ -295,7 +336,6 @@ class CurrentPractice:
 
     def for_acute_cardiovascular_event(self, index: pd.Index):
         """Treat for an stroke or myocardial infarction."""
-
         self.patient_profile.update_treatment(index, self.transition_parameters['post_cve'])
         return pd.Series(FOLLOW_UP_MIN, index=index), pd.Series(FOLLOW_UP_MAX, index=index)
 
@@ -318,3 +358,43 @@ class CurrentPractice:
         to_treat = index[~currently_treated & measured_and_bad & will_treat_if_bad]
         self.patient_profile.update_treatment(to_treat, self.transition_parameters['initial_treatment'])
         return pd.Series(FOLLOW_UP_MIN, index=index), pd.Series(FOLLOW_UP_MAX, index=index)
+
+
+class GuidelineTreatment:
+
+    follow_up_min = 4 * 7  # 4 weeks
+    follow_up_max = 6 * 7  # 6 weeks
+    ldlc_threshold = 3
+
+    def __init__(self, patient_profile: PatientProfile, transition_parameters: Dict[str, pd.DataFrame]):
+        self.patient_profile = patient_profile
+        self.transition_parameters = transition_parameters
+
+    def for_acute_cardiovascular_event(self, index: pd.Index):
+        """Treat for an stroke or myocardial infarction."""
+        self.patient_profile.update_treatment(index, self.transition_parameters['post_cve'])
+        return pd.Series(self.follow_up_min, index=index), pd.Series(self.follow_up_max, index=index)
+
+    def for_follow_up(self, index: pd.Index):
+        """Treat for a follow up visit."""
+        had_adverse_event = self.patient_profile.had_adverse_event(index)
+        to_switch = index[had_adverse_event]
+        self.patient_profile.update_treatment(to_switch, self.transition_parameters['adverse_event'])
+        not_at_target = ~self.patient_profile.at_target(index)
+        is_adherent = self.patient_profile.is_adherent(index)
+        to_ramp = index[not_at_target & is_adherent]
+        self.patient_profile.update_treatment(to_ramp, self.transition_parameters['ramp_up'])
+        return pd.Series(self.follow_up_min, index=index), pd.Series(self.follow_up_max, index=index)
+
+    def for_background_visit(self, index: pd.Index):
+        """Treat for a background visit"""
+        currently_treated = self.patient_profile.currently_treated(index)
+        measured_and_bad = self.patient_profile.sbp_is_measured_and_above_threshold(index, self.ldlc_threshold)
+        will_treat_if_bad = self.patient_profile.will_treat_if_bad(index)
+        to_treat = index[~currently_treated & measured_and_bad & will_treat_if_bad]
+        follow_up_short, follow_up_long = self.patient_profile.start_guideline_treatment(to_treat)
+        follow_up_min = pd.Series(self.follow_up_min, index=follow_up_short.union(follow_up_long))
+        follow_up_min[follow_up_long] = FOLLOW_UP_MIN
+        follow_up_max = pd.Series(self.follow_up_max, index=follow_up_short.union(follow_up_long))
+        follow_up_max[follow_up_long] = FOLLOW_UP_MAX
+        return follow_up_min, follow_up_max
