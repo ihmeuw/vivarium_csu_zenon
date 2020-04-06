@@ -79,6 +79,9 @@ configuration:
         age_end: 125
         exit_age: 125
 
+    ldlc_treatment_algorithm:
+        scenario: 'baseline'
+
     metrics:
         disability:
             by_age: True

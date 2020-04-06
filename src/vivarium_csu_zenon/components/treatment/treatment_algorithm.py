@@ -356,7 +356,7 @@ class CurrentPractice:
         measured_and_bad = self.patient_profile.sbp_is_measured_and_above_threshold(index, self.ldlc_threshold)
         will_treat_if_bad = self.patient_profile.will_treat_if_bad(index)
         to_treat = index[~currently_treated & measured_and_bad & will_treat_if_bad]
-        self.patient_profile.update_treatment(to_treat, self.transition_parameters['initial_treatment'])
+        self.patient_profile.update_treatment(to_treat, self.transition_parameters['treatment_start'])
         return pd.Series(FOLLOW_UP_MIN, index=index), pd.Series(FOLLOW_UP_MAX, index=index)
 
 

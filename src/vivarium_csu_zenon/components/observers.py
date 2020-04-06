@@ -124,7 +124,7 @@ class ResultsStratifier:
 
         """
         cvd_risk = labels[0]
-        measure_data = {f'{k}_cvd_{cvd_risk}': v for k, v in measure_data.items()}
+        measure_data = {f'{k}_{cvd_risk}': v for k, v in measure_data.items()}
         return measure_data
 
 
