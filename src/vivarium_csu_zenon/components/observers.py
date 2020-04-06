@@ -36,7 +36,51 @@ class ResultsStratifier:
         """Perform this component's setup."""
         # The only thing you should request here are resources necessary for
         # results stratification.
-        self.cvd_risk_category = builder.value.get_value('cvd_risk_category')
+        self.sbp = builder.value.get_value('high_systolic_blood_pressure.exposure')
+        self.ldlc = builder.value.get_value('high_ldl_cholesterol.exposure')
+        columns_required = [project_globals.IHD_MODEL_NAME,
+                            project_globals.ISCHEMIC_STROKE_MODEL_NAME,
+                            project_globals.DIABETES_MELLITUS_MODEL_NAME]
+        self.population_view = builder.population.get_view(columns_required)
+        self.risk_groups = None
+        builder.population.initializes_simulants(self.on_initialize_simulants,
+                                                 requires_columns=columns_required,
+                                                 requires_values=['high_systolic_blood_pressure.exposure',
+                                                                  'high_ldl_cholesterol.exposure'])
+
+    def on_initialize_simulants(self, pop_data: 'SimulantData'):
+        risk_groups = pd.Series('', index=pop_data.index)
+        pop = self.population_view.get(pop_data.index)
+        sbp = self.sbp(pop_data.index)
+        ldlc = self.ldlc(pop_data.index)
+
+        post_acs = (
+                (pop[project_globals.IHD_MODEL_NAME] != project_globals.IHD_SUSCEPTIBLE_STATE_NAME)
+                | (pop[project_globals.ISCHEMIC_STROKE_MODEL_NAME]
+                   != project_globals.ISCHEMIC_STROKE_SUSCEPTIBLE_STATE_NAME)
+        )
+        high_sbp = sbp > 140
+        high_ldlc = ldlc > 5
+        high_fpg = (pop[project_globals.DIABETES_MELLITUS_MODEL_NAME]
+                    != project_globals.DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME)
+
+        risk_groups.loc[high_sbp & high_ldlc & high_fpg & post_acs] = project_globals.RISK_GROUPS.cat1
+        risk_groups.loc[high_sbp & high_ldlc & high_fpg & ~post_acs] = project_globals.RISK_GROUPS.cat2
+        risk_groups.loc[high_sbp & high_ldlc & ~high_fpg & post_acs] = project_globals.RISK_GROUPS.cat3
+        risk_groups.loc[high_sbp & high_ldlc & ~high_fpg & ~post_acs] = project_globals.RISK_GROUPS.cat4
+        risk_groups.loc[high_sbp & ~high_ldlc & high_fpg & post_acs] = project_globals.RISK_GROUPS.cat5
+        risk_groups.loc[high_sbp & ~high_ldlc & high_fpg & ~post_acs] = project_globals.RISK_GROUPS.cat6
+        risk_groups.loc[high_sbp & ~high_ldlc & ~high_fpg & post_acs] = project_globals.RISK_GROUPS.cat7
+        risk_groups.loc[high_sbp & ~high_ldlc & ~high_fpg & ~post_acs] = project_globals.RISK_GROUPS.cat8
+        risk_groups.loc[~high_sbp & high_ldlc & high_fpg & post_acs] = project_globals.RISK_GROUPS.cat9
+        risk_groups.loc[~high_sbp & high_ldlc & high_fpg & ~post_acs] = project_globals.RISK_GROUPS.cat10
+        risk_groups.loc[~high_sbp & high_ldlc & ~high_fpg & post_acs] = project_globals.RISK_GROUPS.cat11
+        risk_groups.loc[~high_sbp & high_ldlc & ~high_fpg & ~post_acs] = project_globals.RISK_GROUPS.cat12
+        risk_groups.loc[~high_sbp & ~high_ldlc & high_fpg & post_acs] = project_globals.RISK_GROUPS.cat13
+        risk_groups.loc[~high_sbp & ~high_ldlc & high_fpg & ~post_acs] = project_globals.RISK_GROUPS.cat14
+        risk_groups.loc[~high_sbp & ~high_ldlc & ~high_fpg & post_acs] = project_globals.RISK_GROUPS.cat15
+        risk_groups.loc[~high_sbp & ~high_ldlc & ~high_fpg & ~post_acs] = project_globals.RISK_GROUPS.cat16
+        self.risk_groups = risk_groups
 
     def group(self, population: pd.DataFrame) -> Iterable[Tuple[Tuple[str, ...], pd.DataFrame]]:
         """Takes the full population and yields stratified subgroups.
@@ -52,14 +96,13 @@ class ResultsStratifier:
             corresponding to those labels.
 
         """
-
-        cvd_risk = self.cvd_risk_category(population.index)
-        for cvd_risk_cat in project_globals.CVD_RISK_CATEGORIES:
+        cardiovascular_risk = self.risk_groups.loc[population.index]
+        for risk_cat in project_globals.RISK_GROUPS:
             if population.empty:
                 pop_in_group = population
             else:
-                pop_in_group = population.loc[cvd_risk == cvd_risk_cat]
-            yield (cvd_risk_cat,), pop_in_group
+                pop_in_group = population.loc[cardiovascular_risk == risk_cat]
+            yield (risk_cat,), pop_in_group
 
     @staticmethod
     def update_labels(measure_data: Dict[str, float], labels: Tuple[str, ...]) -> Dict[str, float]:

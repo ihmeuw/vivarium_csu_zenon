@@ -379,13 +379,33 @@ CORRELATED_PROPENSITY_COLUMNS = [
     DIABETES_PROPENSITY_COLUMN,
 ]
 
-
-
-########################
+############################
 # Stratification Constants #
-########################
+############################
 
 CVD_RISK_CATEGORIES = [CVD_VERY_HIGH_RISK, CVD_HIGH_RISK, CVD_MODERATE_RISK, CVD_LOW_RISK]
+
+
+class __RiskGroups(NamedTuple):
+    cat1: str = 'LDL_high_SBP_high_FPG_high_ACS_post'
+    cat2: str = 'LDL_high_SBP_high_FPG_high_ACS_none'
+    cat3: str = 'LDL_high_SBP_high_FPG_low_ACS_post'
+    cat4: str = 'LDL_high_SBP_high_FPG_low_ACS_none'
+    cat5: str = 'LDL_high_SBP_low_FPG_high_ACS_post'
+    cat6: str = 'LDL_high_SBP_low_FPG_high_ACS_none'
+    cat7: str = 'LDL_high_SBP_low_FPG_low_ACS_post'
+    cat8: str = 'LDL_high_SBP_low_FPG_low_ACS_none'
+    cat9: str = 'LDL_low_SBP_high_FPG_high_ACS_post'
+    cat10: str = 'LDL_low_SBP_high_FPG_high_ACS_none'
+    cat11: str = 'LDL_low_SBP_high_FPG_low_ACS_post'
+    cat12: str = 'LDL_low_SBP_high_FPG_low_ACS_none'
+    cat13: str = 'LDL_low_SBP_low_FPG_high_ACS_post'
+    cat14: str = 'LDL_low_SBP_low_FPG_high_ACS_none'
+    cat15: str = 'LDL_low_SBP_low_FPG_low_ACS_post'
+    cat16: str = 'LDL_low_SBP_low_FPG_low_ACS_none'
+
+
+RISK_GROUPS = __RiskGroups()
 
 #################################
 # Results columns and variables #
