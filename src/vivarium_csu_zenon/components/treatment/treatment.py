@@ -323,7 +323,7 @@ class AdverseEffects:
         self.population_view.update(pd.Series(False, index=pop_data.index, name='had_adverse_event'))
 
     def on_time_step(self, event: 'Event'):
-        pop = self.population_view.get(event.index)
+        pop = self.population_view.get(event.index, query='alive == "alive"')
         on_treatment = pop[parameters.TREATMENT.name] != parameters.TREATMENT.none
         # Lookup returns a series for scalar tables.  Yuck inconsistent.
         # noinspection PyTypeChecker

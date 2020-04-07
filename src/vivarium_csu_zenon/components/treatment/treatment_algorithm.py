@@ -117,7 +117,7 @@ class TreatmentAlgorithm:
         to the doctor as well.
 
         """
-        pop = self.population_view.get(event.index)
+        pop = self.population_view.get(event.index, query='alive == "alive"')
         # State table adjusts at the end of each event handler, so we already
         # this info even though it doesn't occur until the start of the
         # next time step.
@@ -129,7 +129,8 @@ class TreatmentAlgorithm:
 
     def on_time_step(self, event: 'Event'):
         """Determine if someone will go for a background or follow up visit."""
-        follow_up_date = self.population_view.subview([FOLLOW_UP_DATE]).get(event.index).follow_up_date
+        follow_up_date = self.population_view.subview([FOLLOW_UP_DATE]).get(event.index,
+                                                                            query='alive == "alive"').follow_up_date
         to_follow_up = follow_up_date[(self.clock() < follow_up_date) & (follow_up_date <= event.time)].index
         follow_up_start, follow_up_end = self.visit_doctor.for_follow_up(to_follow_up)
         new_follow_up = self.schedule_follow_up(follow_up_start, follow_up_end)

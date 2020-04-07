@@ -3,4 +3,4 @@ random_seed_count: 20
 
 branches:
   - ldlc_treatment_algorithm:
-      scenarios: ['baseline', 'guideline', 'guideline_and_new_treatment']
+      scenario: ['baseline', 'guideline', 'guideline_and_new_treatment']
