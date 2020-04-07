@@ -1,4 +1,4 @@
-from typing import List, NamedTuple
+from typing import List
 
 import pandas as pd
 from vivarium.framework.randomness import get_hash
@@ -24,38 +24,6 @@ FDC = 'fdc'
 
 STATIN_HIGH = 'high_potency_statin'
 STATIN_LOW = 'low_potency_statin'
-
-
-class _Treatments(NamedTuple):
-    none: str = 'none'
-    lifestyle: str = 'lifestyle_intervention'
-    fibrates: str = 'fibrates'
-    ezetimibe: str = 'ezetimibe'
-
-    low_statin_low_dose: str = 'low_potency_statin_low_dose'
-    low_statin_high_dose: str = 'low_potency_statin_high_dose'
-    high_statin_low_dose: str = 'high_potency_statin_low_dose'
-    high_statin_high_dose: str = 'high_potency_statin_high_dose'
-
-    # Statin + ezetimibe multi pill
-    low_statin_low_dose_multi: str = 'low_potency_statin_low_dose_multi'
-    low_statin_high_dose_multi: str = 'low_potency_statin_high_dose_multi'
-    high_statin_low_dose_multi: str = 'high_potency_statin_low_dose_multi'
-    high_statin_high_dose_multi: str = 'high_potency_statin_high_dose_multi'
-
-    # Statin + ezetimibe fdc
-    low_statin_low_dose_fdc: str = 'low_potency_statin_low_dose_fdc'
-    low_statin_high_dose_fdc: str = 'low_potency_statin_high_dose_fdc'
-    high_statin_low_dose_fdc: str = 'high_potency_statin_low_dose_fdc'
-    high_statin_high_dose_fdc: str = 'high_potency_statin_high_dose_fdc'
-
-    @property
-    def name(self) -> str:
-        return 'ldlc_treatment_category'
-
-
-TREATMENT = _Treatments()
-
 
 SINGLE_NO_CVE = (0, 0)
 MULTI_NO_CVE = (1, 0)

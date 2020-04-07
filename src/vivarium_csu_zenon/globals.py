@@ -417,6 +417,37 @@ class __RiskGroups(NamedTuple):
 
 RISK_GROUPS = __RiskGroups()
 
+
+class _Treatments(NamedTuple):
+    none: str = 'none'
+    lifestyle: str = 'lifestyle_intervention'
+    fibrates: str = 'fibrates'
+    ezetimibe: str = 'ezetimibe'
+
+    low_statin_low_dose: str = 'low_potency_statin_low_dose'
+    low_statin_high_dose: str = 'low_potency_statin_high_dose'
+    high_statin_low_dose: str = 'high_potency_statin_low_dose'
+    high_statin_high_dose: str = 'high_potency_statin_high_dose'
+
+    # Statin + ezetimibe multi pill
+    low_statin_low_dose_multi: str = 'low_potency_statin_low_dose_multi'
+    low_statin_high_dose_multi: str = 'low_potency_statin_high_dose_multi'
+    high_statin_low_dose_multi: str = 'high_potency_statin_low_dose_multi'
+    high_statin_high_dose_multi: str = 'high_potency_statin_high_dose_multi'
+
+    # Statin + ezetimibe fdc
+    low_statin_low_dose_fdc: str = 'low_potency_statin_low_dose_fdc'
+    low_statin_high_dose_fdc: str = 'low_potency_statin_high_dose_fdc'
+    high_statin_low_dose_fdc: str = 'high_potency_statin_low_dose_fdc'
+    high_statin_high_dose_fdc: str = 'high_potency_statin_high_dose_fdc'
+
+    @property
+    def name(self) -> str:
+        return 'ldlc_treatment_category'
+
+
+TREATMENT = _Treatments()
+
 #################################
 # Results columns and variables #
 #################################
@@ -447,6 +478,7 @@ YLLS_COLUMN_TEMPLATE = 'ylls_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_ag
 YLDS_COLUMN_TEMPLATE = 'ylds_due_to_{CAUSE_OF_DISABILITY}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_LDL_{LDL}_SBP_{SBP}_FPG_{FPG}_ACS_{ACS}'
 STATE_PERSON_TIME_COLUMN_TEMPLATE = '{STATE}_person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_LDL_{LDL}_SBP_{SBP}_FPG_{FPG}_ACS_{ACS}'
 TRANSITION_COUNT_COLUMN_TEMPLATE = '{TRANSITION}_event_count_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_LDL_{LDL}_SBP_{SBP}_FPG_{FPG}_ACS_{ACS}'
+MISCELLANEOUS_PERSON_TIME_COLUMN_TEMPLATE = '{PT_KIND}_person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_LDL_{LDL}_SBP_{SBP}_FPG_{FPG}_ACS_{ACS}'
 
 COLUMN_TEMPLATES = {
     'population': TOTAL_POPULATION_COLUMN_TEMPLATE,
@@ -456,6 +488,7 @@ COLUMN_TEMPLATES = {
     'ylds': YLDS_COLUMN_TEMPLATE,
     'state_person_time': STATE_PERSON_TIME_COLUMN_TEMPLATE,
     'transition_count': TRANSITION_COUNT_COLUMN_TEMPLATE,
+    'miscellaneous_person_time': MISCELLANEOUS_PERSON_TIME_COLUMN_TEMPLATE
 }
 
 NON_COUNT_TEMPLATES = [
@@ -491,6 +524,7 @@ CAUSES_OF_DISABILITY = (
     CKD_MODEL_NAME,
 )
 CAUSES_OF_DEATH = CAUSES_OF_DISABILITY + ('other_causes',)
+PT_KINDS = ('fpg', 'sbp', 'ldlc', 'cv_risk_score', 'adherent', 'at_target',) + TREATMENT
 
 TEMPLATE_FIELD_MAP = {
     'POP_STATE': POP_STATES,
@@ -505,6 +539,7 @@ TEMPLATE_FIELD_MAP = {
     'SBP': RISK_CATEGORIES,
     'FPG': RISK_CATEGORIES,
     'ACS': ACS_CATEGORIES,
+    'PT_KIND': PT_KINDS
 }
 
 

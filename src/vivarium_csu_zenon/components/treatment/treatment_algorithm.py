@@ -97,7 +97,7 @@ class TreatmentAlgorithm:
                                                             FOLLOW_UP_DATE])
         builder.population.initializes_simulants(self.on_initialize_simulants,
                                                  creates_columns=[FOLLOW_UP_DATE],
-                                                 requires_columns=[parameters.TREATMENT.name])
+                                                 requires_columns=[project_globals.TREATMENT.name])
 
         builder.event.register_listener('time_step__cleanup', self.on_time_step_cleanup)
         builder.event.register_listener('time_step', self.on_time_step)
@@ -195,7 +195,7 @@ class PatientProfile:
         self.p_treatment_type = self.load_treatment_type_p(builder)
         self.cvd_risk = builder.value.get_value('cvd_risk_category')
         self.randomness = builder.randomness.get_stream(self.name)
-        self.population_view = builder.population.get_view([parameters.TREATMENT.name,
+        self.population_view = builder.population.get_view([project_globals.TREATMENT.name,
                                                             LDLC_AT_TREATMENT_START, 'had_adverse_event',
                                                             LDLC_TREATMENT_ADHERENCE_PROPENSITY])
         builder.population.initializes_simulants(self.on_initialize_simulants,
@@ -234,7 +234,7 @@ class PatientProfile:
         """Returns whether each individual is currently treated."""
         current_treatments = self.population_view.get(index)
         # noinspection PyTypeChecker
-        return current_treatments[parameters.TREATMENT.name] != parameters.TREATMENT.none
+        return current_treatments[project_globals.TREATMENT.name] != project_globals.TREATMENT.none
 
     def sbp_is_measured_and_above_threshold(self, index: pd.Index, threshold) -> pd.Series:
         """Determine if the doctor measures sbp and finds it above threshold."""
@@ -250,20 +250,21 @@ class PatientProfile:
         return self.randomness.get_draw(index, additional_key='will_treat_if_bad') < self.p_treatment_given_high
 
     def update_treatment(self, index: pd.Index, transition_params):
-        current_treatment = self.population_view.subview([parameters.TREATMENT.name]).get(index)
-        current_treatment = current_treatment[parameters.TREATMENT.name]
+        current_treatment = self.population_view.subview([project_globals.TREATMENT.name]).get(index)
+        current_treatment = current_treatment[project_globals.TREATMENT.name]
         new_treatment = self.randomness.choice(index, transition_params.columns,
                                                transition_params.loc[current_treatment],
                                                additional_key='update_treatment')
-        new_treatment.name = parameters.TREATMENT.name
+        new_treatment.name = project_globals.TREATMENT.name
         pop_update = pd.DataFrame({
-            parameters.TREATMENT.name: new_treatment,
+            project_globals.TREATMENT.name: new_treatment,
             LDLC_TREATMENT_ADHERENCE_PROPENSITY: self.randomness.get_draw(index, additional_key='adherence_update')
         })
         self.population_view.update(pop_update)
 
     def start_guideline_treatment(self, index: pd.Index):
-        new_treatment = pd.Series(parameters.TREATMENT.none, index=index, name=parameters.TREATMENT.name)
+        new_treatment = pd.Series(project_globals.TREATMENT.none, index=index, name=vivarium_csu_zenon
+                                  .globals.TREATMENT.name)
         adherence = pd.Series(0, index=index, name=LDLC_TREATMENT_ADHERENCE_PROPENSITY)
         cvd_risk_category = self.cvd_risk(index)
         ldlc = self.ldlc(index)
@@ -288,12 +289,12 @@ class PatientProfile:
                & (ldlc >= 4.9))
         )
 
-        new_treatment.loc[lifestyle] = parameters.TREATMENT.lifestyle
-        new_treatment.loc[high_potency_high_dose_statin] = parameters.TREATMENT.high_statin_high_dose
+        new_treatment.loc[lifestyle] = project_globals.TREATMENT.lifestyle
+        new_treatment.loc[high_potency_high_dose_statin] = project_globals.TREATMENT.high_statin_high_dose
         adherence.loc[high_potency_high_dose_statin] = self.randomness.get_draw(index[high_potency_high_dose_statin],
                                                                                 additional_key='new_guideline_tx')
         pop_update = pd.DataFrame({
-            parameters.TREATMENT.name: new_treatment,
+            project_globals.TREATMENT.name: new_treatment,
             LDLC_TREATMENT_ADHERENCE_PROPENSITY: adherence
         })
         self.population_view.update(pop_update)
@@ -319,7 +320,7 @@ class PatientProfile:
         location = builder.configuration.input_data.location
         draw = builder.configuration.input_data.input_draw_number
         p_treatment_type = {treatment_type: parameters.sample_raw_drug_prescription(location, draw, treatment_type)
-                            for treatment_type in [parameters.TREATMENT.ezetimibe, parameters.TREATMENT.fibrates,
+                            for treatment_type in [project_globals.TREATMENT.ezetimibe, project_globals.TREATMENT.fibrates,
                                                    parameters.STATIN_HIGH, parameters.STATIN_LOW]}
         p_treatment_type = dict(zip([k for k in p_treatment_type.keys()],
                                     parameters.get_adjusted_probabilities(*p_treatment_type.values())))

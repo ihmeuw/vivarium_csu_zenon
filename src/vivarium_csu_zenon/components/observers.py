@@ -13,7 +13,6 @@ from vivarium_public_health.metrics.utilities import (get_output_template, get_g
 
 from vivarium_csu_zenon import globals as project_globals
 from vivarium_csu_zenon.components.disease import ChronicKidneyDisease
-from vivarium_csu_zenon.components.treatment import parameters as parameters
 
 if typing.TYPE_CHECKING:
     from vivarium.framework.engine import Builder
@@ -331,7 +330,7 @@ class MiscellaneousObserver:
     def setup(self, builder: 'Builder'):
         self.config = builder.configuration.metrics.miscellaneous_observer.to_dict()
         self.age_bins = get_age_bins(builder)
-        columns_required = [parameters.TREATMENT.name, 'age', 'sex', 'alive',
+        columns_required = [project_globals.TREATMENT.name, 'age', 'sex', 'alive',
                             'initial_treatment_proportion_reduction']
         self.population_view = builder.population.get_view(columns_required)
 
@@ -391,9 +390,9 @@ class MiscellaneousObserver:
                     person_time[group_key.substitute(measure='at_target_person_time')] = at_target_pt
 
                     treatments = {group_key.substitute(measure=f'{treatment}_person_time'): 0.
-                                  for treatment in parameters.TREATMENT}
+                                  for treatment in project_globals.TREATMENT}
 
-                    treatments.update((sub_pop[parameters.TREATMENT.name]
+                    treatments.update((sub_pop[project_globals.TREATMENT.name]
                                        .map(lambda x: group_key.substitute(measure=f'{x}_person_time'))
                                        .value_counts() * step_size)
                                       .to_dict())
