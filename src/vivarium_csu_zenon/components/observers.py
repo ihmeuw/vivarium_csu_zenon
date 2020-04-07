@@ -12,6 +12,7 @@ from vivarium_public_health.metrics.utilities import (get_output_template, get_g
 
 from vivarium_csu_zenon import globals as project_globals
 from vivarium_csu_zenon.components.disease import ChronicKidneyDisease
+from vivarium_csu_zenon.components.treatment import parameters as parameters
 
 if typing.TYPE_CHECKING:
     from vivarium.framework.engine import Builder
@@ -32,6 +33,7 @@ class ResultsStratifier:
     def __init__(self, observer_name: str):
         self.name = f'{observer_name}_results_stratifier'
 
+    # noinspection PyAttributeOutsideInit
     def setup(self, builder: 'Builder'):
         """Perform this component's setup."""
         # The only thing you should request here are resources necessary for
@@ -48,6 +50,7 @@ class ResultsStratifier:
                                                  requires_values=['high_systolic_blood_pressure.exposure',
                                                                   'high_ldl_cholesterol.exposure'])
 
+    # noinspection PyAttributeOutsideInit
     def on_initialize_simulants(self, pop_data: 'SimulantData'):
         risk_groups = pd.Series('', index=pop_data.index)
         pop = self.population_view.get(pop_data.index)
@@ -96,12 +99,12 @@ class ResultsStratifier:
             corresponding to those labels.
 
         """
-        cardiovascular_risk = self.risk_groups.loc[population.index]
+        stratification_group = self.risk_groups.loc[population.index]
         for risk_cat in project_globals.RISK_GROUPS:
             if population.empty:
                 pop_in_group = population
             else:
-                pop_in_group = population.loc[cardiovascular_risk == risk_cat]
+                pop_in_group = population.loc[stratification_group == risk_cat]
             yield (risk_cat,), pop_in_group
 
     @staticmethod
@@ -123,8 +126,8 @@ class ResultsStratifier:
             labels.
 
         """
-        cvd_risk = labels[0]
-        measure_data = {f'{k}_{cvd_risk}': v for k, v in measure_data.items()}
+        stratification_label = labels[0]
+        measure_data = {f'{k}_{stratification_label}': v for k, v in measure_data.items()}
         return measure_data
 
 
@@ -180,6 +183,7 @@ class DisabilityObserver(DisabilityObserver_):
     def sub_components(self) -> List[ResultsStratifier]:
         return [self.stratifier]
 
+    # noinspection PyAttributeOutsideInit
     def setup(self, builder: 'Builder'):
         super().setup(builder)
         if builder.components.get_components_by_type(ChronicKidneyDisease):
@@ -231,6 +235,7 @@ class DiseaseObserver:
     def sub_components(self) -> List[ResultsStratifier]:
         return [self.stratifier]
 
+    # noinspection PyAttributeOutsideInit
     def setup(self, builder: 'Builder'):
         self.config = builder.configuration['metrics'][f'{self.disease}_observer'].to_dict()
         self.clock = builder.time.clock()
@@ -296,6 +301,90 @@ class DiseaseObserver:
 
     def __repr__(self) -> str:
         return f"DiseaseObserver({self.disease})"
+
+
+class MiscellaneousObserver:
+    """Observes person time weighted by observed metrics."""
+    configuration_defaults = {
+        'metrics': {
+            'miscellaneous_observer': {
+                'by_age': True,
+                'by_year': True,
+                'by_sex': True,
+            }
+        }
+    }
+
+    def __init__(self):
+        self.stratifier = ResultsStratifier(self.name)
+
+    @property
+    def name(self) -> str:
+        return 'miscellaneous_observer'
+
+    @property
+    def sub_components(self) -> List[ResultsStratifier]:
+        return [self.stratifier]
+
+    # noinspection PyAttributeOutsideInit
+    def setup(self, builder: 'Builder'):
+        columns_required = [
+            parameters.TREATMENT.name,
+            'age', 'sex',
+        ]
+        self.population_view = builder.population.get_view(columns_required)
+        self.config = builder.configuration.metrics.miscellaneous_observer.to_dict()
+        self.age_bins = get_age_bins(builder)
+
+        # Mean FPG
+        self.fpg_exposure = builder.value.get_value(f'{project_globals.FPG.name}.exposure')
+        self.weighted_fpg = Counter()
+
+        # Treatment Coverage metrics
+        self.treatment_coverages = {treatment: Counter() for treatment in parameters.TREATMENT}
+
+        builder.value.register_value_modifier('metrics', self.metrics)
+        builder.event.register_listener('collect_metrics', self.on_collect_metrics)
+
+    def on_collect_metrics(self, event: 'Event'):
+        pop = self.population_view.get(event.index)
+        for labels, pop_in_group in self.stratifier.group(pop):
+
+            def update_counter(counter: Counter, measure: str, values: pd.Series) -> None:
+                return values.sum() * to_years(event.step_size)
+                get_group_counts()
+                scalar_value = self.stratifier.update_labels({measure: scalar_value}, labels)
+                counter.update(scalar_value)
+
+            update_counter(self.weighted_fpg, 'mean_fpg', self.fpg_exposure(pop_in_group.index))
+
+            for treatment in parameters.TREATMENT:
+                treatments = get_treatment_time(pop_in_group, self.config, treatment, event.time.year, event.step_size,
+                                                self.age_bins)
+                treatments = self.stratifier.update_labels(treatments, labels)
+                self.treatment_coverages.update(treatments)
+
+            self.treatment_coverages.update()
+
+            for treatment, counter in self.treatment_coverages.items():
+                update_counter(counter, f'{treatment}_coverage', pop_in_group[parameters.TREATMENT.name] == treatment)
+
+    def metrics(self, index: pd.Index, metrics: Dict[str, float]):
+        metrics.update(self.weighted_fpg)
+        metrics.update(self.treatment_coverages)
+        return metrics
+
+
+def get_treatment_time(pop: pd.DataFrame, config: Dict[str, bool],
+                       treatment: str, current_year: Union[str, int],
+                       step_size: pd.Timedelta, age_bins: pd.DataFrame) -> Dict[str, float]:
+    """Custom person time getter that handles state column name assumptions"""
+    base_key = get_output_template(**config).substitute(measure=f'{treatment}_person_time',
+                                                        year=current_year)
+    base_filter = QueryString(f'alive == "alive" and {parameters.TREATMENT.name} == "{treatment}"')
+    person_time = get_group_counts(pop, base_filter, base_key, config, age_bins,
+                                   aggregate=lambda x: len(x) * to_years(step_size))
+    return person_time
 
 
 def get_state_person_time(pop: pd.DataFrame, config: Dict[str, bool],
