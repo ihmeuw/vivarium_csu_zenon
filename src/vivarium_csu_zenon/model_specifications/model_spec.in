@@ -43,6 +43,7 @@ components:
         - DiseaseObserver('ischemic_stroke')
         - DiseaseObserver('diabetes_mellitus')
         - DiseaseObserver('chronic_kidney_disease')
+        - MiscellaneousObserver()
 
         - LDLCTreatmentCoverage()
         - LDLCTreatmentEffect()
