@@ -148,8 +148,8 @@ class LDLCTreatmentCoverage:
         location = builder.configuration.input_data.location
         draw = builder.configuration.input_data.input_draw_number
         p_treatment_type = {treatment_type: parameters.sample_raw_drug_prescription(location, draw, treatment_type)
-                            for treatment_type in [project_globals.TREATMENT.ezetimibe, vivarium_csu_zenon
-                .globals.TREATMENT.fibrates,
+                            for treatment_type in [project_globals.TREATMENT.ezetimibe,
+                                                   project_globals.TREATMENT.fibrates,
                                                    parameters.STATIN_HIGH, parameters.STATIN_LOW]}
         p_treatment_type = dict(zip([k for k in p_treatment_type.keys()],
                                     parameters.get_adjusted_probabilities(*p_treatment_type.values())))
@@ -207,10 +207,12 @@ class LDLCTreatmentAdherence:
         had_cve = ihd | stroke
 
         treated = pop_status[project_globals.TREATMENT.name] != 'none'
-        multi_pill = pop_status[project_globals.TREATMENT.name].isin([project_globals.TREATMENT.low_statin_low_dose_multi,
-                                                                                 project_globals.TREATMENT.low_statin_high_dose_multi,
-                                                                                 project_globals.TREATMENT.high_statin_low_dose_multi,
-                                                                                 project_globals.TREATMENT.high_statin_high_dose_multi])
+        multi_pill = pop_status[project_globals.TREATMENT.name].isin([
+            project_globals.TREATMENT.low_statin_low_dose_multi,
+            project_globals.TREATMENT.low_statin_high_dose_multi,
+            project_globals.TREATMENT.high_statin_low_dose_multi,
+            project_globals.TREATMENT.high_statin_high_dose_multi
+        ])
 
         p_adherent.loc[treated & ~had_cve & ~multi_pill] = self.p_adherent[parameters.SINGLE_NO_CVE]
         p_adherent.loc[treated & ~had_cve & multi_pill] = self.p_adherent[parameters.MULTI_NO_CVE]
@@ -275,8 +277,9 @@ class LDLCTreatmentEffect:
     def compute_proportion_reduction(self, index: pd.Index) -> pd.Series:
         """Determines how much current treatment reduces ldlc level."""
         pop_status = self.population_view.subview([project_globals.TREATMENT.name]).get(index)
+        adherence = self.is_adherent(index).astype(int)
         effect_size = pop_status[project_globals.TREATMENT.name].map(self.treatment_effect)
-        return effect_size
+        return effect_size * adherence
 
     @staticmethod
     def load_treatment_effect(builder: 'Builder') -> Dict[str, float]:
@@ -284,9 +287,9 @@ class LDLCTreatmentEffect:
         draw = builder.configuration.input_data.input_draw_number
         treatment_effect = {project_globals.TREATMENT.none: 0}
         for treatment in [project_globals.TREATMENT.lifestyle, project_globals.TREATMENT.fibrates,
-                          project_globals.TREATMENT.ezetimibe, project_globals.TREATMENT
-                                  .low_statin_low_dose,
-                          project_globals.TREATMENT.low_statin_high_dose, project_globals.TREATMENT.high_statin_low_dose,
+                          project_globals.TREATMENT.ezetimibe, project_globals.TREATMENT.low_statin_low_dose,
+                          project_globals.TREATMENT.low_statin_high_dose,
+                          project_globals.TREATMENT.high_statin_low_dose,
                           project_globals.TREATMENT.high_statin_high_dose]:
             treatment_effect[treatment] = parameters.sample_ldlc_reduction(location, draw, treatment)
 
