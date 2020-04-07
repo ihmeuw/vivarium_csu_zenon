@@ -8,7 +8,8 @@ from vivarium_public_health.metrics import (MortalityObserver as MortalityObserv
 from vivarium_public_health.metrics.utilities import (get_output_template, get_group_counts,
                                                       QueryString, to_years, get_person_time,
                                                       get_deaths, get_years_of_life_lost,
-                                                      get_years_lived_with_disability, get_age_bins)
+                                                      get_years_lived_with_disability, get_age_bins,
+                                                      get_age_sex_filter_and_iterables)
 
 from vivarium_csu_zenon import globals as project_globals
 from vivarium_csu_zenon.components.disease import ChronicKidneyDisease
@@ -308,9 +309,9 @@ class MiscellaneousObserver:
     configuration_defaults = {
         'metrics': {
             'miscellaneous_observer': {
-                'by_age': True,
-                'by_year': True,
-                'by_sex': True,
+                'by_age': False,
+                'by_year': False,
+                'by_sex': False,
             }
         }
     }
@@ -328,63 +329,81 @@ class MiscellaneousObserver:
 
     # noinspection PyAttributeOutsideInit
     def setup(self, builder: 'Builder'):
-        columns_required = [
-            parameters.TREATMENT.name,
-            'age', 'sex',
-        ]
-        self.population_view = builder.population.get_view(columns_required)
         self.config = builder.configuration.metrics.miscellaneous_observer.to_dict()
         self.age_bins = get_age_bins(builder)
+        columns_required = [parameters.TREATMENT.name, 'age', 'sex', 'alive',
+                            'initial_treatment_proportion_reduction']
+        self.population_view = builder.population.get_view(columns_required)
 
-        # Mean FPG
-        self.fpg_exposure = builder.value.get_value(f'{project_globals.FPG.name}.exposure')
-        self.weighted_fpg = Counter()
+        self.fpg = builder.value.get_value(f'{project_globals.FPG.name}.exposure')
+        self.ldlc = builder.value.get_value(f'{project_globals.LDL_C.name}.exposure')
+        self.sbp = builder.value.get_value(f'{project_globals.SBP.name}.exposure')
+        self.is_adherent = builder.value.get_value('ldlc_treatment_adherence')
+        self.cvd_risk_score = builder.value.get_value('cvd_risk_score')
 
-        # Treatment Coverage metrics
-        self.treatment_coverages = {treatment: Counter() for treatment in parameters.TREATMENT}
+        self.results = Counter()
 
         builder.value.register_value_modifier('metrics', self.metrics)
         builder.event.register_listener('collect_metrics', self.on_collect_metrics)
 
     def on_collect_metrics(self, event: 'Event'):
-        pop = self.population_view.get(event.index)
+        pop = self.population_view.get(event.index, query='alive == "alive"')
+        initial_proportion_reduction = pop['initial_treatment_proportion_reduction']
+
+        fpg = self.fpg(pop.index)
+        sbp = self.sbp(pop.index)
+        ldlc = self.ldlc(pop.index)
+        cvd_score = self.cvd_risk_score(pop.index)
+        measure_map = list(zip(['fpg_person_time', 'sbp_person_time', 'ldlc_person_time', 'cv_risk_score_person_time'],
+                               [fpg, sbp, ldlc, cvd_score]))
+
+        adherent = self.is_adherent(pop.index).astype(int)
+
+        raw_ldlc = ldlc / (1 - initial_proportion_reduction)
+        at_target = (ldlc / raw_ldlc <= 0.5).astype(int)
+
+        # noinspection PyTypeChecker
+        step_size = to_years(event.step_size)
+
+        age_sex_filter, (ages, sexes) = get_age_sex_filter_and_iterables(self.config, self.age_bins)
+        base_key = get_output_template(**self.config).substitute(year=event.time.year)
+        base_filter = QueryString(f'alive == "alive"') + age_sex_filter
+        person_time = {}
         for labels, pop_in_group in self.stratifier.group(pop):
+            for group, age_group in ages:
+                start, end = age_group.age_start, age_group.age_end
+                for sex in sexes:
+                    filter_kwargs = {'age_start': start, 'age_end': end, 'sex': sex, 'age_group': group}
+                    group_key = base_key.substitute(**filter_kwargs)
+                    group_filter = base_filter.format(**filter_kwargs)
 
-            def update_counter(counter: Counter, measure: str, values: pd.Series) -> None:
-                return values.sum() * to_years(event.step_size)
-                get_group_counts()
-                scalar_value = self.stratifier.update_labels({measure: scalar_value}, labels)
-                counter.update(scalar_value)
+                    sub_pop = (pop_in_group.query(group_filter)
+                               if group_filter and not pop_in_group.empty else pop_in_group)
 
-            update_counter(self.weighted_fpg, 'mean_fpg', self.fpg_exposure(pop_in_group.index))
+                    for measure, attribute in measure_map:
+                        person_time[group_key.substitute(measure=measure)] = sum(attribute.loc[sub_pop.index]
+                                                                                 * step_size)
 
-            for treatment in parameters.TREATMENT:
-                treatments = get_treatment_time(pop_in_group, self.config, treatment, event.time.year, event.step_size,
-                                                self.age_bins)
-                treatments = self.stratifier.update_labels(treatments, labels)
-                self.treatment_coverages.update(treatments)
+                    adherent_pt = sum(adherent.loc[sub_pop.index] * step_size)
+                    person_time[group_key.substitute(measure='adherent_person_time')] = adherent_pt
 
-            self.treatment_coverages.update()
+                    at_target_pt = sum(at_target.loc[sub_pop.index] * step_size)
+                    person_time[group_key.substitute(measure='at_target_person_time')] = at_target_pt
 
-            for treatment, counter in self.treatment_coverages.items():
-                update_counter(counter, f'{treatment}_coverage', pop_in_group[parameters.TREATMENT.name] == treatment)
+                    treatments = {group_key.substitute(measure=f'{treatment}_person_time'): 0.
+                                  for treatment in parameters.TREATMENT}
+
+                    treatments.update((sub_pop[parameters.TREATMENT.name]
+                                       .map(lambda x: group_key.substitute(measure=f'{x}_person_time'))
+                                       .value_counts() * step_size)
+                                      .to_dict())
+                    person_time.update(treatments)
+
+            self.results.update(self.stratifier.update_labels(person_time, labels))
 
     def metrics(self, index: pd.Index, metrics: Dict[str, float]):
-        metrics.update(self.weighted_fpg)
-        metrics.update(self.treatment_coverages)
+        metrics.update(self.results)
         return metrics
-
-
-def get_treatment_time(pop: pd.DataFrame, config: Dict[str, bool],
-                       treatment: str, current_year: Union[str, int],
-                       step_size: pd.Timedelta, age_bins: pd.DataFrame) -> Dict[str, float]:
-    """Custom person time getter that handles state column name assumptions"""
-    base_key = get_output_template(**config).substitute(measure=f'{treatment}_person_time',
-                                                        year=current_year)
-    base_filter = QueryString(f'alive == "alive" and {parameters.TREATMENT.name} == "{treatment}"')
-    person_time = get_group_counts(pop, base_filter, base_key, config, age_bins,
-                                   aggregate=lambda x: len(x) * to_years(step_size))
-    return person_time
 
 
 def get_state_person_time(pop: pd.DataFrame, config: Dict[str, bool],
