@@ -263,8 +263,7 @@ class PatientProfile:
         self.population_view.update(pop_update)
 
     def start_guideline_treatment(self, index: pd.Index):
-        new_treatment = pd.Series(project_globals.TREATMENT.none, index=index, name=vivarium_csu_zenon
-                                  .globals.TREATMENT.name)
+        new_treatment = pd.Series(project_globals.TREATMENT.none, index=index, name=project_globals.TREATMENT.name)
         adherence = pd.Series(0, index=index, name=LDLC_TREATMENT_ADHERENCE_PROPENSITY)
         cvd_risk_category = self.cvd_risk(index)
         ldlc = self.ldlc(index)
