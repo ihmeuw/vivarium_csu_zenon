@@ -83,6 +83,7 @@ class TreatmentAlgorithm:
             raise ValueError(f'Invalid scenario {scenario}')
 
         self.clock = builder.time.clock()
+        self.step_size = builder.time.step_size()
         self.randomness = builder.randomness.get_stream(self.name)
         utilization_data = builder.data.load(project_globals.POPULATION.HEALTHCARE_UTILIZATION)
         background_utilization_rate = builder.lookup.build_table(utilization_data,
@@ -106,14 +107,16 @@ class TreatmentAlgorithm:
         """For patients currently treated assign them a follow up date."""
         follow_up_date = pd.Series(pd.NaT, index=pop_data.index, name=FOLLOW_UP_DATE)
         currently_treated = self.patient_profile.currently_treated(pop_data.index)
+        step_size = self.step_size() / pd.Timedelta(days=1)
         # noinspection PyTypeChecker
         follow_up_date.loc[currently_treated] = pd.Series(
-            self.clock() + self.random_time_delta(pd.Series(28, index=pop_data.index),
-                                                  pd.Series(FOLLOW_UP_MAX, index=pop_data.index)), index=pop_data.index)
+            self.clock() + self.random_time_delta(pd.Series(step_size, index=pop_data.index),
+                                                  pd.Series(FOLLOW_UP_MAX + step_size, index=pop_data.index)),
+            index=pop_data.index)
         self.population_view.update(follow_up_date)
 
     def on_time_step_cleanup(self, event: 'Event'):
-        """Send patients who will have a cardiact event at the end of the step
+        """Send patients who will have a cardiac event at the end of the step
         to the doctor as well.
 
         """
