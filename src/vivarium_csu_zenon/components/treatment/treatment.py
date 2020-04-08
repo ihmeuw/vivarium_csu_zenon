@@ -38,6 +38,10 @@ class LDLCTreatmentCoverage:
         self.p_therapy_type = self.load_therapy_type_p(builder)
         self.p_treatment_type = self.load_treatment_type_p(builder)
 
+        threshold_data = builder.data.load(project_globals.LDL_C.HIGH_RISK_THRESHOLD)
+        self.high_risk_threshold = builder.lookup.build_table(threshold_data, key_columns=['sex'],
+                                                        parameter_columns=['age', 'year'])
+
         columns_created = [project_globals.TREATMENT.name]
         self.population_view = builder.population.get_view(columns_created)
         builder.population.initializes_simulants(self.on_initialize_simulants,
@@ -112,8 +116,7 @@ class LDLCTreatmentCoverage:
     def get_treatment_probability(self, ldlc: pd.Series) -> pd.Series:
         """Gets probability of treatment given ldlc level."""
         high_ldlc = ldlc > parameters.HIGH_LDL_BASELINE
-        # FIXME: Generate data, this is an awful hack for small sample sizes and not age/sex specific.
-        p_high_ldlc = len(ldlc[ldlc > parameters.HIGH_LDL_BASELINE])/len(ldlc)
+        p_high_ldlc = 1 - self.high_risk_threshold(ldlc.index)
         p_bad_ldlc = p_high_ldlc / (1 - self.p_at_target_given_treated * self.p_rx_given_bad_ldlc)
 
         p_treated_low = (self.p_at_target_given_treated * self.p_rx_given_bad_ldlc * p_bad_ldlc

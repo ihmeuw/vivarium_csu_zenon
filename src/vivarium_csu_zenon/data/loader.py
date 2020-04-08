@@ -90,6 +90,7 @@ def get_data(lookup_key: str, location: str) -> pd.DataFrame:
         project_globals.LDL_C.EXPOSURE_MEAN: load_standard_data,
         project_globals.LDL_C.EXPOSURE_SD: load_standard_data,
         project_globals.LDL_C.EXPOSURE_WEIGHTS: load_standard_data,
+        project_globals.LDL_C.HIGH_RISK_THRESHOLD: load_high_risk_ldl_threshold,
         project_globals.LDL_C.RELATIVE_RISK: load_standard_data,
         project_globals.LDL_C.PAF: load_standard_data,
         project_globals.LDL_C.TMRED: load_metadata,
@@ -598,6 +599,12 @@ def load_diabetes_fpg_threshold(key: str, location: str) -> pd.DataFrame:
     data_path = paths.FPG_THRESHOLD_DIR / f'{sanitize_location(location)}.hdf'
     fpg_exposure = pd.read_hdf(data_path)
     return fpg_exposure
+
+
+def load_high_risk_ldl_threshold(key: str, location: str) -> pd.DataFrame:
+    data_path = paths.LDL_C_THRESHOLD_DIR / f'{sanitize_location(location)}.hdf'
+    ldl_exposure = pd.read_hdf(data_path)
+    return ldl_exposure
 
 
 def load_propensity_correlation_data(key: str, location: str) -> pd.DataFrame:
