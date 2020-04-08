@@ -108,7 +108,7 @@ class TreatmentAlgorithm:
         currently_treated = self.patient_profile.currently_treated(pop_data.index)
         # noinspection PyTypeChecker
         follow_up_date.loc[currently_treated] = pd.Series(
-            self.clock() + self.random_time_delta(pd.Series(0, index=pop_data.index),
+            self.clock() + self.random_time_delta(pd.Series(28, index=pop_data.index),
                                                   pd.Series(FOLLOW_UP_MAX, index=pop_data.index)), index=pop_data.index)
         self.population_view.update(follow_up_date)
 
@@ -155,7 +155,7 @@ class TreatmentAlgorithm:
     def random_time_delta(self, start: pd.Series, end: pd.Series) -> pd.Series:
         """Generate a random time delta for each individual in the start
         and end series."""
-        return pd.to_timedelta(start + (end - start) * self.randomness.get_draw(start.index))
+        return pd.to_timedelta(start + (end - start) * self.randomness.get_draw(start.index), unit='day')
 
     @staticmethod
     def load_treatment_parameters(builder: 'Builder'):
