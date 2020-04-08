@@ -132,7 +132,6 @@ class TreatmentAlgorithm:
 
     def on_time_step(self, event: 'Event'):
         """Determine if someone will go for a background or follow up visit."""
-        import pdb; pdb.set_trace()
         follow_up_date = self.population_view.subview([FOLLOW_UP_DATE]).get(event.index,
                                                                             query='alive == "alive"').follow_up_date
         to_follow_up = follow_up_date[(self.clock() < follow_up_date) & (follow_up_date <= event.time)].index
