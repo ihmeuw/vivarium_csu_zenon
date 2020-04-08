@@ -23,8 +23,6 @@ LDLC_TREATMENT_ADHERENCE = 'ldlc_treatment_adherence'
 LDLC_TREATMENT_ADHERENCE_PROPENSITY = 'ldlc_treatment_adherence_propensity'
 LDL_CHOLESTEROL_EXPOSURE = 'high_ldl_cholesterol.exposure'
 PATIENT_PROFILE = 'patient_profile'
-BACKGROUND_VISIT = 'background_visit'
-FOLLOW_UP_DATE = 'follow_up_date'
 FOLLOW_UP_SCHEDULING = 'follow_up_scheduling'
 LDLC_TREATMENT_ALGORITHM = 'ldlc_treatment_algorithm'
 LOW_DOSE_IF_STATIN = 'low_dose_if_statin'
@@ -92,12 +90,12 @@ class TreatmentAlgorithm:
         self.background_utilization_rate = builder.value.register_rate_producer('utilization_rate',
                                                                                 background_utilization_rate,
                                                                                 requires_columns=['age', 'sex'])
-
+        columns_created = [project_globals.DOCTOR_VISIT, project_globals.FOLLOW_UP_DATE]
         self.population_view = builder.population.get_view([project_globals.IHD_MODEL_NAME,
-                                                            project_globals.ISCHEMIC_STROKE_MODEL_NAME,
-                                                            FOLLOW_UP_DATE])
+                                                            project_globals.ISCHEMIC_STROKE_MODEL_NAME]
+                                                           + columns_created)
         builder.population.initializes_simulants(self.on_initialize_simulants,
-                                                 creates_columns=[FOLLOW_UP_DATE],
+                                                 creates_columns=columns_created,
                                                  requires_columns=[project_globals.TREATMENT.name])
 
         builder.event.register_listener('time_step__cleanup', self.on_time_step_cleanup)
@@ -105,15 +103,15 @@ class TreatmentAlgorithm:
 
     def on_initialize_simulants(self, pop_data: 'SimulantData'):
         """For patients currently treated assign them a follow up date."""
-        follow_up_date = pd.Series(pd.NaT, index=pop_data.index, name=FOLLOW_UP_DATE)
+        doctor_visit = pd.Series('none', index=pop_data.index, name=project_globals.DOCTOR_VISIT)
+        follow_up_date = pd.Series(pd.NaT, index=pop_data.index, name=project_globals.FOLLOW_UP_DATE)
         currently_treated = self.patient_profile.currently_treated(pop_data.index)
         step_size = self.step_size() / pd.Timedelta(days=1)
         # noinspection PyTypeChecker
         follow_up_date.loc[currently_treated] = pd.Series(
             self.clock() + self.random_time_delta(pd.Series(step_size, index=pop_data.index),
-                                                  pd.Series(FOLLOW_UP_MAX + step_size, index=pop_data.index)),
-            index=pop_data.index)
-        self.population_view.update(follow_up_date)
+                                                  pd.Series(FOLLOW_UP_MAX, index=pop_data.index)), index=pop_data.index)
+        self.population_view.update(pd.concat([doctor_visit, follow_up_date], axis=1))
 
     def on_time_step_cleanup(self, event: 'Event'):
         """Send patients who will have a cardiac event at the end of the step
@@ -132,28 +130,33 @@ class TreatmentAlgorithm:
 
     def on_time_step(self, event: 'Event'):
         """Determine if someone will go for a background or follow up visit."""
-        follow_up_date = self.population_view.subview([FOLLOW_UP_DATE]).get(event.index,
-                                                                            query='alive == "alive"').follow_up_date
+        follow_up_date = self.population_view.subview([project_globals.FOLLOW_UP_DATE]).get(
+            event.index, query='alive == "alive"').follow_up_date
         to_follow_up = follow_up_date[(self.clock() < follow_up_date) & (follow_up_date <= event.time)].index
         follow_up_start, follow_up_end = self.visit_doctor.for_follow_up(to_follow_up)
         new_follow_up = self.schedule_follow_up(follow_up_start, follow_up_end)
-        maybe_follow_up = event.index.difference(to_follow_up)
+        maybe_background_visit = event.index.difference(to_follow_up)
         # noinspection PyTypeChecker
-        utilization_rate = self.background_utilization_rate(maybe_follow_up)  # type: pd.Series
-        to_background_visit = self.randomness.filter_for_rate(maybe_follow_up,
+        utilization_rate = self.background_utilization_rate(maybe_background_visit)  # type: pd.Series
+        to_background_visit = self.randomness.filter_for_rate(maybe_background_visit,
                                                               utilization_rate,
-                                                              additional_key=BACKGROUND_VISIT)
+                                                              additional_key=project_globals.BACKGROUND_VISIT)
         follow_up_start, follow_up_end = self.visit_doctor.for_background_visit(to_background_visit)
         new_follow_up_background = self.schedule_follow_up(follow_up_start, follow_up_end)
         new_follow_up = new_follow_up.append(new_follow_up_background)
-        self.population_view.update(new_follow_up)
+
+        doctor_visit = pd.Series('none', index=event.index, name=project_globals.DOCTOR_VISIT)
+        doctor_visit[to_follow_up] = project_globals.FOLLOW_UP_VISIT
+        doctor_visit[to_background_visit] = project_globals.BACKGROUND_VISIT
+
+        self.population_view.update(pd.concat([doctor_visit, new_follow_up], axis=1))
 
     def schedule_follow_up(self, start: pd.Series, end: pd.Series) -> pd.Series:
         """Schedules follow up visits."""
         current_time = self.clock()
         # noinspection PyTypeChecker
         return pd.Series(current_time + self.random_time_delta(start, end),
-                         index=start.index, name=FOLLOW_UP_DATE)
+                         index=start.index, name=project_globals.FOLLOW_UP_DATE)
 
     def random_time_delta(self, start: pd.Series, end: pd.Series) -> pd.Series:
         """Generate a random time delta for each individual in the start

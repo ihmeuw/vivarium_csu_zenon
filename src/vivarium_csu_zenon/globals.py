@@ -381,6 +381,15 @@ CORRELATED_PROPENSITY_COLUMNS = [
 ]
 
 ############################
+#  Doctor Visit Constants  #
+############################
+
+DOCTOR_VISIT = 'doctor_visit'
+BACKGROUND_VISIT = 'background_visit'
+FOLLOW_UP_VISIT = 'follow_up_visit'
+FOLLOW_UP_DATE = 'follow_up_date'
+
+############################
 # Stratification Constants #
 ############################
 
