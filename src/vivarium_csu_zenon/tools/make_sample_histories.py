@@ -57,7 +57,7 @@ def make_sample_history_single_location(drmaa, queue: str, jobs: Dict, location:
         job_template.remoteCommand = shutil.which("python")
         job_template.outputPath = f":{path}/output_logs"
         job_template.errorPath = f":{path}/error_logs"
-        job_template.args = [__file__, str(path), f'"{location}"', scenario]
+        job_template.args = [__file__, str(path), f'"{sanitized_location}"', scenario]
         job_template.nativeSpecification = (f'-V '  # Export all environment variables
                                             f'-b y '  # Command is a binary (python)
                                             f'-P {project_globals.CLUSTER_PROJECT} '
