@@ -6,6 +6,7 @@ import vivarium_csu_zenon.globals as project_globals
 ARTIFACT_ROOT = Path(f"/share/costeffectiveness/artifacts/{project_globals.PROJECT_NAME}/")
 MODEL_SPEC_DIR = (Path(__file__).parent / 'model_specifications').resolve()
 RESULTS_ROOT = Path(f'/share/costeffectiveness/results/{project_globals.PROJECT_NAME}/')
+SAMPLE_HISTORY_ROOT = RESULTS_ROOT / 'sample_history'
 FPG_THRESHOLD_DIR = Path('/share/costeffectiveness/auxiliary_data/GBD_2017/03_untracked_data/fpg_diabetes_threshold')
 LDL_C_THRESHOLD_DIR = Path('/share/costeffectiveness/auxiliary_data/GBD_2017/03_untracked_data/ldl_c_threshold')
 JOINT_PAF_DIR = Path('/share/costeffectiveness/auxiliary_data/GBD_2017/03_untracked_data/joint_pafs')

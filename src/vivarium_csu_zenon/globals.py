@@ -29,6 +29,11 @@ LOCATIONS = [
     'Russian Federation',
 ]
 
+SCENARIOS = [
+    'baseline',
+    'guideline',
+    'guideline_and_new_treatment'
+]
 
 #############
 # Data Keys #

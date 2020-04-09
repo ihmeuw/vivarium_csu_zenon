@@ -6,3 +6,4 @@ from .make_fpg_thresholds import build_fpg_thresholds
 from .make_ldl_thresholds import  build_ldl_thresholds
 from .make_joint_pafs import build_joint_pafs
 from .parse_logs import build_results_from_logs
+from .make_sample_histories import build_sample_histories

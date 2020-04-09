@@ -70,5 +70,6 @@ if __name__ == "__main__":
             make_ldl_exposure_thresholds=vivarium_csu_zenon.tools.cli:make_ldl_exposure_thresholds
             make_joint_pafs=vivarium_csu_zenon.tools.cli:make_joint_pafs
             parse_logs=vivarium_csu_zenon.tools.cli:parse_logs
+            make_sample_histories=vivarium_csu_zenon.cli:make_sample_histories
         '''
     )
