@@ -13,10 +13,10 @@ from vivarium_csu_zenon.tools import decode_status
 from vivarium_csu_zenon.utilities import sanitize_location
 
 
-def build_sample_histories(location: str, scenario: str, verbose: int, queue: str):
+def build_sample_histories(locations: str, scenarios: str, verbose: int, queue: str):
     output_dir = paths.SAMPLE_HISTORY_ROOT
-    locations = project_globals.LOCATIONS if location == 'all' else [location]
-    scenarios = project_globals.SCENARIOS if scenario == 'all' else [scenario]
+    locations = project_globals.LOCATIONS if locations == 'all' else locations.split(',')
+    scenarios = project_globals.SCENARIOS if scenarios == 'all' else scenarios.split(',')
 
     from vivarium_cluster_tools.psimulate.utilities import get_drmaa
     drmaa = get_drmaa()
@@ -49,6 +49,8 @@ def make_sample_history_single_location(drmaa, queue: str, jobs: Dict, location:
     path = output_dir / sanitized_location
     if not path.exists():
         path.mkdir(exist_ok=True, mode=0o775)
+        (path / 'error_logs').mkdir(exist_ok=True, mode=0o775)
+        (path / 'output_logs').mkdir(exist_ok=True, mode=0o775)
 
     for scenario in scenarios:
         job_template = session.createJobTemplate()
