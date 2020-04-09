@@ -218,7 +218,7 @@ def parse_logs(worker_log_directory, output_file, verbose, with_debugger):
 @click.option('--pdb', 'with_debugger',
               is_flag=True,
               help='Drop into python debugger if an error occurs.')
-def make_sample_histories(location: str, scenario: str, verbose: int, with_debugger: bool, queue: str) -> None:
+def make_sample_histories(location: str, scenarios: str, verbose: int, with_debugger: bool, queue: str) -> None:
     configure_logging_to_terminal(verbose)
     main = handle_exceptions(build_sample_histories, logger, with_debugger=with_debugger)
-    main(location, scenario, verbose, queue)
+    main(location, scenarios, verbose, queue)
