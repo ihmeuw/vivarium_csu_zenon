@@ -138,6 +138,7 @@ class __HighLDLCholesterol(NamedTuple):
     EXPOSURE_MEAN: str = 'risk_factor.high_ldl_cholesterol.exposure'
     EXPOSURE_SD: str = 'risk_factor.high_ldl_cholesterol.exposure_standard_deviation'
     EXPOSURE_WEIGHTS: str = 'risk_factor.high_ldl_cholesterol.exposure_distribution_weights'
+    HIGH_RISK_THRESHOLD: str = 'risk_factor.high_ldl_cholesterol.high_risk_threshold'
     RELATIVE_RISK: str = 'risk_factor.high_ldl_cholesterol.relative_risk'
     PAF: str = 'risk_factor.high_ldl_cholesterol.population_attributable_fraction'
     TMRED: str = 'risk_factor.high_ldl_cholesterol.tmred'
