@@ -44,6 +44,7 @@ components:
         - DiseaseObserver('diabetes_mellitus')
         - DiseaseObserver('chronic_kidney_disease')
         - MiscellaneousObserver()
+        #- SampleHistoryObserver()
 
         - LDLCTreatmentCoverage()
         - LDLCTreatmentEffect()
