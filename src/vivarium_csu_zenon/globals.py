@@ -138,6 +138,7 @@ class __HighLDLCholesterol(NamedTuple):
     EXPOSURE_MEAN: str = 'risk_factor.high_ldl_cholesterol.exposure'
     EXPOSURE_SD: str = 'risk_factor.high_ldl_cholesterol.exposure_standard_deviation'
     EXPOSURE_WEIGHTS: str = 'risk_factor.high_ldl_cholesterol.exposure_distribution_weights'
+    HIGH_RISK_THRESHOLD: str = 'risk_factor.high_ldl_cholesterol.high_risk_threshold'
     RELATIVE_RISK: str = 'risk_factor.high_ldl_cholesterol.relative_risk'
     PAF: str = 'risk_factor.high_ldl_cholesterol.population_attributable_fraction'
     TMRED: str = 'risk_factor.high_ldl_cholesterol.tmred'
@@ -359,7 +360,7 @@ DISEASE_MODEL_MAP = {
 STATES = tuple(state for model in DISEASE_MODELS for state in DISEASE_MODEL_MAP[model]['states'])
 TRANSITIONS = tuple(transition for model in DISEASE_MODELS for transition in DISEASE_MODEL_MAP[model]['transitions'])
 
-# CVD Risk Categories
+# Risk Categories
 CVD_VERY_HIGH_RISK = 'very_high_risk'
 CVD_HIGH_RISK = 'high_risk'
 CVD_MODERATE_RISK = 'moderate_risk'
@@ -379,13 +380,74 @@ CORRELATED_PROPENSITY_COLUMNS = [
     DIABETES_PROPENSITY_COLUMN,
 ]
 
-
-
-########################
+############################
 # Stratification Constants #
-########################
+############################
 
-CVD_RISK_CATEGORIES = [CVD_VERY_HIGH_RISK, CVD_HIGH_RISK, CVD_MODERATE_RISK, CVD_LOW_RISK]
+# Risk Categories
+HIGH_RISK = 'high'
+LOW_RISK = 'low'
+
+RISK_CATEGORIES = [HIGH_RISK, LOW_RISK]
+
+# ACS Categories
+POST_CVE = 'post'
+NO_CVE = 'none'
+
+ACS_CATEGORIES = [POST_CVE, NO_CVE]
+
+
+class __RiskGroups(NamedTuple):
+    cat1: str = 'LDL_high_SBP_high_FPG_high_ACS_post'
+    cat2: str = 'LDL_high_SBP_high_FPG_high_ACS_none'
+    cat3: str = 'LDL_high_SBP_high_FPG_low_ACS_post'
+    cat4: str = 'LDL_high_SBP_high_FPG_low_ACS_none'
+    cat5: str = 'LDL_high_SBP_low_FPG_high_ACS_post'
+    cat6: str = 'LDL_high_SBP_low_FPG_high_ACS_none'
+    cat7: str = 'LDL_high_SBP_low_FPG_low_ACS_post'
+    cat8: str = 'LDL_high_SBP_low_FPG_low_ACS_none'
+    cat9: str = 'LDL_low_SBP_high_FPG_high_ACS_post'
+    cat10: str = 'LDL_low_SBP_high_FPG_high_ACS_none'
+    cat11: str = 'LDL_low_SBP_high_FPG_low_ACS_post'
+    cat12: str = 'LDL_low_SBP_high_FPG_low_ACS_none'
+    cat13: str = 'LDL_low_SBP_low_FPG_high_ACS_post'
+    cat14: str = 'LDL_low_SBP_low_FPG_high_ACS_none'
+    cat15: str = 'LDL_low_SBP_low_FPG_low_ACS_post'
+    cat16: str = 'LDL_low_SBP_low_FPG_low_ACS_none'
+
+
+RISK_GROUPS = __RiskGroups()
+
+
+class _Treatments(NamedTuple):
+    none: str = 'none'
+    lifestyle: str = 'lifestyle_intervention'
+    fibrates: str = 'fibrates'
+    ezetimibe: str = 'ezetimibe'
+
+    low_statin_low_dose: str = 'low_potency_statin_low_dose'
+    low_statin_high_dose: str = 'low_potency_statin_high_dose'
+    high_statin_low_dose: str = 'high_potency_statin_low_dose'
+    high_statin_high_dose: str = 'high_potency_statin_high_dose'
+
+    # Statin + ezetimibe multi pill
+    low_statin_low_dose_multi: str = 'low_potency_statin_low_dose_multi'
+    low_statin_high_dose_multi: str = 'low_potency_statin_high_dose_multi'
+    high_statin_low_dose_multi: str = 'high_potency_statin_low_dose_multi'
+    high_statin_high_dose_multi: str = 'high_potency_statin_high_dose_multi'
+
+    # Statin + ezetimibe fdc
+    low_statin_low_dose_fdc: str = 'low_potency_statin_low_dose_fdc'
+    low_statin_high_dose_fdc: str = 'low_potency_statin_high_dose_fdc'
+    high_statin_low_dose_fdc: str = 'high_potency_statin_low_dose_fdc'
+    high_statin_high_dose_fdc: str = 'high_potency_statin_high_dose_fdc'
+
+    @property
+    def name(self) -> str:
+        return 'ldlc_treatment_category'
+
+
+TREATMENT = _Treatments()
 
 #################################
 # Results columns and variables #
@@ -398,7 +460,7 @@ TOTAL_YLLS_COLUMN = 'years_of_life_lost'
 # Columns from parallel runs
 INPUT_DRAW_COLUMN = 'input_draw'
 RANDOM_SEED_COLUMN = 'random_seed'
-OUTPUT_SCENARIO_COLUMN = 'scenario'
+OUTPUT_SCENARIO_COLUMN = 'ldlc_treatment_algorithm.scenario'
 
 STANDARD_COLUMNS = {
     'total_population': TOTAL_POPULATION_COLUMN,
@@ -411,12 +473,13 @@ THROWAWAY_COLUMNS = ([f'{state}_event_count' for state in STATES]
                      + [f'{state}_prevalent_cases_at_sim_end' for state in STATES])
 
 TOTAL_POPULATION_COLUMN_TEMPLATE = 'total_population_{POP_STATE}'
-PERSON_TIME_COLUMN_TEMPLATE = 'person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_cvd_{CVD_RISK}'
-DEATH_COLUMN_TEMPLATE = 'death_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_cvd_{CVD_RISK}'
-YLLS_COLUMN_TEMPLATE = 'ylls_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_cvd_{CVD_RISK}'
-YLDS_COLUMN_TEMPLATE = 'ylds_due_to_{CAUSE_OF_DISABILITY}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_cvd_{CVD_RISK}'
-STATE_PERSON_TIME_COLUMN_TEMPLATE = '{STATE}_person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_cvd_{CVD_RISK}'
-TRANSITION_COUNT_COLUMN_TEMPLATE = '{TRANSITION}_event_count_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_cvd_{CVD_RISK}'
+PERSON_TIME_COLUMN_TEMPLATE = 'person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_LDL_{LDL}_SBP_{SBP}_FPG_{FPG}_ACS_{ACS}'
+DEATH_COLUMN_TEMPLATE = 'death_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_LDL_{LDL}_SBP_{SBP}_FPG_{FPG}_ACS_{ACS}'
+YLLS_COLUMN_TEMPLATE = 'ylls_due_to_{CAUSE_OF_DEATH}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_LDL_{LDL}_SBP_{SBP}_FPG_{FPG}_ACS_{ACS}'
+YLDS_COLUMN_TEMPLATE = 'ylds_due_to_{CAUSE_OF_DISABILITY}_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_LDL_{LDL}_SBP_{SBP}_FPG_{FPG}_ACS_{ACS}'
+STATE_PERSON_TIME_COLUMN_TEMPLATE = '{STATE}_person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_LDL_{LDL}_SBP_{SBP}_FPG_{FPG}_ACS_{ACS}'
+TRANSITION_COUNT_COLUMN_TEMPLATE = '{TRANSITION}_event_count_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_LDL_{LDL}_SBP_{SBP}_FPG_{FPG}_ACS_{ACS}'
+MISCELLANEOUS_PERSON_TIME_COLUMN_TEMPLATE = '{PT_KIND}_person_time_in_{YEAR}_among_{SEX}_in_age_group_{AGE_GROUP}_LDL_{LDL}_SBP_{SBP}_FPG_{FPG}_ACS_{ACS}'
 
 COLUMN_TEMPLATES = {
     'population': TOTAL_POPULATION_COLUMN_TEMPLATE,
@@ -426,6 +489,7 @@ COLUMN_TEMPLATES = {
     'ylds': YLDS_COLUMN_TEMPLATE,
     'state_person_time': STATE_PERSON_TIME_COLUMN_TEMPLATE,
     'transition_count': TRANSITION_COUNT_COLUMN_TEMPLATE,
+    'miscellaneous_person_time': MISCELLANEOUS_PERSON_TIME_COLUMN_TEMPLATE
 }
 
 NON_COUNT_TEMPLATES = [
@@ -461,6 +525,7 @@ CAUSES_OF_DISABILITY = (
     CKD_MODEL_NAME,
 )
 CAUSES_OF_DEATH = CAUSES_OF_DISABILITY + ('other_causes',)
+PT_KINDS = ('fpg', 'sbp', 'ldlc', 'cv_risk_score', 'adherent', 'at_target',) + TREATMENT
 
 TEMPLATE_FIELD_MAP = {
     'POP_STATE': POP_STATES,
@@ -471,7 +536,11 @@ TEMPLATE_FIELD_MAP = {
     'CAUSE_OF_DISABILITY': CAUSES_OF_DISABILITY,
     'STATE': STATES,
     'TRANSITION': TRANSITIONS,
-    'CVD_RISK': CVD_RISK_CATEGORIES,
+    'LDL': RISK_CATEGORIES,
+    'SBP': RISK_CATEGORIES,
+    'FPG': RISK_CATEGORIES,
+    'ACS': ACS_CATEGORIES,
+    'PT_KIND': PT_KINDS
 }
 
 
@@ -489,6 +558,6 @@ def RESULT_COLUMNS(kind='all'):
                               for field, values in TEMPLATE_FIELD_MAP.items() if f'{{{field}}}' in template}
         fields, value_groups = filtered_field_map.keys(), itertools.product(*filtered_field_map.values())
         for value_group in value_groups:
-            columns.append(template.format(**{field: value for field, value in zip(fields, value_group)}).lower())
+            columns.append(template.format(**{field: value for field, value in zip(fields, value_group)}))
     return columns
 

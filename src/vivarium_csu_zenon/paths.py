@@ -24,9 +24,9 @@ LDLC_REDUCTION = INTERNAL_DATA_ROOT / 'reduction_in_ldlc.csv'
 
 HEALTHCARE_UTILIZATION = INTERNAL_DATA_ROOT / 'outpatient_utilization.csv'
 
-BASELINE_TRANSITION_PARAMETERS = {
-    'initial_treatment': INTERNAL_DATA_ROOT / 'baseline_initial_treatment.csv',
-    'adverse_event': INTERNAL_DATA_ROOT / 'baseline_adverse_event.csv',
-    'post_cve': INTERNAL_DATA_ROOT / 'baseline_post_cve.csv',
-    'ramp_up': INTERNAL_DATA_ROOT / 'baseline_ramp_up.csv'
+TRANSITION_PARAMETERS = {
+    'treatment_start': INTERNAL_DATA_ROOT / 'transition_treatment_start.csv',
+    'ramp_up': INTERNAL_DATA_ROOT / 'transition_ramp_up.csv',
+    'post_cve': INTERNAL_DATA_ROOT / 'transition_ramp_up.csv',
+    'adverse_event': INTERNAL_DATA_ROOT / 'transition_adverse_event.csv'
 }

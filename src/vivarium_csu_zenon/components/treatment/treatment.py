@@ -38,7 +38,11 @@ class LDLCTreatmentCoverage:
         self.p_therapy_type = self.load_therapy_type_p(builder)
         self.p_treatment_type = self.load_treatment_type_p(builder)
 
-        columns_created = [parameters.TREATMENT.name]
+        threshold_data = builder.data.load(project_globals.LDL_C.HIGH_RISK_THRESHOLD)
+        self.high_risk_threshold = builder.lookup.build_table(threshold_data, key_columns=['sex'],
+                                                        parameter_columns=['age', 'year'])
+
+        columns_created = [project_globals.TREATMENT.name]
         self.population_view = builder.population.get_view(columns_created)
         builder.population.initializes_simulants(self.on_initialize_simulants,
                                                  creates_columns=columns_created,
@@ -47,7 +51,7 @@ class LDLCTreatmentCoverage:
 
     def on_initialize_simulants(self, pop_data: 'SimulantData'):
         """Initialize treatment status"""
-        pop_update = pd.Series(parameters.TREATMENT.none, index=pop_data.index, name=parameters.TREATMENT.name)
+        pop_update = pd.Series(project_globals.TREATMENT.none, index=pop_data.index, name=project_globals.TREATMENT.name)
 
         ldlc = self.ldlc(pop_data.index)
         treatment_probability = self.get_treatment_probability(ldlc)
@@ -60,8 +64,8 @@ class LDLCTreatmentCoverage:
                                                         list(self.p_treatment_type.keys()),
                                                         list(self.p_treatment_type.values()),
                                                         additional_key='treatment_type')
-        ezetimibe_if_mono = treatment_type_if_mono == parameters.TREATMENT.ezetimibe
-        fibrates_if_mono = treatment_type_if_mono == parameters.TREATMENT.fibrates
+        ezetimibe_if_mono = treatment_type_if_mono == project_globals.TREATMENT.ezetimibe
+        fibrates_if_mono = treatment_type_if_mono == project_globals.TREATMENT.fibrates
         low_statin_if_mono = treatment_type_if_mono == parameters.STATIN_LOW
         high_statin_if_mono = treatment_type_if_mono == parameters.STATIN_HIGH
 
@@ -83,37 +87,36 @@ class LDLCTreatmentCoverage:
         # Mono doses
         on_mono = treated & mono_if_treated
 
-        pop_update.loc[on_mono & fibrates_if_mono] = parameters.TREATMENT.fibrates
-        pop_update.loc[on_mono & ezetimibe_if_mono] = parameters.TREATMENT.ezetimibe
+        pop_update.loc[on_mono & fibrates_if_mono] = project_globals.TREATMENT.fibrates
+        pop_update.loc[on_mono & ezetimibe_if_mono] = project_globals.TREATMENT.ezetimibe
 
         pop_update.loc[(on_mono & low_statin_if_mono
-                        & low_dose_if_low_statin)] = parameters.TREATMENT.low_statin_low_dose
+                        & low_dose_if_low_statin)] = project_globals.TREATMENT.low_statin_low_dose
         pop_update.loc[(on_mono & low_statin_if_mono
-                        & ~low_dose_if_low_statin)] = parameters.TREATMENT.low_statin_high_dose
-        pop_update.loc[on_mono & high_statin_if_mono] = parameters.TREATMENT.high_statin_low_dose
+                        & ~low_dose_if_low_statin)] = project_globals.TREATMENT.low_statin_high_dose
+        pop_update.loc[on_mono & high_statin_if_mono] = project_globals.TREATMENT.high_statin_low_dose
 
         # Multi pill doses
         on_multi = treated & ~mono_if_treated & ~fdc_if_multi
 
         pop_update.loc[(on_multi & low_potency_statin_if_not_fdc
-                        & low_dose_if_low_statin)] = parameters.TREATMENT.low_statin_low_dose_multi
+                        & low_dose_if_low_statin)] = project_globals.TREATMENT.low_statin_low_dose_multi
         pop_update.loc[(on_multi & low_potency_statin_if_not_fdc
-                        & ~low_dose_if_low_statin)] = parameters.TREATMENT.low_statin_high_dose_multi
-        pop_update.loc[on_multi & ~low_potency_statin_if_not_fdc] = parameters.TREATMENT.high_statin_low_dose
+                        & ~low_dose_if_low_statin)] = project_globals.TREATMENT.low_statin_high_dose_multi
+        pop_update.loc[on_multi & ~low_potency_statin_if_not_fdc] = project_globals.TREATMENT.high_statin_low_dose
 
         # FDC
         fdc = treated & ~mono_if_treated & fdc_if_multi
 
-        pop_update.loc[fdc & low_dose_if_fdc] = parameters.TREATMENT.low_statin_low_dose_fdc
-        pop_update.loc[fdc & ~low_dose_if_fdc] = parameters.TREATMENT.low_statin_high_dose_fdc
+        pop_update.loc[fdc & low_dose_if_fdc] = project_globals.TREATMENT.low_statin_low_dose_fdc
+        pop_update.loc[fdc & ~low_dose_if_fdc] = project_globals.TREATMENT.low_statin_high_dose_fdc
 
         self.population_view.update(pop_update)
 
     def get_treatment_probability(self, ldlc: pd.Series) -> pd.Series:
         """Gets probability of treatment given ldlc level."""
         high_ldlc = ldlc > parameters.HIGH_LDL_BASELINE
-        # FIXME: Generate data, this is an awful hack for small sample sizes and not age/sex specific.
-        p_high_ldlc = len(ldlc[ldlc > parameters.HIGH_LDL_BASELINE])/len(ldlc)
+        p_high_ldlc = 1 - self.high_risk_threshold(ldlc.index)
         p_bad_ldlc = p_high_ldlc / (1 - self.p_at_target_given_treated * self.p_rx_given_bad_ldlc)
 
         p_treated_low = (self.p_at_target_given_treated * self.p_rx_given_bad_ldlc * p_bad_ldlc
@@ -148,7 +151,8 @@ class LDLCTreatmentCoverage:
         location = builder.configuration.input_data.location
         draw = builder.configuration.input_data.input_draw_number
         p_treatment_type = {treatment_type: parameters.sample_raw_drug_prescription(location, draw, treatment_type)
-                            for treatment_type in [parameters.TREATMENT.ezetimibe, parameters.TREATMENT.fibrates,
+                            for treatment_type in [project_globals.TREATMENT.ezetimibe,
+                                                   project_globals.TREATMENT.fibrates,
                                                    parameters.STATIN_HIGH, parameters.STATIN_LOW]}
         p_treatment_type = dict(zip([k for k in p_treatment_type.keys()],
                                     parameters.get_adjusted_probabilities(*p_treatment_type.values())))
@@ -170,7 +174,7 @@ class LDLCTreatmentAdherence:
 
         self.columns_required = [project_globals.IHD_MODEL_NAME,
                                  project_globals.ISCHEMIC_STROKE_MODEL_NAME,
-                                 parameters.TREATMENT.name]
+                                 project_globals.TREATMENT.name]
 
         self.population_view = builder.population.get_view(self.columns_required
                                                            + [f'{self.name}_propensity'])
@@ -205,11 +209,13 @@ class LDLCTreatmentAdherence:
                   != project_globals.ISCHEMIC_STROKE_SUSCEPTIBLE_STATE_NAME)
         had_cve = ihd | stroke
 
-        treated = pop_status[parameters.TREATMENT.name] != 'none'
-        multi_pill = pop_status[parameters.TREATMENT.name].isin([parameters.TREATMENT.low_statin_low_dose_multi,
-                                                                 parameters.TREATMENT.low_statin_high_dose_multi,
-                                                                 parameters.TREATMENT.high_statin_low_dose_multi,
-                                                                 parameters.TREATMENT.high_statin_high_dose_multi])
+        treated = pop_status[project_globals.TREATMENT.name] != 'none'
+        multi_pill = pop_status[project_globals.TREATMENT.name].isin([
+            project_globals.TREATMENT.low_statin_low_dose_multi,
+            project_globals.TREATMENT.low_statin_high_dose_multi,
+            project_globals.TREATMENT.high_statin_low_dose_multi,
+            project_globals.TREATMENT.high_statin_high_dose_multi
+        ])
 
         p_adherent.loc[treated & ~had_cve & ~multi_pill] = self.p_adherent[parameters.SINGLE_NO_CVE]
         p_adherent.loc[treated & ~had_cve & multi_pill] = self.p_adherent[parameters.MULTI_NO_CVE]
@@ -242,7 +248,7 @@ class LDLCTreatmentEffect:
         self.treatment_effect = self.load_treatment_effect(builder)
 
         self.is_adherent = builder.value.get_value('ldlc_treatment_adherence')
-        self.columns_required = [parameters.TREATMENT.name]
+        self.columns_required = [project_globals.TREATMENT.name]
 
         # This pipeline is not required.  It's a convenience for reporting later.
         self.proportion_reduction = builder.value.register_value_producer(self.name, self.compute_proportion_reduction,
@@ -273,23 +279,25 @@ class LDLCTreatmentEffect:
 
     def compute_proportion_reduction(self, index: pd.Index) -> pd.Series:
         """Determines how much current treatment reduces ldlc level."""
-        pop_status = self.population_view.subview([parameters.TREATMENT.name]).get(index)
-        effect_size = pop_status[parameters.TREATMENT.name].map(self.treatment_effect)
-        return effect_size
+        pop_status = self.population_view.subview([project_globals.TREATMENT.name]).get(index)
+        adherence = self.is_adherent(index).astype(int)
+        effect_size = pop_status[project_globals.TREATMENT.name].map(self.treatment_effect)
+        return effect_size * adherence
 
     @staticmethod
     def load_treatment_effect(builder: 'Builder') -> Dict[str, float]:
         location = builder.configuration.input_data.location
         draw = builder.configuration.input_data.input_draw_number
-        treatment_effect = {parameters.TREATMENT.none: 0}
-        for treatment in [parameters.TREATMENT.lifestyle, parameters.TREATMENT.fibrates,
-                          parameters.TREATMENT.ezetimibe, parameters.TREATMENT.low_statin_low_dose,
-                          parameters.TREATMENT.low_statin_high_dose, parameters.TREATMENT.high_statin_low_dose,
-                          parameters.TREATMENT.high_statin_high_dose]:
+        treatment_effect = {project_globals.TREATMENT.none: 0}
+        for treatment in [project_globals.TREATMENT.lifestyle, project_globals.TREATMENT.fibrates,
+                          project_globals.TREATMENT.ezetimibe, project_globals.TREATMENT.low_statin_low_dose,
+                          project_globals.TREATMENT.low_statin_high_dose,
+                          project_globals.TREATMENT.high_statin_low_dose,
+                          project_globals.TREATMENT.high_statin_high_dose]:
             treatment_effect[treatment] = parameters.sample_ldlc_reduction(location, draw, treatment)
 
-        ezetimibe_effect = treatment_effect[parameters.TREATMENT.ezetimibe]
-        for treatment in parameters.TREATMENT:
+        ezetimibe_effect = treatment_effect[project_globals.TREATMENT.ezetimibe]
+        for treatment in project_globals.TREATMENT:
             if 'multi' in treatment or 'fdc' in treatment:
                 existing_key = treatment.split('_multi')[0].split('_fdc')[0]
                 treatment_effect[treatment] = 1 - (1 - treatment_effect[existing_key]) * (1 - ezetimibe_effect)
@@ -315,7 +323,7 @@ class AdverseEffects:
         columns_created = [f'had_adverse_event']
         self.population_view = builder.population.get_view(columns_created
                                                            + ['ldlc_treatment_adherence_propensity']
-                                                           + [parameters.TREATMENT.name])
+                                                           + [project_globals.TREATMENT.name])
         builder.population.initializes_simulants(self.on_initialize_simulants,
                                                  creates_columns=columns_created)
 
@@ -323,8 +331,8 @@ class AdverseEffects:
         self.population_view.update(pd.Series(False, index=pop_data.index, name='had_adverse_event'))
 
     def on_time_step(self, event: 'Event'):
-        pop = self.population_view.get(event.index)
-        on_treatment = pop[parameters.TREATMENT.name] != parameters.TREATMENT.none
+        pop = self.population_view.get(event.index, query='alive == "alive"')
+        on_treatment = pop[project_globals.TREATMENT.name] != project_globals.TREATMENT.none
         # Lookup returns a series for scalar tables.  Yuck inconsistent.
         # noinspection PyTypeChecker
         had_adverse_event = self.randomness.filter_for_rate(on_treatment, self.event_rate(on_treatment))

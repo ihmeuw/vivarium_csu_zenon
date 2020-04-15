@@ -10,7 +10,7 @@ from vivarium_csu_zenon import globals as project_globals
 SCENARIO_COLUMN = 'scenario'
 GROUPBY_COLUMNS = [
     project_globals.INPUT_DRAW_COLUMN,
-    # SCENARIO_COLUMN
+    SCENARIO_COLUMN
 ]
 OUTPUT_COLUMN_SORT_ORDER = [
     'age_group',
@@ -35,6 +35,8 @@ def make_measure_data(data):
         deaths=get_by_cause_measure_data(data, 'deaths'),
         state_person_time=get_state_person_time_measure_data(data),
         transition_count=get_transition_count_measure_data(data),
+        miscellaneous_person_time=get_measure_data(data, 'miscellaneous_person_time')
+
     )
     return measure_data
 
@@ -47,6 +49,7 @@ class MeasureData(NamedTuple):
     deaths: pd.DataFrame
     state_person_time: pd.DataFrame
     transition_count: pd.DataFrame
+    miscellaneous_person_time: pd.DataFrame
 
     def dump(self, output_dir: Path):
         for key, df in self._asdict().items():
@@ -56,11 +59,11 @@ class MeasureData(NamedTuple):
 
 def read_data(path: Path) -> (pd.DataFrame, List[str]):
     data = pd.read_hdf(path)
+    # noinspection PyUnresolvedReferences
     data = (data
             .drop(columns=data.columns.intersection(project_globals.THROWAWAY_COLUMNS))
             .reset_index(drop=True)
-            # TODO: add back when we have scenarios
-            # .rename(columns={project_globals.OUTPUT_SCENARIO_COLUMN: SCENARIO_COLUMN}))
+            .rename(columns={project_globals.OUTPUT_SCENARIO_COLUMN: SCENARIO_COLUMN})
             )
     data[project_globals.INPUT_DRAW_COLUMN] = data[project_globals.INPUT_DRAW_COLUMN].astype(int)
     data[project_globals.RANDOM_SEED_COLUMN] = data[project_globals.RANDOM_SEED_COLUMN].astype(int)
@@ -114,10 +117,14 @@ def sort_data(data):
 
 
 def split_processing_column(data):
-    data['measure'], year_and_sex, process = data.process.str.split('_in_').str
-    data['year'], data['sex'] = year_and_sex.str.split('_among_').str
-    process = process.str.split('age_group_').str[1]
-    data['age_group'], data['cvd_risk_category'] = process.str.split('_cvd_').str
+    data['process'], data['acs'] = data.process.str.split('_ACS_').str
+    data['process'], data['fpg'] = data.process.str.split('_FPG_').str
+    data['process'], data['sbp'] = data.process.str.split('_SBP_').str
+    data['process'], data['ldl'] = data.process.str.split('_LDL_').str
+
+    data['process'], data['age_group'] = data.process.str.split('_in_age_group_').str
+    data['process'], data['sex'] = data.process.str.split('_among_').str
+    data['measure'], data['year'] = data.process.str.split('_in_').str
     return data.drop(columns='process')
 
 
@@ -150,6 +157,5 @@ def get_state_person_time_measure_data(data):
 def get_transition_count_measure_data(data):
     # Oops, edge case.
     data = data.drop(columns=[c for c in data.columns if 'event_count' in c and '2025' in c])
-    data = pivot_data(data[project_globals.RESULT_COLUMNS('transition_count') + GROUPBY_COLUMNS])
-    data = split_processing_column(data)
+    data = get_measure_data(data, 'transition_count')
     return sort_data(data)

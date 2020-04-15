@@ -43,6 +43,7 @@ components:
         - DiseaseObserver('ischemic_stroke')
         - DiseaseObserver('diabetes_mellitus')
         - DiseaseObserver('chronic_kidney_disease')
+        - MiscellaneousObserver()
 
         - LDLCTreatmentCoverage()
         - LDLCTreatmentEffect()
@@ -79,6 +80,9 @@ configuration:
         age_end: 125
         exit_age: 125
 
+    ldlc_treatment_algorithm:
+        scenario: 'baseline'
+
     metrics:
         disability:
             by_age: True
@@ -101,6 +105,10 @@ configuration:
             by_sex: True
             by_year: True
         chronic_kidney_disease_observer:
+            by_age: True
+            by_sex: True
+            by_year: True
+        miscellaneous_observer:
             by_age: True
             by_sex: True
             by_year: True

@@ -1,0 +1,6 @@
+input_draw_count: 10
+random_seed_count: 20
+
+branches:
+  - ldlc_treatment_algorithm:
+      scenario: ['baseline', 'guideline', 'guideline_and_new_treatment']

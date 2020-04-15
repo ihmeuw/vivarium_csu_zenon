@@ -8,7 +8,8 @@ from vivarium_public_health.metrics import (MortalityObserver as MortalityObserv
 from vivarium_public_health.metrics.utilities import (get_output_template, get_group_counts,
                                                       QueryString, to_years, get_person_time,
                                                       get_deaths, get_years_of_life_lost,
-                                                      get_years_lived_with_disability, get_age_bins)
+                                                      get_years_lived_with_disability, get_age_bins,
+                                                      get_age_sex_filter_and_iterables)
 
 from vivarium_csu_zenon import globals as project_globals
 from vivarium_csu_zenon.components.disease import ChronicKidneyDisease
@@ -32,11 +33,57 @@ class ResultsStratifier:
     def __init__(self, observer_name: str):
         self.name = f'{observer_name}_results_stratifier'
 
+    # noinspection PyAttributeOutsideInit
     def setup(self, builder: 'Builder'):
         """Perform this component's setup."""
         # The only thing you should request here are resources necessary for
         # results stratification.
-        self.cvd_risk_category = builder.value.get_value('cvd_risk_category')
+        self.sbp = builder.value.get_value('high_systolic_blood_pressure.exposure')
+        self.ldlc = builder.value.get_value('high_ldl_cholesterol.exposure')
+        columns_required = [project_globals.IHD_MODEL_NAME,
+                            project_globals.ISCHEMIC_STROKE_MODEL_NAME,
+                            project_globals.DIABETES_MELLITUS_MODEL_NAME]
+        self.population_view = builder.population.get_view(columns_required)
+        self.risk_groups = None
+        builder.population.initializes_simulants(self.on_initialize_simulants,
+                                                 requires_columns=columns_required,
+                                                 requires_values=['high_systolic_blood_pressure.exposure',
+                                                                  'high_ldl_cholesterol.exposure'])
+
+    # noinspection PyAttributeOutsideInit
+    def on_initialize_simulants(self, pop_data: 'SimulantData'):
+        risk_groups = pd.Series('', index=pop_data.index)
+        pop = self.population_view.get(pop_data.index)
+        sbp = self.sbp(pop_data.index)
+        ldlc = self.ldlc(pop_data.index)
+
+        post_acs = (
+                (pop[project_globals.IHD_MODEL_NAME] != project_globals.IHD_SUSCEPTIBLE_STATE_NAME)
+                | (pop[project_globals.ISCHEMIC_STROKE_MODEL_NAME]
+                   != project_globals.ISCHEMIC_STROKE_SUSCEPTIBLE_STATE_NAME)
+        )
+        high_sbp = sbp > 140
+        high_ldlc = ldlc > 5
+        high_fpg = (pop[project_globals.DIABETES_MELLITUS_MODEL_NAME]
+                    != project_globals.DIABETES_MELLITUS_SUSCEPTIBLE_STATE_NAME)
+
+        risk_groups.loc[high_sbp & high_ldlc & high_fpg & post_acs] = project_globals.RISK_GROUPS.cat1
+        risk_groups.loc[high_sbp & high_ldlc & high_fpg & ~post_acs] = project_globals.RISK_GROUPS.cat2
+        risk_groups.loc[high_sbp & high_ldlc & ~high_fpg & post_acs] = project_globals.RISK_GROUPS.cat3
+        risk_groups.loc[high_sbp & high_ldlc & ~high_fpg & ~post_acs] = project_globals.RISK_GROUPS.cat4
+        risk_groups.loc[high_sbp & ~high_ldlc & high_fpg & post_acs] = project_globals.RISK_GROUPS.cat5
+        risk_groups.loc[high_sbp & ~high_ldlc & high_fpg & ~post_acs] = project_globals.RISK_GROUPS.cat6
+        risk_groups.loc[high_sbp & ~high_ldlc & ~high_fpg & post_acs] = project_globals.RISK_GROUPS.cat7
+        risk_groups.loc[high_sbp & ~high_ldlc & ~high_fpg & ~post_acs] = project_globals.RISK_GROUPS.cat8
+        risk_groups.loc[~high_sbp & high_ldlc & high_fpg & post_acs] = project_globals.RISK_GROUPS.cat9
+        risk_groups.loc[~high_sbp & high_ldlc & high_fpg & ~post_acs] = project_globals.RISK_GROUPS.cat10
+        risk_groups.loc[~high_sbp & high_ldlc & ~high_fpg & post_acs] = project_globals.RISK_GROUPS.cat11
+        risk_groups.loc[~high_sbp & high_ldlc & ~high_fpg & ~post_acs] = project_globals.RISK_GROUPS.cat12
+        risk_groups.loc[~high_sbp & ~high_ldlc & high_fpg & post_acs] = project_globals.RISK_GROUPS.cat13
+        risk_groups.loc[~high_sbp & ~high_ldlc & high_fpg & ~post_acs] = project_globals.RISK_GROUPS.cat14
+        risk_groups.loc[~high_sbp & ~high_ldlc & ~high_fpg & post_acs] = project_globals.RISK_GROUPS.cat15
+        risk_groups.loc[~high_sbp & ~high_ldlc & ~high_fpg & ~post_acs] = project_globals.RISK_GROUPS.cat16
+        self.risk_groups = risk_groups
 
     def group(self, population: pd.DataFrame) -> Iterable[Tuple[Tuple[str, ...], pd.DataFrame]]:
         """Takes the full population and yields stratified subgroups.
@@ -52,14 +99,13 @@ class ResultsStratifier:
             corresponding to those labels.
 
         """
-
-        cvd_risk = self.cvd_risk_category(population.index)
-        for cvd_risk_cat in project_globals.CVD_RISK_CATEGORIES:
+        stratification_group = self.risk_groups.loc[population.index]
+        for risk_cat in project_globals.RISK_GROUPS:
             if population.empty:
                 pop_in_group = population
             else:
-                pop_in_group = population.loc[cvd_risk == cvd_risk_cat]
-            yield (cvd_risk_cat,), pop_in_group
+                pop_in_group = population.loc[stratification_group == risk_cat]
+            yield (risk_cat,), pop_in_group
 
     @staticmethod
     def update_labels(measure_data: Dict[str, float], labels: Tuple[str, ...]) -> Dict[str, float]:
@@ -80,8 +126,8 @@ class ResultsStratifier:
             labels.
 
         """
-        cvd_risk = labels[0]
-        measure_data = {f'{k}_cvd_{cvd_risk}': v for k, v in measure_data.items()}
+        stratification_label = labels[0]
+        measure_data = {f'{k}_{stratification_label}': v for k, v in measure_data.items()}
         return measure_data
 
 
@@ -137,6 +183,7 @@ class DisabilityObserver(DisabilityObserver_):
     def sub_components(self) -> List[ResultsStratifier]:
         return [self.stratifier]
 
+    # noinspection PyAttributeOutsideInit
     def setup(self, builder: 'Builder'):
         super().setup(builder)
         if builder.components.get_components_by_type(ChronicKidneyDisease):
@@ -188,6 +235,7 @@ class DiseaseObserver:
     def sub_components(self) -> List[ResultsStratifier]:
         return [self.stratifier]
 
+    # noinspection PyAttributeOutsideInit
     def setup(self, builder: 'Builder'):
         self.config = builder.configuration['metrics'][f'{self.disease}_observer'].to_dict()
         self.clock = builder.time.clock()
@@ -253,6 +301,108 @@ class DiseaseObserver:
 
     def __repr__(self) -> str:
         return f"DiseaseObserver({self.disease})"
+
+
+class MiscellaneousObserver:
+    """Observes person time weighted by observed metrics."""
+    configuration_defaults = {
+        'metrics': {
+            'miscellaneous_observer': {
+                'by_age': False,
+                'by_year': False,
+                'by_sex': False,
+            }
+        }
+    }
+
+    def __init__(self):
+        self.stratifier = ResultsStratifier(self.name)
+
+    @property
+    def name(self) -> str:
+        return 'miscellaneous_observer'
+
+    @property
+    def sub_components(self) -> List[ResultsStratifier]:
+        return [self.stratifier]
+
+    # noinspection PyAttributeOutsideInit
+    def setup(self, builder: 'Builder'):
+        self.config = builder.configuration.metrics.miscellaneous_observer.to_dict()
+        self.age_bins = get_age_bins(builder)
+        columns_required = [project_globals.TREATMENT.name, 'age', 'sex', 'alive',
+                            'initial_treatment_proportion_reduction']
+        self.population_view = builder.population.get_view(columns_required)
+
+        self.fpg = builder.value.get_value(f'{project_globals.FPG.name}.exposure')
+        self.ldlc = builder.value.get_value(f'{project_globals.LDL_C.name}.exposure')
+        self.sbp = builder.value.get_value(f'{project_globals.SBP.name}.exposure')
+        self.is_adherent = builder.value.get_value('ldlc_treatment_adherence')
+        self.cvd_risk_score = builder.value.get_value('cvd_risk_score')
+
+        self.results = Counter()
+
+        builder.value.register_value_modifier('metrics', self.metrics)
+        builder.event.register_listener('collect_metrics', self.on_collect_metrics)
+
+    def on_collect_metrics(self, event: 'Event'):
+        pop = self.population_view.get(event.index, query='alive == "alive"')
+        initial_proportion_reduction = pop['initial_treatment_proportion_reduction']
+
+        fpg = self.fpg(pop.index)
+        sbp = self.sbp(pop.index)
+        ldlc = self.ldlc(pop.index)
+        cvd_score = self.cvd_risk_score(pop.index)
+        measure_map = list(zip(['fpg_person_time', 'sbp_person_time', 'ldlc_person_time', 'cv_risk_score_person_time'],
+                               [fpg, sbp, ldlc, cvd_score]))
+
+        adherent = self.is_adherent(pop.index).astype(int)
+
+        raw_ldlc = ldlc / (1 - initial_proportion_reduction)
+        at_target = (ldlc / raw_ldlc <= 0.5).astype(int)
+
+        # noinspection PyTypeChecker
+        step_size = to_years(event.step_size)
+
+        age_sex_filter, (ages, sexes) = get_age_sex_filter_and_iterables(self.config, self.age_bins)
+        base_key = get_output_template(**self.config).substitute(year=event.time.year)
+        base_filter = QueryString(f'alive == "alive"') + age_sex_filter
+        person_time = {}
+        for labels, pop_in_group in self.stratifier.group(pop):
+            for group, age_group in ages:
+                start, end = age_group.age_start, age_group.age_end
+                for sex in sexes:
+                    filter_kwargs = {'age_start': start, 'age_end': end, 'sex': sex, 'age_group': group}
+                    group_key = base_key.substitute(**filter_kwargs)
+                    group_filter = base_filter.format(**filter_kwargs)
+
+                    sub_pop = (pop_in_group.query(group_filter)
+                               if group_filter and not pop_in_group.empty else pop_in_group)
+
+                    for measure, attribute in measure_map:
+                        person_time[group_key.substitute(measure=measure)] = sum(attribute.loc[sub_pop.index]
+                                                                                 * step_size)
+
+                    adherent_pt = sum(adherent.loc[sub_pop.index] * step_size)
+                    person_time[group_key.substitute(measure='adherent_person_time')] = adherent_pt
+
+                    at_target_pt = sum(at_target.loc[sub_pop.index] * step_size)
+                    person_time[group_key.substitute(measure='at_target_person_time')] = at_target_pt
+
+                    treatments = {group_key.substitute(measure=f'{treatment}_person_time'): 0.
+                                  for treatment in project_globals.TREATMENT}
+
+                    treatments.update((sub_pop[project_globals.TREATMENT.name]
+                                       .map(lambda x: group_key.substitute(measure=f'{x}_person_time'))
+                                       .value_counts() * step_size)
+                                      .to_dict())
+                    person_time.update(treatments)
+
+            self.results.update(self.stratifier.update_labels(person_time, labels))
+
+    def metrics(self, index: pd.Index, metrics: Dict[str, float]):
+        metrics.update(self.results)
+        return metrics
 
 
 def get_state_person_time(pop: pd.DataFrame, config: Dict[str, bool],
