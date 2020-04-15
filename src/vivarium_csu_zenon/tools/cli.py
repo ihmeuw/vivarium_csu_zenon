@@ -13,6 +13,7 @@ from vivarium_csu_zenon.tools import build_fpg_thresholds
 from vivarium_csu_zenon.tools import build_ldl_thresholds
 from vivarium_csu_zenon.tools import build_results_from_logs
 from vivarium_csu_zenon.tools import build_joint_pafs
+from vivarium_csu_zenon.tools import build_sample_histories
 
 
 @click.command()
@@ -193,3 +194,31 @@ def parse_logs(worker_log_directory, output_file, verbose, with_debugger):
     configure_logging_to_terminal(verbose)
     main = handle_exceptions(build_results_from_logs, logger, with_debugger=with_debugger)
     main(worker_log_directory, output_file)
+
+
+@click.command()
+@click.option('-l', '--location',
+              default='all',
+              show_default=True,
+              type=click.Choice(project_globals.LOCATIONS + ['all']),
+              help='Location to make sample histories for.')
+@click.option('-s', '--scenarios',
+              default='all',
+              show_default=True,
+              type=click.Choice(project_globals.SCENARIOS + ['all']),
+              help='Scenarios to make sample histories for')
+@click.option('-q', '--queue',
+              default=project_globals.ALL_QUEUE,
+              show_default=True,
+              type=click.Choice(project_globals.CLUSTER_QUEUES),
+              help='Queue to run calculations on.')
+@click.option('-v', 'verbose',
+              count=True,
+              help='Configure logging verbosity.')
+@click.option('--pdb', 'with_debugger',
+              is_flag=True,
+              help='Drop into python debugger if an error occurs.')
+def make_sample_histories(location: str, scenarios: str, verbose: int, with_debugger: bool, queue: str) -> None:
+    configure_logging_to_terminal(verbose)
+    main = handle_exceptions(build_sample_histories, logger, with_debugger=with_debugger)
+    main(location, scenarios, verbose, queue)

@@ -29,6 +29,11 @@ LOCATIONS = [
     'Russian Federation',
 ]
 
+SCENARIOS = [
+    'baseline',
+    'guideline',
+    'guideline_and_new_treatment'
+]
 
 #############
 # Data Keys #
@@ -379,6 +384,15 @@ CORRELATED_PROPENSITY_COLUMNS = [
     LDL_C_PROPENSITY_COLUMN,
     DIABETES_PROPENSITY_COLUMN,
 ]
+
+############################
+#  Doctor Visit Constants  #
+############################
+
+DOCTOR_VISIT = 'doctor_visit'
+BACKGROUND_VISIT = 'background_visit'
+FOLLOW_UP_VISIT = 'follow_up_visit'
+FOLLOW_UP_DATE = 'follow_up_date'
 
 ############################
 # Stratification Constants #
