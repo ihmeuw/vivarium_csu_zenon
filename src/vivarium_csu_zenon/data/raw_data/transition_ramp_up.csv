@@ -29,12 +29,12 @@ France,baseline,ezetimibe,high_potency_statin_high_dose_multi,0
 Italy,baseline,ezetimibe,high_potency_statin_high_dose_multi,0
 Russian Federation,baseline,ezetimibe,high_potency_statin_high_dose_multi,0
 Spain,baseline,ezetimibe,high_potency_statin_high_dose_multi,0
-Brazil,baseline,ezetimibe,high_potency_statin_low_dose,0
-China,baseline,ezetimibe,high_potency_statin_low_dose,0.00
-France,baseline,ezetimibe,high_potency_statin_low_dose,0
-Italy,baseline,ezetimibe,high_potency_statin_low_dose,0
-Russian Federation,baseline,ezetimibe,high_potency_statin_low_dose,0
-Spain,baseline,ezetimibe,high_potency_statin_low_dose,0
+Brazil,baseline,ezetimibe,high_potency_statin_low_dose,0.026899563318777
+China,baseline,ezetimibe,high_potency_statin_low_dose,0.03
+France,baseline,ezetimibe,high_potency_statin_low_dose,0.026899563318777
+Italy,baseline,ezetimibe,high_potency_statin_low_dose,0.026899563318777
+Russian Federation,baseline,ezetimibe,high_potency_statin_low_dose,0.026899563318777
+Spain,baseline,ezetimibe,high_potency_statin_low_dose,0.026899563318777
 Brazil,baseline,ezetimibe,high_potency_statin_low_dose_fdc,0
 China,baseline,ezetimibe,high_potency_statin_low_dose_fdc,0.00
 France,baseline,ezetimibe,high_potency_statin_low_dose_fdc,0
@@ -71,12 +71,12 @@ France,baseline,ezetimibe,low_potency_statin_high_dose_multi,0
 Italy,baseline,ezetimibe,low_potency_statin_high_dose_multi,0
 Russian Federation,baseline,ezetimibe,low_potency_statin_high_dose_multi,0
 Spain,baseline,ezetimibe,low_potency_statin_high_dose_multi,0
-Brazil,baseline,ezetimibe,low_potency_statin_low_dose,0.053799126637555
-China,baseline,ezetimibe,low_potency_statin_low_dose,0.05
-France,baseline,ezetimibe,low_potency_statin_low_dose,0.053799126637555
-Italy,baseline,ezetimibe,low_potency_statin_low_dose,0.053799126637555
-Russian Federation,baseline,ezetimibe,low_potency_statin_low_dose,0.053799126637555
-Spain,baseline,ezetimibe,low_potency_statin_low_dose,0.053799126637555
+Brazil,baseline,ezetimibe,low_potency_statin_low_dose,0.026899563318777
+China,baseline,ezetimibe,low_potency_statin_low_dose,0.03
+France,baseline,ezetimibe,low_potency_statin_low_dose,0.026899563318777
+Italy,baseline,ezetimibe,low_potency_statin_low_dose,0.026899563318777
+Russian Federation,baseline,ezetimibe,low_potency_statin_low_dose,0.026899563318777
+Spain,baseline,ezetimibe,low_potency_statin_low_dose,0.026899563318777
 Brazil,baseline,ezetimibe,low_potency_statin_low_dose_fdc,0.058593585303418
 China,baseline,ezetimibe,low_potency_statin_low_dose_fdc,0.06
 France,baseline,ezetimibe,low_potency_statin_low_dose_fdc,0.072216593886463
@@ -125,12 +125,12 @@ France,baseline,fibrates,high_potency_statin_high_dose_multi,0
 Italy,baseline,fibrates,high_potency_statin_high_dose_multi,0
 Russian Federation,baseline,fibrates,high_potency_statin_high_dose_multi,0
 Spain,baseline,fibrates,high_potency_statin_high_dose_multi,0
-Brazil,baseline,fibrates,high_potency_statin_low_dose,0
-China,baseline,fibrates,high_potency_statin_low_dose,0.00
-France,baseline,fibrates,high_potency_statin_low_dose,0
-Italy,baseline,fibrates,high_potency_statin_low_dose,0
-Russian Federation,baseline,fibrates,high_potency_statin_low_dose,0
-Spain,baseline,fibrates,high_potency_statin_low_dose,0
+Brazil,baseline,fibrates,high_potency_statin_low_dose,0.063081351073201
+China,baseline,fibrates,high_potency_statin_low_dose,0.079062173835017
+France,baseline,fibrates,high_potency_statin_low_dose,0.07069144926573
+Italy,baseline,fibrates,high_potency_statin_low_dose,0.058655992420366
+Russian Federation,baseline,fibrates,high_potency_statin_low_dose,0.079789669078516
+Spain,baseline,fibrates,high_potency_statin_low_dose,0.06458245146618
 Brazil,baseline,fibrates,high_potency_statin_low_dose_fdc,0
 China,baseline,fibrates,high_potency_statin_low_dose_fdc,0
 France,baseline,fibrates,high_potency_statin_low_dose_fdc,0
@@ -167,12 +167,12 @@ France,baseline,fibrates,low_potency_statin_high_dose_multi,0
 Italy,baseline,fibrates,low_potency_statin_high_dose_multi,0
 Russian Federation,baseline,fibrates,low_potency_statin_high_dose_multi,0
 Spain,baseline,fibrates,low_potency_statin_high_dose_multi,0
-Brazil,baseline,fibrates,low_potency_statin_low_dose,0.126162702146401
-China,baseline,fibrates,low_potency_statin_low_dose,0.16
-France,baseline,fibrates,low_potency_statin_low_dose,0.14138289853146
-Italy,baseline,fibrates,low_potency_statin_low_dose,0.117311984840731
-Russian Federation,baseline,fibrates,low_potency_statin_low_dose,0.159579338157031
-Spain,baseline,fibrates,low_potency_statin_low_dose,0.129164902932359
+Brazil,baseline,fibrates,low_potency_statin_low_dose,0.063081351073201
+China,baseline,fibrates,low_potency_statin_low_dose,0.08
+France,baseline,fibrates,low_potency_statin_low_dose,0.07069144926573
+Italy,baseline,fibrates,low_potency_statin_low_dose,0.058655992420366
+Russian Federation,baseline,fibrates,low_potency_statin_low_dose,0.079789669078516
+Spain,baseline,fibrates,low_potency_statin_low_dose,0.06458245146618
 Brazil,baseline,fibrates,low_potency_statin_low_dose_fdc,0
 China,baseline,fibrates,low_potency_statin_low_dose_fdc,0
 France,baseline,fibrates,low_potency_statin_low_dose_fdc,0
@@ -767,18 +767,18 @@ France,baseline,high_potency_statin_low_dose_multi,none,0
 Italy,baseline,high_potency_statin_low_dose_multi,none,0
 Russian Federation,baseline,high_potency_statin_low_dose_multi,none,0
 Spain,baseline,high_potency_statin_low_dose_multi,none,0
-Brazil,baseline,lifestyle_intervention,ezetimibe,0.068710238678789
-China,baseline,lifestyle_intervention,ezetimibe,0.003019350307982
-France,baseline,lifestyle_intervention,ezetimibe,0.043484563635757
-Italy,baseline,lifestyle_intervention,ezetimibe,0.137930143833017
-Russian Federation,baseline,lifestyle_intervention,ezetimibe,0.001009415147175
-Spain,baseline,lifestyle_intervention,ezetimibe,0.064356518229253
-Brazil,baseline,lifestyle_intervention,fibrates,0.098102951891383
-China,baseline,lifestyle_intervention,fibrates,0.061083779307637
-France,baseline,lifestyle_intervention,fibrates,0.131282845722358
-Italy,baseline,lifestyle_intervention,fibrates,0.008620633989564
-Russian Federation,baseline,lifestyle_intervention,fibrates,0.007065906030224
-Spain,baseline,lifestyle_intervention,fibrates,0.002758136495539
+Brazil,baseline,lifestyle_intervention,ezetimibe,0.034355119339395
+China,baseline,lifestyle_intervention,ezetimibe,0.001509675153991
+France,baseline,lifestyle_intervention,ezetimibe,0.021742281817878
+Italy,baseline,lifestyle_intervention,ezetimibe,0.068965071916509
+Russian Federation,baseline,lifestyle_intervention,ezetimibe,0.000504707573587
+Spain,baseline,lifestyle_intervention,ezetimibe,0.032178259114627
+Brazil,baseline,lifestyle_intervention,fibrates,0.049051475945691
+China,baseline,lifestyle_intervention,fibrates,0.030541889653819
+France,baseline,lifestyle_intervention,fibrates,0.065641422861179
+Italy,baseline,lifestyle_intervention,fibrates,0.004310316994782
+Russian Federation,baseline,lifestyle_intervention,fibrates,0.003532953015112
+Spain,baseline,lifestyle_intervention,fibrates,0.00137906824777
 Brazil,baseline,lifestyle_intervention,high_potency_statin_high_dose,0
 China,baseline,lifestyle_intervention,high_potency_statin_high_dose,0
 France,baseline,lifestyle_intervention,high_potency_statin_high_dose,0
@@ -797,12 +797,12 @@ France,baseline,lifestyle_intervention,high_potency_statin_high_dose_multi,0
 Italy,baseline,lifestyle_intervention,high_potency_statin_high_dose_multi,0
 Russian Federation,baseline,lifestyle_intervention,high_potency_statin_high_dose_multi,0
 Spain,baseline,lifestyle_intervention,high_potency_statin_high_dose_multi,0
-Brazil,baseline,lifestyle_intervention,high_potency_statin_low_dose,0
-China,baseline,lifestyle_intervention,high_potency_statin_low_dose,0
-France,baseline,lifestyle_intervention,high_potency_statin_low_dose,0
-Italy,baseline,lifestyle_intervention,high_potency_statin_low_dose,0
-Russian Federation,baseline,lifestyle_intervention,high_potency_statin_low_dose,0
-Spain,baseline,lifestyle_intervention,high_potency_statin_low_dose,0
+Brazil,baseline,lifestyle_intervention,high_potency_statin_low_dose,0.2115
+China,baseline,lifestyle_intervention,high_potency_statin_low_dose,0.159322698751219
+France,baseline,lifestyle_intervention,high_potency_statin_low_dose,0.2525
+Italy,baseline,lifestyle_intervention,high_potency_statin_low_dose,0.2628
+Russian Federation,baseline,lifestyle_intervention,high_potency_statin_low_dose,0.1955
+Spain,baseline,lifestyle_intervention,high_potency_statin_low_dose,0.168348591549296
 Brazil,baseline,lifestyle_intervention,high_potency_statin_low_dose_fdc,0
 China,baseline,lifestyle_intervention,high_potency_statin_low_dose_fdc,0
 France,baseline,lifestyle_intervention,high_potency_statin_low_dose_fdc,0
@@ -839,12 +839,12 @@ France,baseline,lifestyle_intervention,low_potency_statin_high_dose_multi,0
 Italy,baseline,lifestyle_intervention,low_potency_statin_high_dose_multi,0
 Russian Federation,baseline,lifestyle_intervention,low_potency_statin_high_dose_multi,0
 Spain,baseline,lifestyle_intervention,low_potency_statin_high_dose_multi,0
-Brazil,baseline,lifestyle_intervention,low_potency_statin_low_dose,0.256186809429828
-China,baseline,lifestyle_intervention,low_potency_statin_low_dose,0.254542267886818
-France,baseline,lifestyle_intervention,low_potency_statin_low_dose,0.330232590641885
-Italy,baseline,lifestyle_intervention,low_potency_statin_low_dose,0.379049222177419
-Russian Federation,baseline,lifestyle_intervention,low_potency_statin_low_dose,0.382924678822601
-Spain,baseline,lifestyle_intervention,low_potency_statin_low_dose,0.269582528373799
+Brazil,baseline,lifestyle_intervention,low_potency_statin_low_dose,0.128093404714914
+China,baseline,lifestyle_intervention,low_potency_statin_low_dose,0.127271133943409
+France,baseline,lifestyle_intervention,low_potency_statin_low_dose,0.165116295320943
+Italy,baseline,lifestyle_intervention,low_potency_statin_low_dose,0.18952461108871
+Russian Federation,baseline,lifestyle_intervention,low_potency_statin_low_dose,0.191462339411301
+Spain,baseline,lifestyle_intervention,low_potency_statin_low_dose,0.1347912641869
 Brazil,baseline,lifestyle_intervention,low_potency_statin_low_dose_fdc,0
 China,baseline,lifestyle_intervention,low_potency_statin_low_dose_fdc,0.00
 France,baseline,lifestyle_intervention,low_potency_statin_low_dose_fdc,0
@@ -1439,18 +1439,18 @@ France,baseline,low_potency_statin_low_dose_multi,none,0
 Italy,baseline,low_potency_statin_low_dose_multi,none,0
 Russian Federation,baseline,low_potency_statin_low_dose_multi,none,0
 Spain,baseline,low_potency_statin_low_dose_multi,none,0
-Brazil,baseline,none,ezetimibe,0.068710238678789
-China,baseline,none,ezetimibe,0.003019350307982
-France,baseline,none,ezetimibe,0.043484563635757
-Italy,baseline,none,ezetimibe,0.137930143833017
-Russian Federation,baseline,none,ezetimibe,0.001009415147175
-Spain,baseline,none,ezetimibe,0.064356518229253
-Brazil,baseline,none,fibrates,0.098102951891383
-China,baseline,none,fibrates,0.061083779307637
-France,baseline,none,fibrates,0.131282845722358
-Italy,baseline,none,fibrates,0.008620633989564
-Russian Federation,baseline,none,fibrates,0.007065906030224
-Spain,baseline,none,fibrates,0.002758136495539
+Brazil,baseline,none,ezetimibe,0.034355119339395
+China,baseline,none,ezetimibe,0.001509675153991
+France,baseline,none,ezetimibe,0.021742281817878
+Italy,baseline,none,ezetimibe,0.068965071916509
+Russian Federation,baseline,none,ezetimibe,0.000504707573587
+Spain,baseline,none,ezetimibe,0.032178259114627
+Brazil,baseline,none,fibrates,0.049051475945691
+China,baseline,none,fibrates,0.030541889653819
+France,baseline,none,fibrates,0.065641422861179
+Italy,baseline,none,fibrates,0.004310316994782
+Russian Federation,baseline,none,fibrates,0.003532953015112
+Spain,baseline,none,fibrates,0.00137906824777
 Brazil,baseline,none,high_potency_statin_high_dose,0
 China,baseline,none,high_potency_statin_high_dose,0
 France,baseline,none,high_potency_statin_high_dose,0
@@ -1469,12 +1469,12 @@ France,baseline,none,high_potency_statin_high_dose_multi,0
 Italy,baseline,none,high_potency_statin_high_dose_multi,0
 Russian Federation,baseline,none,high_potency_statin_high_dose_multi,0
 Spain,baseline,none,high_potency_statin_high_dose_multi,0
-Brazil,baseline,none,high_potency_statin_low_dose,0
-China,baseline,none,high_potency_statin_low_dose,0
-France,baseline,none,high_potency_statin_low_dose,0
-Italy,baseline,none,high_potency_statin_low_dose,0
-Russian Federation,baseline,none,high_potency_statin_low_dose,0
-Spain,baseline,none,high_potency_statin_low_dose,0
+Brazil,baseline,none,high_potency_statin_low_dose,0.2115
+China,baseline,none,high_potency_statin_low_dose,0.159322698751219
+France,baseline,none,high_potency_statin_low_dose,0.2525
+Italy,baseline,none,high_potency_statin_low_dose,0.2628
+Russian Federation,baseline,none,high_potency_statin_low_dose,0.1955
+Spain,baseline,none,high_potency_statin_low_dose,0.168348591549296
 Brazil,baseline,none,high_potency_statin_low_dose_fdc,0
 China,baseline,none,high_potency_statin_low_dose_fdc,0
 France,baseline,none,high_potency_statin_low_dose_fdc,0
@@ -1511,12 +1511,12 @@ France,baseline,none,low_potency_statin_high_dose_multi,0
 Italy,baseline,none,low_potency_statin_high_dose_multi,0
 Russian Federation,baseline,none,low_potency_statin_high_dose_multi,0
 Spain,baseline,none,low_potency_statin_high_dose_multi,0
-Brazil,baseline,none,low_potency_statin_low_dose,0.256186809429828
-China,baseline,none,low_potency_statin_low_dose,0.254542267886818
-France,baseline,none,low_potency_statin_low_dose,0.330232590641885
-Italy,baseline,none,low_potency_statin_low_dose,0.379049222177419
-Russian Federation,baseline,none,low_potency_statin_low_dose,0.382924678822601
-Spain,baseline,none,low_potency_statin_low_dose,0.269582528373799
+Brazil,baseline,none,low_potency_statin_low_dose,0.128093404714914
+China,baseline,none,low_potency_statin_low_dose,0.127271133943409
+France,baseline,none,low_potency_statin_low_dose,0.165116295320943
+Italy,baseline,none,low_potency_statin_low_dose,0.18952461108871
+Russian Federation,baseline,none,low_potency_statin_low_dose,0.191462339411301
+Spain,baseline,none,low_potency_statin_low_dose,0.1347912641869
 Brazil,baseline,none,low_potency_statin_low_dose_fdc,0
 China,baseline,none,low_potency_statin_low_dose_fdc,0
 France,baseline,none,low_potency_statin_low_dose_fdc,0
