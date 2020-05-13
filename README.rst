@@ -2,6 +2,9 @@
 vivarium_csu_zenon
 ===============================
 
+.. image:: https://zenodo.org/badge/240375663.svg
+   :target: https://zenodo.org/badge/latestdoi/240375663
+
 Research repository for the vivarium_csu_zenon project.
 
 .. contents::
