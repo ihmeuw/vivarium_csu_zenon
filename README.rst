@@ -4,6 +4,10 @@ vivarium_csu_zenon
 
 .. image:: https://zenodo.org/badge/240375663.svg
    :target: https://zenodo.org/badge/latestdoi/240375663
+   
+Cite as 
+
+   Rajan Mudambi, David Bernotas, Serena Santoni, & James Collins. (2020, May 13). ihmeuw/vivarium_csu_zenon: Replication Archive (Version client_release). Zenodo. http://doi.org/10.5281/zenodo.3823610
 
 Research repository for the vivarium_csu_zenon project.
 
