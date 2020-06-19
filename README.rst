@@ -30,13 +30,13 @@ Once you have all three installed, you should open up your normal shell
 You'll then make an environment, clone this repository, then install
 all necessary requirements as follows::
 
-  $> conda create --name=vivarium-zenon python=3.6
+  :~$ conda create --name=vivarium-zenon python=3.6
   ...conda will download python and base dependencies...
-  $> conda activate vivarium-htn
-  (vivarium-htn) $> git clone https://github.com/ihmeuw/vivarium_csu_hypertension_sdc.git
+  :~$ conda activate vivarium-zenon
+  (vivarium-zenon) :~$ git clone https://github.com/ihmeuw/vivarium_csu_zenon.git
   ...git will copy the repository from github and place it in your current directory...
-  (vivarium-htn) $> cd vivarium_csu_hypertension_sdc
-  (vivarium-htn) $> pip install -e .
+  (vivarium-zenon) :~$ cd vivarium_csu_zenon
+  (vivarium-zenon) :~$ pip install -e .
   ...pip will install vivarium and other requirements...
 
 
@@ -44,7 +44,7 @@ Note the ``-e`` flag that follows pip install. This will install the python
 package in-place, which is important for making the model specifications later.
 
 Cloning the repository should take a fair bit of time as git must fetch
-the data artifact associated with the demo (about 2GB of data) from the
+the data artifact associated with the demo (about 4GB of data) from the
 large file system storage (``git-lfs``). **If your clone works quickly,
 you are likely only retrieving the checksum file that github holds onto,
 and your simulations will fail.** If you are only retrieving checksum
@@ -57,9 +57,9 @@ not something that can be specified and installed with the rest of the package's
 dependencies via ``pip``. If you encounter HDF5-related errors, you should
 install hdf tooling from within your environment like so::
 
-  (vivarium-htn) $> conda install hdf5
+  (vivarium-zenon) :~$ conda install hdf5
 
-The ``(vivarium-htn)`` that precedes your shell prompt will probably show
+The ``(vivarium-zenon)`` that precedes your shell prompt will probably show
 up by default, though it may not.  It's just a visual reminder that you
 are installing and running things in an isolated programming environment
 so it doesn't conflict with other source code and libraries on your
@@ -69,8 +69,8 @@ system.
 Usage
 -----
 
-You'll find five directories inside the main
-``src/vivarium_csu_hypertension_sdc`` package directory:
+You'll find six directories inside the main
+``src/vivarium_csu_zenon`` package directory:
 
 - ``artifacts``
 
@@ -81,10 +81,10 @@ You'll find five directories inside the main
 - ``components``
 
   This directory is for Python modules containing custom components for
-  the vivarium_csu_hypertension_sdc project. You should work with the
+  the vivarium_csu_zenon project. You should work with the
   engineering staff to help scope out what you need and get them built.
 
-- ``external_data``
+- ``data``
 
   If you have **small scale** external data for use in your sim or in your
   results processing, it can live here. This is almost certainly not the right
@@ -95,10 +95,15 @@ You'll find five directories inside the main
   This directory should hold all model specifications and branch files
   associated with the project.
 
-- ``verification_and_validation``
+- ``results_processing``
 
   Any post-processing and analysis code or notebooks you write should be
   stored in this directory.
+
+- ``tools``
+
+  This directory hold Python files used to run scripts used to prepare input
+  data or process outputs.
 
 
 Running Simulations
@@ -110,19 +115,14 @@ complete description of a vivarium model. The command to generate model
 specifications is installed with this repository and it can be run
 from any directory.::
 
-  (vivarium-htn) $> make_specs
-  2019-11-18 21:30:41.429 | INFO     | vivarium_csu_hypertension_sdc.cli:make_specs:69 - Writing model spec(s) to "/REPO_INSTALLATION_DIRECTORY/vivarium_csu_hypertension_sdc/src/vivarium_csu_hypertension_sdc/model_specifications"
-  2019-11-18 21:30:41.429 | INFO     | vivarium_csu_hypertension_sdc.cli:make_specs:74 -    Writing china.yaml
-  2019-11-18 21:30:41.430 | INFO     | vivarium_csu_hypertension_sdc.cli:make_specs:74 -    Writing italy.yaml
-  2019-11-18 21:30:41.430 | INFO     | vivarium_csu_hypertension_sdc.cli:make_specs:74 -    Writing mexico.yaml
-  2019-11-18 21:30:41.431 | INFO     | vivarium_csu_hypertension_sdc.cli:make_specs:74 -    Writing russian_federation.yaml
-  2019-11-18 21:30:41.431 | INFO     | vivarium_csu_hypertension_sdc.cli:make_specs:74 -    Writing south_korea.yaml
+  (vivarium-zenon) :~$ make_specs -v
+  2020-06-18 18:18:28.311 | 0:00:00.679701 | build_model_specifications:48 - Writing model spec(s) to "/REPO_INSTALLATION_DIRECTORY/vivarium_csu_zenon/src/vivarium_csu_zenon/model_specifications"
 
 As the log message indicates, the model specifications will be written to
 the ``model_specifications`` subdirectory in this repository. You can then
 run simulations by, e.g.::
 
-   (vivarium-htn) $> simulate run -v /<REPO_INSTALLATION_DIRECTORY>/vivarium_csu_hypertension_sdc/src/vivarium_csu_hypertension_sdc/model_specifications/china.yaml
+   (vivarium-zenon) :~$ simulate run -v /<REPO_INSTALLATION_DIRECTORY>/vivarium_csu_zenon/src/vivarium_csu_zenon/model_specifications/china.yaml
 
 The ``-v`` flag will log verbosely, so you will get log messages every time
 step. For more ways to run simulations, see the tutorials at
