@@ -9,7 +9,6 @@ import pandas as pd
 from scipy.optimize import minimize, Bounds
 
 from risk_distributions import EnsembleDistribution
-from vivarium_inputs import interface, utilities
 from gbd_mapping import risk_factors
 
 from vivarium_csu_zenon import paths, globals as project_globals
@@ -100,6 +99,8 @@ def build_single_location_single_draw(path: Union[str, Path], location: str, dra
 
 
 def _get_ldl_exposure_data(location: int) -> Tuple[List[Tuple], pd.DataFrame, pd.DataFrame, List[Dict[str, float]]]:
+    # Local import to avoid data dependencies
+    from vivarium_inputs import interface
     means = (
         interface.get_measure(risk_factors.high_ldl_cholesterol, 'exposure', location)
         .reset_index()
