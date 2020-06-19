@@ -9,13 +9,10 @@ import pandas as pd
 import scipy.stats
 from loguru import logger
 
-from vivarium_inputs import globals as vi_globals, utilities
-from vivarium_inputs.interface import get_measure
 from gbd_mapping import risk_factors, causes
 from risk_distributions import EnsembleDistribution
 
 from vivarium_csu_zenon import paths, globals as project_globals
-from vivarium_csu_zenon.data.loader import load_ikf_exposure, load_ikf_relative_risk, load_propensity_correlation_data
 from vivarium_csu_zenon.tools import decode_status
 from vivarium_csu_zenon.utilities import sanitize_location
 
@@ -28,6 +25,9 @@ INDEX_COLS = ['location', 'sex', 'age_start', 'age_end', 'year_start', 'year_end
 
 
 def build_joint_pafs(location: str, draws: str, verbose: int, queue: str):
+    # Local import to avoid data dependencies
+    from vivarium_inputs import globals as vi_globals, utilities
+
     output_dir = paths.JOINT_PAF_DIR
     locations = project_globals.LOCATIONS if location == 'all' else [location]
 
@@ -166,6 +166,9 @@ def build_joint_paf_single_draw(output_path: Union[str, Path], location: str, dr
 # Correlation requires you to be on the latest branch of zenon until we do some pr review.
 
 def load_correlation_data():
+    # Local import to avoid data dependencies
+    from vivarium_csu_zenon.data.loader import load_propensity_correlation_data
+
     raw_data = load_propensity_correlation_data('', '').reset_index()
     data = {}
     for label, group in raw_data.groupby(['age_group']):
@@ -182,12 +185,18 @@ def load_correlation_data():
 
 class DistParams:
     def __init__(self, risk, location):
+        # Local import to avoid data dependencies
+        from vivarium_inputs.interface import get_measure
+
         self.mean = get_measure(risk, 'exposure', location).droplevel('parameter')
         self.sd = get_measure(risk, 'exposure_standard_deviation', location)
         self.weights = get_measure(risk, 'exposure_distribution_weights', location)
 
 
 def load_exposure_data(risk, location):
+    # Local import to avoid data dependencies
+    from vivarium_csu_zenon.data.loader import load_ikf_exposure
+
     if risk.name == risk_factors.impaired_kidney_function.name:
         ikf = load_ikf_exposure(project_globals.IKF.EXPOSURE, location)
         return ikf
@@ -196,6 +205,8 @@ def load_exposure_data(risk, location):
 
 class RelativeRiskParams:
     def __init__(self, risk, location):
+        # Local import to avoid data dependencies
+        from vivarium_inputs.interface import get_measure
         rr = get_measure(risk, 'relative_risk', location).droplevel(['affected_measure', 'parameter'])
         self.base = (
             rr.reorder_levels(['affected_entity'] + INDEX_COLS)
@@ -206,6 +217,9 @@ class RelativeRiskParams:
 
 
 def load_relative_risk_data(risk, location):
+    # Local import to avoid data dependencies
+    from vivarium_csu_zenon.data.loader import load_ikf_relative_risk
+
     if risk.name == risk_factors.impaired_kidney_function.name:
         ikf_rr = load_ikf_relative_risk(project_globals.IKF.RELATIVE_RISK, location).droplevel('affected_measure')
         ikf_rr = (
