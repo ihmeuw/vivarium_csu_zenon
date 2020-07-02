@@ -1,0 +1,114 @@
+components:
+    vivarium_public_health:
+        population:
+            - BasePopulation()
+            - Mortality()
+
+    vivarium_csu_zenon.components:
+        - CorrelatedPropensityGenerator()
+        - IschemicHeartDisease()
+        - IschemicStroke()
+        - DiabetesMellitus()
+        - ChronicKidneyDisease()
+
+        - CVDRiskAttribute()
+
+        - LDLCholesterolRisk()
+        - RiskEffect('risk_factor.high_ldl_cholesterol', 'sequela.acute_myocardial_infarction.incidence_rate')
+        - RiskEffect('risk_factor.high_ldl_cholesterol', 'sequela.acute_ischemic_stroke.incidence_rate')
+        - RiskEffect('risk_factor.high_ldl_cholesterol', 'sequela.post_myocardial_infarction_to_acute_myocardial_infarction.transition_rate')
+        - RiskEffect('risk_factor.high_ldl_cholesterol', 'sequela.post_ischemic_stroke_to_acute_ischemic_stroke.transition_rate')
+
+        - Risk('risk_factor.high_systolic_blood_pressure')
+        - RiskEffect('risk_factor.high_systolic_blood_pressure', 'sequela.acute_myocardial_infarction.incidence_rate')
+        - RiskEffect('risk_factor.high_systolic_blood_pressure', 'sequela.acute_ischemic_stroke.incidence_rate')
+        - RiskEffect('risk_factor.high_systolic_blood_pressure', 'sequela.post_myocardial_infarction_to_acute_myocardial_infarction.transition_rate')
+        - RiskEffect('risk_factor.high_systolic_blood_pressure', 'sequela.post_ischemic_stroke_to_acute_ischemic_stroke.transition_rate')
+
+        - FastingPlasmaGlucose()
+        - RiskEffect('risk_factor.high_fasting_plasma_glucose_continuous', 'sequela.acute_myocardial_infarction.incidence_rate')
+        - RiskEffect('risk_factor.high_fasting_plasma_glucose_continuous', 'sequela.acute_ischemic_stroke.incidence_rate')
+        - RiskEffect('risk_factor.high_fasting_plasma_glucose_continuous', 'sequela.post_myocardial_infarction_to_acute_myocardial_infarction.transition_rate')
+        - RiskEffect('risk_factor.high_fasting_plasma_glucose_continuous', 'sequela.post_ischemic_stroke_to_acute_ischemic_stroke.transition_rate')
+
+        - Risk('risk_factor.impaired_kidney_function')
+        - RiskEffect('risk_factor.impaired_kidney_function', 'sequela.acute_myocardial_infarction.incidence_rate')
+        - RiskEffect('risk_factor.impaired_kidney_function', 'sequela.acute_ischemic_stroke.incidence_rate')
+        - RiskEffect('risk_factor.impaired_kidney_function', 'sequela.post_myocardial_infarction_to_acute_myocardial_infarction.transition_rate')
+        - RiskEffect('risk_factor.impaired_kidney_function', 'sequela.post_ischemic_stroke_to_acute_ischemic_stroke.transition_rate')
+
+        - MortalityObserver()
+        - DisabilityObserver()
+        - DiseaseObserver('ischemic_heart_disease')
+        - DiseaseObserver('ischemic_stroke')
+        - DiseaseObserver('diabetes_mellitus')
+        - DiseaseObserver('chronic_kidney_disease')
+        - MiscellaneousObserver()
+
+        - LDLCTreatmentCoverage()
+        - LDLCTreatmentEffect()
+        - LDLCTreatmentAdherence()
+        - AdverseEffects()
+
+        - TreatmentAlgorithm()
+
+configuration:
+    input_data:
+        location: Russian Federation
+        input_draw_number: 0
+        artifact_path: /share/costeffectiveness/artifacts/vivarium_csu_zenon/russian_federation.hdf
+    interpolation:
+        order: 0
+        extrapolate: True
+    randomness:
+        map_size: 1_000_000
+        key_columns: ['entrance_time', 'age']
+        random_seed: 0
+    time:
+        start:
+            year: 2020
+            month: 1
+            day: 1
+        end:
+            year: 2024
+            month: 12
+            day: 31
+        step_size: 28 # Days
+    population:
+        population_size: 10000
+        age_start: 30
+        age_end: 125
+        exit_age: 125
+
+    ldlc_treatment_algorithm:
+        scenario: 'baseline'
+
+    metrics:
+        disability:
+            by_age: True
+            by_sex: True
+            by_year: True
+        mortality:
+            by_age: True
+            by_sex: True
+            by_year: True
+        ischemic_heart_disease_observer:
+            by_age: True
+            by_sex: True
+            by_year: True
+        ischemic_stroke_observer:
+            by_age: True
+            by_sex: True
+            by_year: True
+        diabetes_mellitus_observer:
+            by_age: True
+            by_sex: True
+            by_year: True
+        chronic_kidney_disease_observer:
+            by_age: True
+            by_sex: True
+            by_year: True
+        miscellaneous_observer:
+            by_age: True
+            by_sex: True
+            by_year: True
