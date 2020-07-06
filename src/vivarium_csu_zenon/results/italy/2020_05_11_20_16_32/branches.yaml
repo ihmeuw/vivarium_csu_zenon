@@ -1,0 +1,6 @@
+- ldlc_treatment_algorithm:
+    scenario: baseline
+- ldlc_treatment_algorithm:
+    scenario: guideline
+- ldlc_treatment_algorithm:
+    scenario: guideline_and_new_treatment

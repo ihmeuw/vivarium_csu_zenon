@@ -95,6 +95,10 @@ You'll find six directories inside the main
   This directory should hold all model specifications and branch files
   associated with the project.
 
+- ``results``
+
+  The results of running the simulation.
+
 - ``results_processing``
 
   Any post-processing and analysis code or notebooks you write should be
