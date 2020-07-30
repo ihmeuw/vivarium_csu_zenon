@@ -1,10 +1,4 @@
 {
-    "description": "No description provided.",
-    "license": "other-open",
-    "title": "ihmeuw/vivarium_csu_zenon: Replication Archive",
-    "version": "v8.1_archive",
-    "upload_type": "software",
-    "publication_date": "2020-07-29",
     "creators": [
         {
             "affiliation": "Institute for Health Metrics and Evaluation",
@@ -34,18 +28,5 @@
               "type": "Researcher",
               "name": "Abraham Flaxman"
           }
-      ],
-    "access_right": "open",
-    "related_identifiers": [
-        {
-            "scheme": "url",
-            "identifier": "https://github.com/ihmeuw/vivarium_csu_zenon/tree/v8.1_archive",
-            "relation": "isSupplementTo"
-        },
-        {
-            "scheme": "doi",
-            "identifier": "10.5281/zenodo.3823609",
-            "relation": "isVersionOf"
-        }
-    ]
+      ]
 }
