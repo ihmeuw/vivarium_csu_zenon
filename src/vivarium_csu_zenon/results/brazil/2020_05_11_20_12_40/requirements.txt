@@ -81,7 +81,7 @@ ptpython==3.0.1
 ptyprocess==0.6.0
 py==1.8.1
 pyDOE==0.3.8
-Pygments==2.6.1
+Pygments==2.7.4
 PyMySQL==0.9.3
 pyparsing==2.4.6
 pyrsistent==0.15.7
