@@ -113,7 +113,7 @@ tornado==6.0.4
 tqdm==4.43.0
 traitlets==4.3.3
 transmogrifier==1.1.5
-urllib3==1.25.8
+urllib3==1.26.5
 vivarium==0.9.3
 vivarium-cluster-tools==1.1.2
 -e git+git@github.com:ihmeuw/vivarium_csu_zenon.git@6e1122486e08e68e215ae1da9b02904dbfc508d4#egg=vivarium_csu_zenon
